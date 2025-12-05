@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # --- Dateien & Speicher -----------------------------------------
-BOT_SETTINGS_CONFIG_FILE = 'bot_settings_config.json' # <-- NEU: Konfigurationsdatei für Bot-Einstellungen
+BOT_SETTINGS_CONFIG_FILE = 'bot_settings_config.json'
 
 DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
@@ -42,8 +42,9 @@ def load_json(file_path, default_data):
 def load_bot_settings_config():
     default = {
         "is_enabled": False,
-        "bot_token": "", # <-- NEU: Bot-Token für diesen Bot
+        "bot_token": "",
         "main_chat_id": "",
+        "topic_id": "", # NEU
         "link_ttl_minutes": 15
     }
     return load_json(BOT_SETTINGS_CONFIG_FILE, default)
@@ -87,7 +88,7 @@ ASK_NAME, ASK_AGE, ASK_STATE, ASK_PHOTO, ASK_SECURITY, ASK_HOBBIES, ASK_INSTAGRA
 user_data_temp = {}
 
 # --- Commands ---------------------------------------------------
-async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "👋 *Hey und herzlich willkommen!*\n\n"
         "Du bist hier, weil du in unsere *Engelbert‑Strauss Gruppe* möchtest 👷‍♂️🦺\n\n"
@@ -101,14 +102,14 @@ async def welcome(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: i
     await update.message.reply_text(text, parse_mode="Markdown")
 
 
-async def start_form(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def start_form(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Wie ist dein Name? Es reicht dein Vorname.")
     return ASK_NAME
 
 
 # --- Formular Schritte ------------------------------------------
-async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
-    logger.info(f"DEBUG: get_name triggered. User ID: {update.message.from_user.id}, Text: {update.message.text}") # <-- NEUE DEBUG-AUSGABE
+async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"DEBUG: get_name triggered. User ID: {update.message.from_user.id}, Text: {update.message.text}")
     user = update.message.from_user
     user_data_temp[user.id] = {
         "name": update.message.text.strip(),
@@ -120,7 +121,7 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: 
     return ASK_AGE
 
 
-async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
     age_text = update.message.text.strip()
     if not age_text.isdigit() or not 10 <= int(age_text) <= 100:
         await update.message.reply_text("Bitte gib dein Alter als Zahl zwischen 10 und 100 ein.")
@@ -130,13 +131,13 @@ async def get_age(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: i
     return ASK_STATE
 
 
-async def get_state(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def get_state(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_data_temp[update.message.from_user.id]["state"] = update.message.text.strip()
     await update.message.reply_text("Bitte sende ein *normales Foto* von dir (kein Dokument).", parse_mode="Markdown")
     return ASK_PHOTO
 
 
-async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     if not update.message.photo:
         await update.message.reply_text("Bitte sende ein Foto, kein Dokument.")
@@ -146,7 +147,7 @@ async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE): # type:
     return ASK_SECURITY
 
 
-async def get_security(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def get_security(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     if is_valid(text):
         user_data_temp[update.message.from_user.id]["security"] = text
@@ -154,7 +155,7 @@ async def get_security(update: Update, context: ContextTypes.DEFAULT_TYPE): # ty
     return ASK_HOBBIES
 
 
-async def get_hobbies(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def get_hobbies(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     if is_valid(text):
         user_data_temp[update.message.from_user.id]["hobbies"] = text
@@ -162,7 +163,7 @@ async def get_hobbies(update: Update, context: ContextTypes.DEFAULT_TYPE): # typ
     return ASK_INSTAGRAM
 
 
-async def get_instagram(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def get_instagram(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     if is_valid(text):
         user_data_temp[update.message.from_user.id]["instagram"] = text
@@ -170,7 +171,7 @@ async def get_instagram(update: Update, context: ContextTypes.DEFAULT_TYPE): # t
     return ASK_OTHER
 
 
-async def get_other(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def get_other(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     if is_valid(text):
         user_data_temp[update.message.from_user.id]["other"] = text
@@ -178,7 +179,7 @@ async def get_other(update: Update, context: ContextTypes.DEFAULT_TYPE): # type:
     return ASK_SEXUALITY
 
 
-async def get_sexuality(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def get_sexuality(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     if is_valid(text):
         user_data_temp[update.message.from_user.id]["sexuality"] = text
@@ -204,7 +205,7 @@ async def get_sexuality(update: Update, context: ContextTypes.DEFAULT_TYPE): # t
     return ASK_RULES
 
 
-async def get_rules_ok(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def get_rules_ok(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text.strip().lower() != "ok":
         await update.message.reply_text("Bitte antworte mit *OK*, um den Regeln zuzustimmen.", parse_mode="Markdown")
         return ASK_RULES
@@ -261,16 +262,17 @@ def format_welcome(profile: dict) -> str:
     return "\n".join(lines)
 
 
-async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.chat_join_request.from_user
     profile = load_profile(user.id)
 
     config = load_bot_settings_config()
     GROUP_ID = int(config.get("main_chat_id", 0)) if config.get("main_chat_id") else 0
+    TOPIC_ID_STR = config.get("topic_id")
+    TOPIC_ID = int(TOPIC_ID_STR) if TOPIC_ID_STR and TOPIC_ID_STR.isdigit() else None
 
     if not GROUP_ID:
         logger.error("GROUP_ID ist nicht konfiguriert. Kann Beitrittsanfrage nicht bearbeiten.")
-        # Hier könnte man die Anfrage ablehnen oder eine Nachricht senden
         return
 
     try:
@@ -278,40 +280,41 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
     except Exception as e:
         logger.error(f"Genehmigung fehlgeschlagen: {e}")
         return
+
     if profile:
-        welcome = format_welcome(profile)
+        welcome_message = format_welcome(profile)
         try:
+            # Sende Steckbrief in das spezifische Topic, falls eine TOPIC_ID konfiguriert ist
             if profile.get("photo_file_id"):
-                await context.bot.send_photo(chat_id=GROUP_ID, photo=profile["photo_file_id"], caption=welcome, parse_mode="Markdown")
+                await context.bot.send_photo(
+                    chat_id=GROUP_ID,
+                    photo=profile["photo_file_id"],
+                    caption=welcome_message,
+                    parse_mode="Markdown",
+                    message_thread_id=TOPIC_ID # Hinzugefügt
+                )
             else:
-                await context.bot.send_message(chat_id=GROUP_ID, text=welcome, parse_mode="Markdown")
+                await context.bot.send_message(
+                    chat_id=GROUP_ID,
+                    text=welcome_message,
+                    parse_mode="Markdown",
+                    message_thread_id=TOPIC_ID # Hinzugefügt
+                )
+            logger.info(f"Steckbrief für {user.full_name} in Topic {TOPIC_ID if TOPIC_ID else 'main chat'} gepostet.")
         except Exception as e:
-            logger.error(f"Fehler bei Begrüßung: {e}")
+            logger.error(f"Fehler bei Begrüßung in Gruppe/Topic: {e}")
+        
         remove_profile(user.id)
 
 
 # --- Wenn jemand die Gruppe verlässt -----------------------------
-async def handle_member_left(update: Update, context: ContextTypes.DEFAULT_TYPE): # type: ignore
+async def handle_member_left(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.left_chat_member: return
     user = update.message.left_chat_member
     if user:
-        user_id_str = str(user.id)
-        if user_id_str in _load_all_profiles():
-            remove_profile(user.id)
-            config = load_bot_settings_config()
-            GROUP_ID = int(config.get("main_chat_id", 0)) if config.get("main_chat_id") else 0
-            if GROUP_ID:
-                try:
-                    await context.bot.send_message(
-                        chat_id=GROUP_ID,
-                        text=f"👋 {user.full_name} hat die Gruppe verlassen. Steckbrief wurde gelöscht."
-                    )
-                except Exception as e:
-                    logger.error(f"Fehler beim Senden der Austrittsnachricht: {e}")
-            else:
-                logger.warning("GROUP_ID ist nicht konfiguriert. Kann Austrittsnachricht nicht senden.")
-        else:
-            logger.warning(f"⚠️ Kein Profil gefunden für Benutzer {user_id_str}.")
+        remove_profile(user.id)
+        logger.info(f"Benutzer {user.full_name} hat die Gruppe verlassen. Profil wurde gelöscht.")
+        # Optional: Nachricht über Verlassen in einem Admin-Log-Kanal posten, aber nicht in der Hauptgruppe, um Spam zu vermeiden
 
 
 # --- Bot Start --------------------------------------------------
@@ -320,8 +323,8 @@ if __name__ == "__main__":
     BOT_TOKEN = config.get("bot_token")
     is_enabled = config.get("is_enabled", False)
 
-    if not BOT_TOKEN or BOT_TOKEN == "" or not is_enabled:
-        logger.info("Invite-Bot ist nicht aktiviert oder BOT_TOKEN fehlt in bot_settings_config.json. Wird nicht gestartet.")
+    if not BOT_TOKEN or not is_enabled:
+        logger.info("Invite-Bot ist nicht aktiviert oder BOT_TOKEN fehlt. Wird nicht gestartet.")
     else:
         app = ApplicationBuilder().token(BOT_TOKEN).build()
 

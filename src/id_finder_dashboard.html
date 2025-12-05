@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID-Finder Bot Steuerung</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+        h1, h2, h3 {
+            color: #bb86fc;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+        }
+        input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .button-style, button {
+            display: block;
+            width: 100%;
+            padding: 12px 20px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            text-align: center;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+            background-color: #6200ee;
+            color: white;
+        }
+        button:hover, .button-style:hover {
+            background-color: #3700b3;
+        }
+        .success-message, .danger-message {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success-message {
+            color: #03dac6;
+            background-color: rgba(3, 218, 198, 0.1);
+        }
+        .danger-message {
+            color: #cf6679;
+            background-color: rgba(207, 102, 121, 0.1);
+        }
+        .status-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-running {
+            background-color: #28a745;
+        }
+        .status-stopped {
+            background-color: #dc3545;
+        }
+        pre {
+            background-color: #000;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #03dac6;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .button-group button {
+            flex: 1;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="button-style" style="margin-bottom: 20px;">← Zurück zur Hauptseite</a>
+        
+        <h1>ID-Finder Bot Steuerung</h1>
+        <p>Dieser Bot hilft dir, die `Group-ID` und `Topic-ID` von jeder Telegram-Gruppe herauszufinden, in der er Mitglied ist. Füge ihn einfach zur Gruppe hinzu und sende den Befehl `/id`.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <p class="{{ category }}-message">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form action="/id-finder" method="POST">
+            <input type="hidden" name="action" value="save_config">
+            <div class="form-group">
+                <label for="is_enabled">
+                    <input type="checkbox" id="is_enabled" name="is_enabled" {% if config.is_enabled %}checked{% endif %}>
+                    Bot aktivieren
+                </label>
+            </div>
+            <div class="form-group">
+                <label for="bot_token">Bot Token:</label>
+                <input type="text" id="bot_token" name="bot_token" value="{{ config.bot_token or '' }}" placeholder="Dein neuer Bot Token für den ID-Finder">
+            </div>
+            <button type="submit">Einstellungen speichern</button>
+        </form>
+
+        <div class="status-section">
+            <h2>ID-Finder Bot Status</h2>
+            <p>
+                <span class="status-indicator {% if is_running %}status-running{% else %}status-stopped{% endif %}"></span>
+                Status: <strong>{% if is_running %}Läuft{% else %}Gestoppt{% endif %}</strong>
+            </p>
+            <div class="button-group">
+                <form action="/id-finder" method="POST" style="flex: 1;">
+                    <input type="hidden" name="action" value="start_bot">
+                    <button type="submit" {% if is_running %}disabled{% endif %}>Bot starten</button>
+                </form>
+                <form action="/id-finder" method="POST" style="flex: 1;">
+                    <input type="hidden" name="action" value="stop_bot">
+                    <button type="submit" {% if not is_running %}disabled{% endif %}>Bot stoppen</button>
+                </form>
+            </div>
+            <h3>Logs:</h3>
+            <pre>{{ logs|join('') or 'Keine Logs verfügbar.' }}</pre>
+        </div>
+    </div>
+</body>
+</html>

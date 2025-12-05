@@ -51,12 +51,10 @@
             <a href="/" style="color: #007bff; text-decoration: none;">← Zurück zur Hauptseite</a>
         </div>
         
-        <!-- Status Anzeige -->
         <div class="status-box {{ 'status-active' if is_running else 'status-inactive' }}">
             Status: {{ '🟢 AKTIV (Läuft)' if is_running else '🔴 INAKTIV (Gestoppt)' }}
         </div>
 
-        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -65,7 +63,6 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Hauptsteuerung (Start/Stop) -->
         <div style="margin-bottom: 20px; padding: 15px; background-color: #2a2a2a; border-radius: 8px;">
             <h3 style="margin-top: 0;">Prozess-Steuerung</h3>
             {% if is_running %}
@@ -79,7 +76,6 @@
             {% endif %}
         </div>
 
-        <!-- Manuelle Aktionen -->
         <h2>Manuelle Aktionen</h2>
         <div style="margin-bottom: 20px;">
             <form action="/outfit-bot/start-contest" method="post" style="display:inline;">
@@ -95,22 +91,22 @@
 
         <hr>
 
-        <!-- Konfiguration -->
         <h2>⚙️ Konfiguration</h2>
         <form action="/outfit-bot/save-config" method="post">
             <div class="form-group">
                 <label for="bot_token">Bot Token</label>
-                <input type="text" id="bot_token" name="BOT_TOKEN" value="{{ config.BOT_TOKEN }}">
+                <input type="text" id="bot_token" name="BOT_TOKEN" value="{{ config.BOT_TOKEN or '' }}">
             </div>
             <div class="form-group">
                 <label for="chat_id">Gruppen-Chat-ID</label>
-                <input type="text" id="chat_id" name="CHAT_ID" value="{{ config.CHAT_ID }}">
+                <input type="text" id="chat_id" name="CHAT_ID" value="{{ config.CHAT_ID or '' }}">
             </div>
             <div class="form-group">
-                <label>Automatische Posts: 
-                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color: {{ '#28a745' if config.AUTO_POST_ENABLED else '#dc3545' }}; margin-right:5px;"></span>
-                    {{ 'Aktiviert' if config.AUTO_POST_ENABLED else 'Deaktiviert' }}
-                </label>
+                <label for="topic_id">Topic ID (Optional)</label>
+                <input type="text" id="topic_id" name="TOPIC_ID" value="{{ config.TOPIC_ID or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Automatische Posts</label>
                  <select name="AUTO_POST_ENABLED">
                     <option value="true" {{ 'selected' if config.AUTO_POST_ENABLED }}>Aktivieren</option>
                     <option value="false" {{ 'selected' if not config.AUTO_POST_ENABLED }}>Deaktivieren</option>
@@ -118,11 +114,11 @@
             </div>
             <div class="form-group">
                 <label for="post_time">Start-Uhrzeit (HH:MM)</label>
-                <input type="time" id="post_time" name="POST_TIME" value="{{ config.POST_TIME }}">
+                <input type="time" id="post_time" name="POST_TIME" value="{{ config.POST_TIME or '18:00' }}">
             </div>
             <div class="form-group">
                 <label for="winner_time">Gewinner-Uhrzeit (HH:MM)</label>
-                <input type="time" id="winner_time" name="WINNER_TIME" value="{{ config.WINNER_TIME }}">
+                <input type="time" id="winner_time" name="WINNER_TIME" value="{{ config.WINNER_TIME or '22:00' }}">
             </div>
             <div class="form-group">
                 <label for="admin_ids">Admin User IDs (kommagetrennt)</label>
@@ -133,11 +129,9 @@
 
         <hr>
 
-        <!-- Live Logs -->
         <h2>📜 Live Logs (Letzte 30 Zeilen)</h2>
         <div class="log-window">
-            {% for line in logs %}
-{{ line }}{% endfor %}
+            {% for line in logs %}{{ line }}{% endfor %}
         </div>
         <div style="text-align: right; margin-top: 5px;">
             <a href="/outfit-bot/dashboard" class="btn btn-secondary" style="background-color: #6c757d; font-size: 0.8em; padding: 5px 10px;">Logs aktualisieren</a>

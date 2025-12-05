@@ -35,18 +35,22 @@
     <div class="container">
         <h1>Bot Steuerung</h1>
         
-        <!-- Navigations-Sektion zum Outfit-Bot -->
         <div class="nav-section">
             <h2>Outfit-Wettbewerb Bot</h2>
             <p>Hier geht es zur Steuerung für den Outfit-Bot.</p>
             <a href="/outfit-bot/dashboard" class="btn btn-success">Zum Outfit-Bot Dashboard</a>
         </div>
 
-        <!-- NEU: Navigations-Sektion zum Invite-Bot -->
         <div class="nav-section">
             <h2>Einladungs-Bot Einstellungen</h2>
             <p>Hier geht es zu den Einstellungen für den Einladungs-Bot.</p>
             <a href="/bot-settings" class="btn btn-success">Zu den Einladungs-Bot Einstellungen</a>
+        </div>
+
+        <div class="nav-section">
+            <h2>ID-Finder Bot</h2>
+            <p>Ein Werkzeug, um Chat- und Topic-IDs von Telegram-Gruppen zu ermitteln.</p>
+            <a href="/id-finder" class="btn btn-secondary">Zum ID-Finder Bot</a>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -68,18 +72,21 @@
         <hr>
         <h2>Einstellungen (Alter Bot)</h2>
 
-        <!-- Quiz Einstellungen -->
         <div class="settings-section">
             <h3>Quiz-Einstellungen</h3>
             <form action="/save_settings" method="POST">
                 <input type="hidden" name="config_type" value="quiz">
                 <div class="form-group">
                     <label>Telegram Bot Token</label>
-                    <input type="text" name="token" value="{{ config.quiz.token }}">
+                    <input type="text" name="token" value="{{ config.quiz.token or '' }}">
                 </div>
                 <div class="form-group">
                     <label>Channel ID</label>
-                    <input type="text" name="channel_id" value="{{ config.quiz.channel_id }}">
+                    <input type="text" name="channel_id" value="{{ config.quiz.channel_id or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>Topic ID (Optional)</label>
+                    <input type="text" name="topic_id" value="{{ config.quiz.topic_id or '' }}">
                 </div>
                 <div class="form-group">
                     <label>Tägliche Posts</label>
@@ -89,24 +96,27 @@
                 </div>
                 <div class="form-group">
                     <label>Uhrzeit für tägliche Posts</label>
-                    <input type="time" name="time" value="{{ config.quiz.time }}">
+                    <input type="time" name="time" value="{{ config.quiz.time or '12:00' }}">
                 </div>
                 <button type="submit" name="action" value="save_settings" class="btn">Quiz-Einstellungen Speichern</button>
             </form>
         </div>
 
-        <!-- Umfrage Einstellungen -->
         <div class="settings-section">
             <h3>Umfrage-Einstellungen</h3>
             <form action="/save_settings" method="POST">
                 <input type="hidden" name="config_type" value="umfrage">
                 <div class="form-group">
                     <label>Telegram Bot Token</label>
-                    <input type="text" name="token" value="{{ config.umfrage.token }}">
+                    <input type="text" name="token" value="{{ config.umfrage.token or '' }}">
                 </div>
                 <div class="form-group">
                     <label>Channel ID</label>
-                    <input type="text" name="channel_id" value="{{ config.umfrage.channel_id }}">
+                    <input type="text" name="channel_id" value="{{ config.umfrage.channel_id or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>Topic ID (Optional)</label>
+                    <input type="text" name="topic_id" value="{{ config.umfrage.topic_id or '' }}">
                 </div>
                 <div class="form-group">
                     <label>Tägliche Posts</label>
@@ -116,7 +126,7 @@
                 </div>
                 <div class="form-group">
                     <label>Uhrzeit für tägliche Posts</label>
-                    <input type="time" name="time" value="{{ config.umfrage.time }}">
+                    <input type="time" name="time" value="{{ config.umfrage.time or '12:00' }}">
                 </div>
                 <button type="submit" name="action" value="save_settings" class="btn">Umfrage-Einstellungen Speichern</button>
             </form>

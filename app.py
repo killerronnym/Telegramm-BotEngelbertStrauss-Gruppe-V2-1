@@ -36,10 +36,13 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 CONFIG_FILE = 'config.json'
 OUTFIT_BOT_CONFIG_FILE = 'outfit_bot_config.json'
 BOT_SETTINGS_CONFIG_FILE = 'bot_settings_config.json'
+ID_FINDER_CONFIG_FILE = 'id_finder_config.json'
 OUTFIT_BOT_SCRIPT = 'outfit_bot.py'
 OUTFIT_BOT_LOG = 'outfit_bot.log'
 INVITE_BOT_SCRIPT = 'invite_bot.py'
 INVITE_BOT_LOG = 'invite_bot.log'
+ID_FINDER_BOT_SCRIPT = 'id_finder_bot.py'
+ID_FINDER_BOT_LOG = 'id_finder_bot.log'
 QUIZFRAGEN_FILE = 'quizfragen.json'
 GESTELLTE_QUIZFRAGEN_FILE = 'gestellte_quizfragen.json'
 UMFRAGEN_FILE = 'umfragen.json'
@@ -48,6 +51,7 @@ GESTELLTE_UMFRAGEN_FILE = 'gestellte_umfragen.json'
 # Prozess-Variablen
 outfit_bot_process = None
 invite_bot_process = None
+id_finder_bot_process = None
 
 # --- Hilfsfunktionen für JSON ---
 def load_json(file_path, default_data):
@@ -68,6 +72,7 @@ def load_bot_settings_config():
         "is_enabled": False,
         "bot_token": "",
         "main_chat_id": "",
+        "topic_id": "",
         "link_ttl_minutes": 15
     }
     return load_json(BOT_SETTINGS_CONFIG_FILE, default)
@@ -75,117 +80,63 @@ def load_bot_settings_config():
 def save_bot_settings_config(data):
     save_json(BOT_SETTINGS_CONFIG_FILE, data)
 
-# --- Hilfsfunktionen für Outfit-Bot Management ---
-def is_outfit_bot_running():
-    global outfit_bot_process
-    if outfit_bot_process and outfit_bot_process.poll() is None:
-        return True
-    return False
+# --- Hilfsfunktionen für Bot Management (Generisch) ---
+def is_bot_running(process):
+    return process and process.poll() is None
 
-def get_outfit_bot_logs(lines=30):
-    if not os.path.exists(OUTFIT_BOT_LOG):
+def get_bot_logs(log_file, lines=30):
+    if not os.path.exists(log_file):
         return ["Keine Log-Datei vorhanden."]
     try:
-        with open(OUTFIT_BOT_LOG, 'r', encoding='utf-8') as f:
-            all_lines = f.readlines()
-            return all_lines[-lines:]
+        with open(log_file, 'r', encoding='utf-8') as f:
+            return f.readlines()[-lines:]
     except Exception as e:
         return [f"Fehler beim Lesen der Logs: {e}"]
 
-def start_outfit_bot():
-    global outfit_bot_process
+def start_bot_process(script_path, log_path):
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
-        log.info("start_outfit_bot: Nicht im Haupt-Worker-Prozess, überspringe Start.")
-        return False, "Nicht im Hauptprozess, Bot wird hier nicht gestartet."
-
-    if is_outfit_bot_running():
-        return False, "Bot läuft bereits."
+        return None, "Nicht im Hauptprozess, Bot wird hier nicht gestartet."
     try:
         python_executable = __import__('sys').executable
-        outfit_bot_process = subprocess.Popen([python_executable, OUTFIT_BOT_SCRIPT])
-        log.info(f"{OUTFIT_BOT_SCRIPT} gestartet mit PID: {outfit_bot_process.pid}")
-        return True, "Bot erfolgreich gestartet."
-    except Exception as e:
-        log.error(f"Fehler beim Starten des Bots {OUTFIT_BOT_SCRIPT}: {e}", exc_info=True)
-        return False, f"Fehler beim Starten: {e}"
-
-def stop_outfit_bot():
-    global outfit_bot_process
-    if not is_outfit_bot_running():
-        return False, "Bot läuft nicht."
-    try:
-        outfit_bot_process.terminate()
-        try:
-            outfit_bot_process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            outfit_bot_process.kill()
-        outfit_bot_process = None
-        log.info(f"{OUTFIT_BOT_SCRIPT} Prozess gestoppt.")
-        return True, "Bot erfolgreich gestoppt."
-    except Exception as e:
-        log.error(f"Fehler beim Stoppen des Bots {OUTFIT_BOT_SCRIPT}: {e}", exc_info=True)
-        return False, f"Fehler beim Stoppen: {e}"
-
-# --- NEU: Hilfsfunktionen für Invite-Bot Management ---
-def is_invite_bot_running():
-    global invite_bot_process
-    if invite_bot_process and invite_bot_process.poll() is None:
-        return True
-    return False
-
-def get_invite_bot_logs(lines=30):
-    if not os.path.exists(INVITE_BOT_LOG):
-        return ["Keine Log-Datei vorhanden."]
-    try:
-        with open(INVITE_BOT_LOG, 'r', encoding='utf-8') as f:
-            all_lines = f.readlines()
-            return all_lines[-lines:]
-    except Exception as e:
-        return [f"Fehler beim Lesen der Logs: {e}"]
-
-def start_invite_bot():
-    global invite_bot_process
-    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
-        log.info("start_invite_bot: Nicht im Haupt-Worker-Prozess, überspringe Start.")
-        return False, "Nicht im Hauptprozess, Bot wird hier nicht gestartet."
-
-    if is_invite_bot_running():
-        return False, "Bot läuft bereits."
-    try:
-        python_executable = __import__('sys').executable
-        
-        # Hier leiten wir stderr in die INVITE_BOT_LOG Datei um
-        with open(INVITE_BOT_LOG, "a", encoding="utf-8") as log_file:
-            invite_bot_process = subprocess.Popen(
-                [python_executable, INVITE_BOT_SCRIPT],
-                stdout=log_file, # Optional: stdout auch umleiten, wenn gewünscht
-                stderr=log_file, # Wichtig: stderr umleiten
-                text=True, # Für Text-Modus der Logs
-                bufsize=1, # Zeilenweise Pufferung
-                universal_newlines=True # Für plattformübergreifende Zeilenumbrüche
+        with open(log_path, "a", encoding="utf-8") as log_file:
+            process = subprocess.Popen(
+                [python_executable, script_path],
+                stdout=log_file, stderr=log_file, text=True, bufsize=1, universal_newlines=True
             )
-        log.info(f"{INVITE_BOT_SCRIPT} gestartet mit PID: {invite_bot_process.pid}. Logs in {INVITE_BOT_LOG}")
-        return True, "Invite-Bot erfolgreich gestartet."
+        log.info(f"{script_path} gestartet mit PID: {process.pid}")
+        return process, f"{os.path.basename(script_path)} erfolgreich gestartet."
     except Exception as e:
-        log.error(f"Fehler beim Starten des Bots {INVITE_BOT_SCRIPT}: {e}", exc_info=True)
-        return False, f"Fehler beim Starten: {e}"
+        log.error(f"Fehler beim Starten von {script_path}: {e}", exc_info=True)
+        return None, str(e)
 
-def stop_invite_bot():
-    global invite_bot_process
-    if not is_invite_bot_running():
-        return False, "Bot läuft nicht."
+def stop_bot_process(process):
+    if not process or process.poll() is not None:
+        return None, "Bot läuft nicht."
     try:
-        invite_bot_process.terminate()
-        try:
-            invite_bot_process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            invite_bot_process.kill()
-        invite_bot_process = None
-        log.info(f"{INVITE_BOT_SCRIPT} Prozess gestoppt.")
-        return True, "Invite-Bot erfolgreich gestoppt."
+        process.terminate()
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
     except Exception as e:
-        log.error(f"Fehler beim Stoppen des Bots {INVITE_BOT_SCRIPT}: {e}", exc_info=True)
-        return False, f"Fehler beim Stoppen: {e}"
+        log.error(f"Fehler beim Stoppen eines Bots: {e}", exc_info=True)
+        return process, str(e)
+    return None, "Bot erfolgreich gestoppt."
+
+# --- Bot Management Instanzen ---
+def is_outfit_bot_running(): global outfit_bot_process; return is_bot_running(outfit_bot_process)
+def start_outfit_bot(): global outfit_bot_process; outfit_bot_process, msg = start_bot_process(OUTFIT_BOT_SCRIPT, OUTFIT_BOT_LOG); return bool(outfit_bot_process), msg
+def stop_outfit_bot(): global outfit_bot_process; outfit_bot_process, msg = stop_bot_process(outfit_bot_process); return not bool(outfit_bot_process), msg
+def get_outfit_bot_logs(lines=30): return get_bot_logs(OUTFIT_BOT_LOG, lines)
+
+def is_invite_bot_running(): global invite_bot_process; return is_bot_running(invite_bot_process)
+def start_invite_bot(): global invite_bot_process; invite_bot_process, msg = start_bot_process(INVITE_BOT_SCRIPT, INVITE_BOT_LOG); return bool(invite_bot_process), msg
+def stop_invite_bot(): global invite_bot_process; invite_bot_process, msg = stop_bot_process(invite_bot_process); return not bool(invite_bot_process), msg
+def get_invite_bot_logs(lines=30): return get_bot_logs(INVITE_BOT_LOG, lines)
+
+def is_id_finder_bot_running(): global id_finder_bot_process; return is_bot_running(id_finder_bot_process)
+def start_id_finder_bot(): global id_finder_bot_process; id_finder_bot_process, msg = start_bot_process(ID_FINDER_BOT_SCRIPT, ID_FINDER_BOT_LOG); return bool(id_finder_bot_process), msg
+def stop_id_finder_bot(): global id_finder_bot_process; id_finder_bot_process, msg = stop_bot_process(id_finder_bot_process); return not bool(id_finder_bot_process), msg
+def get_id_finder_bot_logs(lines=30): return get_bot_logs(ID_FINDER_BOT_LOG, lines)
 
 
 # --- Haupt-Web-Routen ---
@@ -193,58 +144,96 @@ def stop_invite_bot():
 def index():
     return render_template('index.html', config=load_config())
 
-# ... (Alte Quiz-Routen bleiben unverändert) ...
-async def send_telegram_poll(bot_token, channel_id, question, options, poll_type, correct_option_id=None, is_anonymous=True):
+async def send_telegram_poll(bot_token, channel_id, question, options, poll_type, correct_option_id=None, is_anonymous=True, topic_id=None):
     try:
         bot = telegram.Bot(token=bot_token)
-        await bot.send_poll(chat_id=channel_id, question=question, options=options, type=poll_type, correct_option_id=correct_option_id, is_anonymous=is_anonymous)
+        kwargs = {
+            'chat_id': channel_id,
+            'question': question,
+            'options': options,
+            'type': poll_type,
+            'correct_option_id': correct_option_id,
+            'is_anonymous': is_anonymous
+        }
+        if topic_id:
+            kwargs['message_thread_id'] = topic_id
+        await bot.send_poll(**kwargs)
         return True, None
-    except Exception as e: return False, str(e)
+    except Exception as e:
+        return False, str(e)
 
 @app.route('/send_quizfrage', methods=['POST'])
 def send_quizfrage_route():
     config = load_config().get('quiz', {})
-    bot_token, channel_id = config.get('token'), config.get('channel_id')
-    if not bot_token or not channel_id: return redirect(url_for('index'))
+    bot_token, channel_id, topic_id = config.get('token'), config.get('channel_id'), config.get('topic_id')
+    if not bot_token or not channel_id:
+        flash("Bot Token oder Channel ID für Quiz nicht konfiguriert.", "danger")
+        return redirect(url_for('index'))
+    
     all_q = load_json(QUIZFRAGEN_FILE, [])
-    asked_q_ids = load_json(GESTELLTE_QUIZFRAGEN_FILE, [])
-    for i, q in enumerate(all_q): 
+    if not all_q:
+        flash("Keine Quizfragen in quizfragen.json gefunden.", "warning")
+        return redirect(url_for('index'))
+
+    for i, q in enumerate(all_q):
         if 'id' not in q: q['id'] = i
+
+    asked_q_ids = load_json(GESTELLTE_QUIZFRAGEN_FILE, [])
     available = [q for q in all_q if q.get('id') not in asked_q_ids]
     if not available:
         asked_q_ids = []
-        save_json(GESTELLTE_QUIZFRAGEN_FILE, asked_q_ids)
         available = all_q
-    if not available: return redirect(url_for('index'))
+    
+    if not available:
+        flash("Alle Quizfragen wurden bereits gestellt.", "info")
+        return redirect(url_for('index'))
+        
     question = random.choice(available)
-    success, error = asyncio.run(send_telegram_poll(bot_token, channel_id, question.get('frage'), question.get('optionen'), 'quiz', correct_option_id=question.get('antwort'), is_anonymous=True))
+    success, error = asyncio.run(send_telegram_poll(bot_token, channel_id, question['frage'], question['optionen'], 'quiz', question['antwort'], topic_id=topic_id))
+    
     if success:
         asked_q_ids.append(question['id'])
         save_json(GESTELLTE_QUIZFRAGEN_FILE, asked_q_ids)
         flash('Quizfrage gesendet!', 'success')
+    else:
+        flash(f"Fehler beim Senden der Quizfrage: {error}", "danger")
     return redirect(url_for('index'))
 
 @app.route('/send_umfrage', methods=['POST'])
 def send_umfrage_route():
     config = load_config().get('umfrage', {})
-    bot_token, channel_id = config.get('token'), config.get('channel_id')
-    if not bot_token or not channel_id: return redirect(url_for('index'))
+    bot_token, channel_id, topic_id = config.get('token'), config.get('channel_id'), config.get('topic_id')
+    if not bot_token or not channel_id:
+        flash("Bot Token oder Channel ID für Umfrage nicht konfiguriert.", "danger")
+        return redirect(url_for('index'))
+
     all_p = load_json(UMFRAGEN_FILE, [])
-    asked_p_ids = load_json(GESTELLTE_UMFRAGEN_FILE, [])
+    if not all_p:
+        flash("Keine Umfragen in umfragen.json gefunden.", "warning")
+        return redirect(url_for('index'))
+
     for i, p in enumerate(all_p):
         if 'id' not in p: p['id'] = i
+
+    asked_p_ids = load_json(GESTELLTE_UMFRAGEN_FILE, [])
     available = [p for p in all_p if p.get('id') not in asked_p_ids]
     if not available:
         asked_p_ids = []
-        save_json(GESTELLTE_UMFRAGEN_FILE, asked_p_ids)
         available = all_p
-    if not available: return redirect(url_for('index'))
+
+    if not available:
+        flash("Alle Umfragen wurden bereits gestellt.", "info")
+        return redirect(url_for('index'))
+
     poll = random.choice(available)
-    success, error = asyncio.run(send_telegram_poll(bot_token, channel_id, poll.get('frage'), poll.get('optionen'), 'regular', is_anonymous=False))
+    success, error = asyncio.run(send_telegram_poll(bot_token, channel_id, poll['frage'], poll['optionen'], 'regular', is_anonymous=False, topic_id=topic_id))
+
     if success:
         asked_p_ids.append(poll['id'])
         save_json(GESTELLTE_UMFRAGEN_FILE, asked_p_ids)
         flash('Umfrage gesendet!', 'success')
+    else:
+        flash(f"Fehler beim Senden der Umfrage: {error}", "danger")
     return redirect(url_for('index'))
 
 @app.route('/save_settings', methods=['POST'])
@@ -253,99 +242,95 @@ def handle_settings():
     form = request.form
     config_type = form.get('config_type')
     if config_type not in config: return redirect(url_for('index'))
-    action = form.get('action')
-    if action == 'save_settings':
-        config[config_type].update({'token': form.get('token', '').strip(), 'channel_id': form.get('channel_id', '').strip(), 'time': form.get('time', '12:00')})
-        flash('Gespeichert.', 'success')
+    
+    if form.get('action') == 'save_settings':
+        config[config_type].update({
+            'token': form.get('token', '').strip(),
+            'channel_id': form.get('channel_id', '').strip(),
+            'topic_id': form.get('topic_id', '').strip(),
+            'time': form.get('time', '12:00')
+        })
+        flash(f'{config_type.capitalize()}-Einstellungen gespeichert.', 'success')
+    
     save_json(CONFIG_FILE, config)
     return redirect(url_for('index'))
 
-
-# --- NEUE WEB ROUTEN (für Bot-Einstellungen und Invite-Bot Management) ---
+# --- Web-Routen für Invite-Bot ---
 @app.route("/bot-settings", methods=['GET', 'POST'])
 def bot_settings():
     config = load_bot_settings_config()
-    message = None
-    error = None
-
     if request.method == 'POST':
         if 'action' in request.form:
             action = request.form['action']
             if action == 'start_invite_bot':
                 success, msg = start_invite_bot()
-                flash(msg, "success" if success else "danger")
             elif action == 'stop_invite_bot':
                 success, msg = stop_invite_bot()
-                flash(msg, "success" if success else "danger")
+            flash(msg, "success" if success else "danger")
         else:
-            try:
-                config['is_enabled'] = 'is_enabled' in request.form
-                config['bot_token'] = request.form.get('bot_token', '').strip()
-                config['main_chat_id'] = request.form.get('main_chat_id', '').strip()
-
-                link_ttl = request.form.get('link_ttl_minutes')
-                if link_ttl:
-                    config['link_ttl_minutes'] = int(link_ttl)
-                else:
-                    config['link_ttl_minutes'] = 15 # Default if empty
-
-                save_bot_settings_config(config)
-                message = "Einstellungen erfolgreich gespeichert!"
-                flash(message, "success")
-
-            except ValueError:
-                error = "Fehler: Die Gültigkeitsdauer muss eine Zahl sein."
-                flash(error, "danger")
-            except Exception as e:
-                error = f"Fehler beim Speichern der Einstellungen: {e}"
-                flash(error, "danger")
-
+            config['is_enabled'] = 'is_enabled' in request.form
+            config['bot_token'] = request.form.get('bot_token', '').strip()
+            config['main_chat_id'] = request.form.get('main_chat_id', '').strip()
+            config['topic_id'] = request.form.get('topic_id', '').strip()
+            config['link_ttl_minutes'] = int(request.form.get('link_ttl_minutes', 15))
+            save_bot_settings_config(config)
+            flash("Einstellungen erfolgreich gespeichert!", "success")
         return redirect(url_for('bot_settings'))
-
-    # Wenn GET-Request oder nach POST-Redirect
-    is_invite_running = is_invite_bot_running()
-    invite_bot_logs = get_invite_bot_logs(30)
 
     return render_template(
         'bot_settings.html', 
         config=config, 
-        message=message, 
-        error=error,
-        is_invite_running=is_invite_running, 
-        invite_bot_logs=invite_bot_logs
+        is_invite_running=is_invite_bot_running(), 
+        invite_bot_logs=get_invite_bot_logs(30)
     )
 
-# --- NEUE WEB ROUTEN (für Outfit-Bot) ---
+# --- Web-Routen für ID-Finder-Bot ---
+@app.route("/id-finder", methods=['GET', 'POST'])
+def id_finder_dashboard():
+    config = load_json(ID_FINDER_CONFIG_FILE, {"is_enabled": False, "bot_token": ""})
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'save_config':
+            config['is_enabled'] = 'is_enabled' in request.form
+            config['bot_token'] = request.form.get('bot_token', '').strip()
+            save_json(ID_FINDER_CONFIG_FILE, config)
+            flash("ID-Finder-Bot Einstellungen gespeichert!", "success")
+        elif action == 'start_bot':
+            success, msg = start_id_finder_bot()
+            flash(msg, "success" if success else "danger")
+        elif action == 'stop_bot':
+            success, msg = stop_id_finder_bot()
+            flash(msg, "success" if success else "danger")
+        return redirect(url_for('id_finder_dashboard'))
 
+    return render_template(
+        'id_finder_dashboard.html',
+        config=config,
+        is_running=is_id_finder_bot_running(),
+        logs=get_id_finder_bot_logs(30)
+    )
+
+# --- Web-Routen für Outfit-Bot ---
 @app.route("/outfit-bot/dashboard")
 def outfit_bot_dashboard():
-    try:
-        with open('src/outfit_bot_dashboard.html', 'r', encoding='utf-8') as f: template_content = f.read()
-        
-        bot_config = load_json(OUTFIT_BOT_CONFIG_FILE, {})
-        is_running = is_outfit_bot_running()
-        logs = get_outfit_bot_logs(30)
-        
-        return render_template_string(
-            template_content, 
-            config=bot_config, 
-            is_running=is_running,
-            logs=logs
-        )
-    except FileNotFoundError: return "Fehler: Dashboard-Template nicht gefunden.", 404
+    config = load_json(OUTFIT_BOT_CONFIG_FILE, {})
+    return render_template(
+        'outfit_bot_dashboard.html', 
+        config=config, 
+        is_running=is_outfit_bot_running(),
+        logs=get_outfit_bot_logs(30)
+    )
 
 @app.route("/outfit-bot/start", methods=['POST'])
 def outfit_bot_start():
     success, msg = start_outfit_bot()
-    if success: flash(msg, "success")
-    else: flash(msg, "danger")
+    flash(msg, "success" if success else "danger")
     return redirect(url_for('outfit_bot_dashboard'))
 
 @app.route("/outfit-bot/stop", methods=['POST'])
 def outfit_bot_stop():
     success, msg = stop_outfit_bot()
-    if success: flash(msg, "success")
-    else: flash(msg, "danger")
+    flash(msg, "success" if success else "danger")
     return redirect(url_for('outfit_bot_dashboard'))
 
 @app.route("/outfit-bot/save-config", methods=['POST'])
@@ -355,6 +340,7 @@ def outfit_bot_save_config():
     config.update({
         'BOT_TOKEN': form.get('BOT_TOKEN', '').strip(),
         'CHAT_ID': form.get('CHAT_ID', '').strip(),
+        'TOPIC_ID': form.get('TOPIC_ID', '').strip(),
         'POST_TIME': form.get('POST_TIME', '18:00'),
         'WINNER_TIME': form.get('WINNER_TIME', '22:00'),
         'AUTO_POST_ENABLED': form.get('AUTO_POST_ENABLED') == 'true'
@@ -365,8 +351,11 @@ def outfit_bot_save_config():
     flash("Outfit-Bot Konfiguration gespeichert!", "success")
     return redirect(url_for('outfit_bot_dashboard'))
 
+# NEU: Wiederhergestellte Routen für manuelle Aktionen
 def trigger_bot_command(command_name):
-    with open(f"command_{command_name}.tmp", 'w') as f: f.write('trigger')
+    """Erstellt eine temporäre Datei, um einen Befehl an den Bot zu signalisieren."""
+    with open(f"command_{command_name}.tmp", 'w') as f:
+        f.write('trigger')
 
 @app.route("/outfit-bot/start-contest", methods=['POST'])
 def outfit_bot_start_contest():
@@ -388,19 +377,19 @@ def outfit_bot_announce_winner():
 
 # --- Hintergrundprozesse ---
 def start_background_processes():
-    # Wir starten den Bot beim App-Start automatisch (wie gewünscht), aber mit der neuen start-Funktion
     start_outfit_bot()
     start_invite_bot()
+    start_id_finder_bot()
 
 def shutdown_background_processes():
-    # Stelle sicher, dass der Outfit-Bot sauber beendet wird, wenn die Flask-App herunterfährt
     stop_outfit_bot()
     stop_invite_bot()
+    stop_id_finder_bot()
 
 # === ANWENDUNGSSTART ===
 if __name__ == '__main__':
     atexit.register(shutdown_background_processes)
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true': # Startet den Bot nur einmal im Hauptprozess
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
          start_background_processes() 
 
     app.run(host='0.0.0.0', port=8080, debug=True, use_reloader=True)

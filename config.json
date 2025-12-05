@@ -1,14 +1,16 @@
 {
     "quiz": {
         "token": "7635905106:AAHuzxw5lw3fhXHx_8b9Wlw_WwGVxACbKAA",
-        "channel_id": "-1003234700999",
+        "channel_id": "-1003405727637",
         "daily_enabled": false,
-        "time": "14:53"
+        "time": "14:53",
+        "topic_id": "4"
     },
     "umfrage": {
         "token": "7635905106:AAHuzxw5lw3fhXHx_8b9Wlw_WwGVxACbKAA",
-        "channel_id": "-1003234700999",
+        "channel_id": "-1003405727637",
         "daily_enabled": false,
-        "time": "14:53"
+        "time": "14:53",
+        "topic_id": "4"
     }
 }
