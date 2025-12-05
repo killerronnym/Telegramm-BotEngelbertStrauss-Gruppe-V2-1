@@ -28,3 +28,6 @@
 2025-12-05 20:00:09,446 INFO: 127.0.0.1 - - [05/Dec/2025 20:00:09] "[32mPOST /bot-settings HTTP/1.1[0m" 302 - [in /home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/werkzeug/_internal.py:97]
 2025-12-05 20:00:09,508 INFO: 127.0.0.1 - - [05/Dec/2025 20:00:09] "GET /bot-settings HTTP/1.1" 200 - [in /home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/werkzeug/_internal.py:97]
 2025-12-05 20:00:19,725 INFO: 127.0.0.1 - - [05/Dec/2025 20:00:19] "GET /bot-settings?monospaceUid=607736 HTTP/1.1" 200 - [in /home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/werkzeug/_internal.py:97]
+2025-12-05 20:11:43,010 INFO: 127.0.0.1 - - [05/Dec/2025 20:11:43] "GET / HTTP/1.1" 200 - [in /home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/werkzeug/_internal.py:97]
+2025-12-05 20:11:47,981 INFO: 127.0.0.1 - - [05/Dec/2025 20:11:47] "GET /?monospaceUid=0 HTTP/1.1" 200 - [in /home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/werkzeug/_internal.py:97]
+2025-12-05 20:11:48,132 INFO: 127.0.0.1 - - [05/Dec/2025 20:11:48] "GET /?monospaceUid=930995 HTTP/1.1" 200 - [in /home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/werkzeug/_internal.py:97]
