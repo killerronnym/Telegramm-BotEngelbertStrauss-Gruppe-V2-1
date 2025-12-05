@@ -1,1 +1,56 @@
-.venv
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# IDE configuration files
+.idea/
+.vscode/
+.idx/
+
+# Log files
+*.log
+*.log.*
+
+# Temporary files
+*.swp
+*~
+
+# Environment variables
+.env
+.env.*
+
+# Data files generated at runtime
+bot_settings_config.json
+outfit_bot_config.json
+outfit_bot_data.json
+contest_submissions.json
+gestellte_quizfragen.json
+gestellte_umfragen.json
+data/profiles.json
