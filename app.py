@@ -35,8 +35,11 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 # Dateipfade
 CONFIG_FILE = 'config.json'
 OUTFIT_BOT_CONFIG_FILE = 'outfit_bot_config.json'
+BOT_SETTINGS_CONFIG_FILE = 'bot_settings_config.json'
 OUTFIT_BOT_SCRIPT = 'outfit_bot.py'
-OUTFIT_BOT_LOG = 'outfit_bot.log' # Logdatei des Bots
+OUTFIT_BOT_LOG = 'outfit_bot.log'
+INVITE_BOT_SCRIPT = 'invite_bot.py'
+INVITE_BOT_LOG = 'invite_bot.log'
 QUIZFRAGEN_FILE = 'quizfragen.json'
 GESTELLTE_QUIZFRAGEN_FILE = 'gestellte_quizfragen.json'
 UMFRAGEN_FILE = 'umfragen.json'
@@ -44,6 +47,7 @@ GESTELLTE_UMFRAGEN_FILE = 'gestellte_umfragen.json'
 
 # Prozess-Variablen
 outfit_bot_process = None
+invite_bot_process = None
 
 # --- Hilfsfunktionen für JSON ---
 def load_json(file_path, default_data):
@@ -58,6 +62,18 @@ def save_json(file_path, data):
 def load_config():
     default = {"quiz": {}, "umfrage": {}}
     return load_json(CONFIG_FILE, default)
+
+def load_bot_settings_config():
+    default = {
+        "is_enabled": False,
+        "bot_token": "",
+        "main_chat_id": "",
+        "link_ttl_minutes": 15
+    }
+    return load_json(BOT_SETTINGS_CONFIG_FILE, default)
+
+def save_bot_settings_config(data):
+    save_json(BOT_SETTINGS_CONFIG_FILE, data)
 
 # --- Hilfsfunktionen für Outfit-Bot Management ---
 def is_outfit_bot_running():
@@ -78,8 +94,6 @@ def get_outfit_bot_logs(lines=30):
 
 def start_outfit_bot():
     global outfit_bot_process
-    # Dies ist der Schlüssel: Nur starten, wenn WERKZEUG_RUN_MAIN == 'true'
-    # Sonst startet es doppelt im Flask Debug Modus
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         log.info("start_outfit_bot: Nicht im Haupt-Worker-Prozess, überspringe Start.")
         return False, "Nicht im Hauptprozess, Bot wird hier nicht gestartet."
@@ -92,7 +106,7 @@ def start_outfit_bot():
         log.info(f"{OUTFIT_BOT_SCRIPT} gestartet mit PID: {outfit_bot_process.pid}")
         return True, "Bot erfolgreich gestartet."
     except Exception as e:
-        log.error(f"Fehler beim Starten des Bots: {e}", exc_info=True)
+        log.error(f"Fehler beim Starten des Bots {OUTFIT_BOT_SCRIPT}: {e}", exc_info=True)
         return False, f"Fehler beim Starten: {e}"
 
 def stop_outfit_bot():
@@ -106,10 +120,71 @@ def stop_outfit_bot():
         except subprocess.TimeoutExpired:
             outfit_bot_process.kill()
         outfit_bot_process = None
-        log.info("Outfit-Bot Prozess gestoppt.")
+        log.info(f"{OUTFIT_BOT_SCRIPT} Prozess gestoppt.")
         return True, "Bot erfolgreich gestoppt."
     except Exception as e:
-        log.error(f"Fehler beim Stoppen des Bots: {e}", exc_info=True)
+        log.error(f"Fehler beim Stoppen des Bots {OUTFIT_BOT_SCRIPT}: {e}", exc_info=True)
+        return False, f"Fehler beim Stoppen: {e}"
+
+# --- NEU: Hilfsfunktionen für Invite-Bot Management ---
+def is_invite_bot_running():
+    global invite_bot_process
+    if invite_bot_process and invite_bot_process.poll() is None:
+        return True
+    return False
+
+def get_invite_bot_logs(lines=30):
+    if not os.path.exists(INVITE_BOT_LOG):
+        return ["Keine Log-Datei vorhanden."]
+    try:
+        with open(INVITE_BOT_LOG, 'r', encoding='utf-8') as f:
+            all_lines = f.readlines()
+            return all_lines[-lines:]
+    except Exception as e:
+        return [f"Fehler beim Lesen der Logs: {e}"]
+
+def start_invite_bot():
+    global invite_bot_process
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+        log.info("start_invite_bot: Nicht im Haupt-Worker-Prozess, überspringe Start.")
+        return False, "Nicht im Hauptprozess, Bot wird hier nicht gestartet."
+
+    if is_invite_bot_running():
+        return False, "Bot läuft bereits."
+    try:
+        python_executable = __import__('sys').executable
+        
+        # Hier leiten wir stderr in die INVITE_BOT_LOG Datei um
+        with open(INVITE_BOT_LOG, "a", encoding="utf-8") as log_file:
+            invite_bot_process = subprocess.Popen(
+                [python_executable, INVITE_BOT_SCRIPT],
+                stdout=log_file, # Optional: stdout auch umleiten, wenn gewünscht
+                stderr=log_file, # Wichtig: stderr umleiten
+                text=True, # Für Text-Modus der Logs
+                bufsize=1, # Zeilenweise Pufferung
+                universal_newlines=True # Für plattformübergreifende Zeilenumbrüche
+            )
+        log.info(f"{INVITE_BOT_SCRIPT} gestartet mit PID: {invite_bot_process.pid}. Logs in {INVITE_BOT_LOG}")
+        return True, "Invite-Bot erfolgreich gestartet."
+    except Exception as e:
+        log.error(f"Fehler beim Starten des Bots {INVITE_BOT_SCRIPT}: {e}", exc_info=True)
+        return False, f"Fehler beim Starten: {e}"
+
+def stop_invite_bot():
+    global invite_bot_process
+    if not is_invite_bot_running():
+        return False, "Bot läuft nicht."
+    try:
+        invite_bot_process.terminate()
+        try:
+            invite_bot_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            invite_bot_process.kill()
+        invite_bot_process = None
+        log.info(f"{INVITE_BOT_SCRIPT} Prozess gestoppt.")
+        return True, "Invite-Bot erfolgreich gestoppt."
+    except Exception as e:
+        log.error(f"Fehler beim Stoppen des Bots {INVITE_BOT_SCRIPT}: {e}", exc_info=True)
         return False, f"Fehler beim Stoppen: {e}"
 
 
@@ -186,6 +261,60 @@ def handle_settings():
     return redirect(url_for('index'))
 
 
+# --- NEUE WEB ROUTEN (für Bot-Einstellungen und Invite-Bot Management) ---
+@app.route("/bot-settings", methods=['GET', 'POST'])
+def bot_settings():
+    config = load_bot_settings_config()
+    message = None
+    error = None
+
+    if request.method == 'POST':
+        if 'action' in request.form:
+            action = request.form['action']
+            if action == 'start_invite_bot':
+                success, msg = start_invite_bot()
+                flash(msg, "success" if success else "danger")
+            elif action == 'stop_invite_bot':
+                success, msg = stop_invite_bot()
+                flash(msg, "success" if success else "danger")
+        else:
+            try:
+                config['is_enabled'] = 'is_enabled' in request.form
+                config['bot_token'] = request.form.get('bot_token', '').strip()
+                config['main_chat_id'] = request.form.get('main_chat_id', '').strip()
+
+                link_ttl = request.form.get('link_ttl_minutes')
+                if link_ttl:
+                    config['link_ttl_minutes'] = int(link_ttl)
+                else:
+                    config['link_ttl_minutes'] = 15 # Default if empty
+
+                save_bot_settings_config(config)
+                message = "Einstellungen erfolgreich gespeichert!"
+                flash(message, "success")
+
+            except ValueError:
+                error = "Fehler: Die Gültigkeitsdauer muss eine Zahl sein."
+                flash(error, "danger")
+            except Exception as e:
+                error = f"Fehler beim Speichern der Einstellungen: {e}"
+                flash(error, "danger")
+
+        return redirect(url_for('bot_settings'))
+
+    # Wenn GET-Request oder nach POST-Redirect
+    is_invite_running = is_invite_bot_running()
+    invite_bot_logs = get_invite_bot_logs(30)
+
+    return render_template(
+        'bot_settings.html', 
+        config=config, 
+        message=message, 
+        error=error,
+        is_invite_running=is_invite_running, 
+        invite_bot_logs=invite_bot_logs
+    )
+
 # --- NEUE WEB ROUTEN (für Outfit-Bot) ---
 
 @app.route("/outfit-bot/dashboard")
@@ -261,10 +390,12 @@ def outfit_bot_announce_winner():
 def start_background_processes():
     # Wir starten den Bot beim App-Start automatisch (wie gewünscht), aber mit der neuen start-Funktion
     start_outfit_bot()
+    start_invite_bot()
 
 def shutdown_background_processes():
     # Stelle sicher, dass der Outfit-Bot sauber beendet wird, wenn die Flask-App herunterfährt
     stop_outfit_bot()
+    stop_invite_bot()
 
 # === ANWENDUNGSSTART ===
 if __name__ == '__main__':

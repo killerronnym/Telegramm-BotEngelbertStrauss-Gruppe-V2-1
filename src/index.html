@@ -35,11 +35,18 @@
     <div class="container">
         <h1>Bot Steuerung</h1>
         
-        <!-- NEU: Navigations-Sektion zum Outfit-Bot -->
+        <!-- Navigations-Sektion zum Outfit-Bot -->
         <div class="nav-section">
-            <h2>Neuer Outfit-Wettbewerb Bot</h2>
-            <p>Hier geht es zur neuen Steuerung für den Outfit-Bot.</p>
+            <h2>Outfit-Wettbewerb Bot</h2>
+            <p>Hier geht es zur Steuerung für den Outfit-Bot.</p>
             <a href="/outfit-bot/dashboard" class="btn btn-success">Zum Outfit-Bot Dashboard</a>
+        </div>
+
+        <!-- NEU: Navigations-Sektion zum Invite-Bot -->
+        <div class="nav-section">
+            <h2>Einladungs-Bot Einstellungen</h2>
+            <p>Hier geht es zu den Einstellungen für den Einladungs-Bot.</p>
+            <a href="/bot-settings" class="btn btn-success">Zu den Einladungs-Bot Einstellungen</a>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}

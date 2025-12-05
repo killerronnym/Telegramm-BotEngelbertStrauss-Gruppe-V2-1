@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Einstellungen</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #121212; /* Sehr dunkles Grau */
+            color: #e0e0e0; /* Helles Grau für Text */
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #1e1e1e; /* Etwas helleres Dunkelgrau */
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4); /* Dunklerer Schatten */
+        }
+        h1 {
+            color: #bb86fc; /* Hell-Lila, für Kontrast auf dunklem Hintergrund */
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2, h3 {
+            color: #e0e0e0;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #e0e0e0;
+        }
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: calc(100% - 20px);
+            padding: 10px;
+            border: 1px solid #333; /* Dunklerer Rand */
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #2a2a2a; /* Dunkles Feld */
+            color: #e0e0e0; /* Helle Schrift im Feld */
+        }
+        input[type="checkbox"] {
+            margin-right: 10px;
+            background-color: #2a2a2a;
+            border: 1px solid #333;
+        }
+        .button-style {
+            display: block;
+            width: 100%;
+            padding: 12px 20px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            text-align: center;
+            text-decoration: none; /* Wichtig für Links, damit sie wie Buttons aussehen */
+            transition: background-color 0.3s ease;
+        }
+        button, .button-style {
+            background-color: #6200ee; /* Dunkel-Lila Button */
+            color: white;
+        }
+        button:hover, .button-style:hover {
+            background-color: #3700b3; /* Dunkleres Lila beim Hover */
+        }
+        .success-message {
+            color: #03dac6; /* Türkisgrün für Erfolg */
+            text-align: center;
+            margin-top: 20px;
+        }
+        .error-message {
+            color: #cf6679; /* Korallrot für Fehler */
+            text-align: center;
+            margin-top: 20px;
+        }
+        .status-section {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #2a2a2a; /* Dunkler Hintergrund für Status */
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-running {
+            background-color: #28a745; /* Green - bleibt gut sichtbar */
+        }
+        .status-stopped {
+            background-color: #dc3545; /* Red - bleibt gut sichtbar */
+        }
+        pre {
+            background-color: #000; /* Reines Schwarz für Logs */
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #03dac6; /* Türkisgrün für Log-Text */
+            border: 1px solid #333;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .button-group button {
+            flex: 1;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="button-style" style="margin-bottom: 20px;">← Zurück zur Hauptseite</a>
+
+        <h1>Telegram Bot Einstellungen (Einladungs-Bot)</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <p class="{{ category }}-message">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form action="/bot-settings" method="POST">
+            <div class="form-group">
+                <label for="is_enabled">
+                    <input type="checkbox" id="is_enabled" name="is_enabled" {% if config.is_enabled %}checked{% endif %}>
+                    Bot aktivieren
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label for="bot_token">Bot Token:</label>
+                <input type="text" id="bot_token" name="bot_token" value="{{ config.bot_token or '' }}" placeholder="Ihr Bot Token">
+            </div>
+
+            <!-- Affiliate ID wurde entfernt -->
+
+            <div class="form-group">
+                <label for="main_chat_id">Haupt-Chat ID der Gruppe (für Einladungslinks):</label>
+                <input type="text" id="main_chat_id" name="main_chat_id" value="{{ config.main_chat_id or '' }}" placeholder="-100xxxxxxxxxx">
+            </div>
+
+            <div class="form-group">
+                <label for="link_ttl_minutes">Gültigkeit des Einladungslinks (Minuten):</label>
+                <input type="number" id="link_ttl_minutes" name="link_ttl_minutes" value="{{ config.link_ttl_minutes or 15 }}" min="1">
+            </div>
+
+            <button type="submit">Einstellungen speichern</button>
+        </form>
+
+        <div class="status-section">
+            <h2>Invite-Bot Status</h2>
+            <p>
+                <span class="status-indicator {% if is_invite_running %}status-running{% else %}status-stopped{% endif %}"></span>
+                Status: <strong>{% if is_invite_running %}Läuft{% else %}Gestoppt{% endif %}</strong>
+            </p>
+            <div class="button-group">
+                <form action="/bot-settings" method="POST" style="flex: 1;">
+                    <input type="hidden" name="action" value="start_invite_bot">
+                    <button type="submit" {% if is_invite_running %}disabled{% endif %}>Bot starten</button>
+                </form>
+                <form action="/bot-settings" method="POST" style="flex: 1;">
+                    <input type="hidden" name="action" value="stop_invite_bot">
+                    <button type="submit" {% if not is_invite_running %}disabled{% endif %}>Bot stoppen</button>
+                </form>
+            </div>
+            <h3>Logs:</h3>
+            <pre>{% if invite_bot_logs %}{{ invite_bot_logs|join('') }}{% else %}Keine Logs verfügbar oder Bot wurde noch nicht gestartet.{% endif %}</pre>
+        </div>
+    </div>
+</body>
+</html>
