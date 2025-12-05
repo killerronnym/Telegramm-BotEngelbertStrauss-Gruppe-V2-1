@@ -17,7 +17,7 @@
         .btn-success { background-color: #28a745; }
         .btn-success:hover { background-color: #218838; }
         .form-group { margin-bottom: 1rem; }
-        .action-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .action-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #333;}
         label { display: block; margin-bottom: 0.5rem; }
         input[type="text"], input[type="time"] { width: 100%; padding: 0.75rem; background-color: #333; border: 1px solid #555; color: #e0e0e0; border-radius: 4px; box-sizing: border-box; }
         .alert { padding: 1rem; margin-bottom: 1rem; border-radius: 4px; }
@@ -34,6 +34,23 @@
 <body>
     <div class="container">
         <h1>Bot Steuerung</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="form-group action-group">
+            <form action="/send_quizfrage" method="POST">
+                <button type="submit" class="btn">Neue Quizfrage Senden</button>
+            </form>
+            <form action="/send_umfrage" method="POST">
+                <button type="submit" class="btn btn-secondary">Neue Umfrage Senden</button>
+            </form>
+        </div>
         
         <div class="nav-section">
             <h2>Outfit-Wettbewerb Bot</h2>
@@ -53,22 +70,6 @@
             <a href="/id-finder" class="btn btn-secondary">Zum ID-Finder Bot</a>
         </div>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <div class="form-group action-group">
-            <form action="/send_quizfrage" method="POST">
-                <button type="submit" class="btn">Neue Quizfrage Senden</button>
-            </form>
-            <form action="/send_umfrage" method="POST">
-                <button type="submit" class="btn btn-secondary">Neue Umfrage Senden</button>
-            </form>
-        </div>
         <hr>
         <h2>Einstellungen (Alter Bot)</h2>
 
