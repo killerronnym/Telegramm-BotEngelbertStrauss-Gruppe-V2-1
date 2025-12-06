@@ -30,6 +30,8 @@
         .status-inactive { background-color: #dc3545; color: white; }
         .settings-section { background-color: #2a2a2a; padding: 1.5rem; border-radius: 8px; margin-top: 1.5rem; }
         .nav-section { background-color: #2a2a2a; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; text-align: center; border: 1px solid #444; }
+        .logout-section { text-align: right; margin-bottom: 1rem; }
+        .logout-section strong { margin-right: 1rem; }
 
         @media (min-width: 600px) {
             .action-group {
@@ -47,6 +49,13 @@
 </head>
 <body>
     <div class="container">
+        {% if session['user'] %}
+        <div class="logout-section">
+            Eingeloggt als: <strong>{{ session['user'] }}</strong>
+            <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+        </div>
+        {% endif %}
+
         <h1>Bot Steuerung</h1>
 
         {% with messages = get_flashed_messages(with_categories=true) %}

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Outfit-Bot Dashboard</title>
     <style>
-        body { background-color: #121212; color: #e0e_e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 1rem; }
+        body { background-color: #121212; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 1rem; }
         .container { max-width: 900px; margin: auto; background-color: #1e1e1e; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
         h1, h2, h3 { color: #ffffff; border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
         .form-group { margin-bottom: 15px; }
@@ -40,6 +40,9 @@
 
         .action-buttons { display: flex; flex-direction: column; gap: 10px; }
 
+        .logout-section { text-align: right; margin-bottom: 1rem; }
+        .logout-section strong { margin-right: 1rem; }
+
         @media (min-width: 600px) {
             .flex-row { flex-direction: row; align-items: center; }
             .flex-row a { margin-top: 0; }
@@ -50,6 +53,13 @@
 </head>
 <body>
     <div class="container">
+        {% if session['user'] %}
+        <div class="logout-section">
+            Eingeloggt als: <strong>{{ session['user'] }}</strong>
+            <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+        </div>
+        {% endif %}
+
         <div class="flex-row">
             <h1>👔 Outfit-Bot Dashboard</h1>
             <a href="/" style="color: #007bff; text-decoration: none;">← Zurück zur Hauptseite</a>

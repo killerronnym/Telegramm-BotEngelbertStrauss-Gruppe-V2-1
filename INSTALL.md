@@ -38,13 +38,20 @@ Die Konfiguration der Bots erfolgt bequem über die Flask-Weboberfläche. Die Ei
 ### 1. Flask-Anwendung starten
 
 Starte die Flask-Anwendung. Dies versucht auch, die Bots im Hintergrund zu starten (sofern sie aktiviert sind).
+
 ```bash
 ./devserver.sh
 ```
+
 *   Die Anwendung sollte unter `http://localhost:8080` erreichbar sein.
+*   **Wichtiger Hinweis:** Die Flask-Anwendung läuft jetzt mit `use_reloader=False`, um Konflikte mit den Telegram-Bots zu vermeiden. Das bedeutet, dass Änderungen am Code einen **manuellen Neustart** des `./devserver.sh`-Skripts erfordern, damit sie wirksam werden.
 *   Beachte die Terminal-Ausgabe auf Fehler.
 
-### 2. Einladungs-Bot konfigurieren
+### 2. Standard-Konfigurationsdateien initialisieren (falls nicht vorhanden)
+
+Beim ersten Start oder wenn `bot_settings_config.json` leer ist, werden Standardwerte erstellt. Du musst diese mit deinen tatsächlichen Bot-Informationen aktualisieren.
+
+### 3. Einladungs-Bot konfigurieren
 
 Navigiere im Browser zu den Einstellungen des Einladungs-Bots: `http://localhost:8080/bot-settings`
 
@@ -52,10 +59,11 @@ Navigiere im Browser zu den Einstellungen des Einladungs-Bots: `http://localhost
 *   **"Bot Token"**: Gib hier den **Bot Token deines EINLADUNGS-BOTS** ein (vom BotFather).
 *   **"Haupt-Chat ID der Gruppe (für Einladungslinks)"**: Gib hier die Chat ID deiner Haupt-Telegram-Gruppe ein (z.B. `-1001234567890`).
 *   **"Gültigkeit des Einladungslinks (Minuten)"**: Lege die gewünschte Gültigkeitsdauer fest.
+*   **"Steckbrief für bestehende Mitglieder erneut posten"**: Aktiviere diesen Haken, wenn der Steckbrief eines Nutzers, der bereits Mitglied der Gruppe ist und das Formular erneut ausfüllt, wieder in der Gruppe gepostet werden soll. Ist dies aktiviert, erhält der Benutzer keinen neuen Einladungslink, sondern eine Bestätigung, dass der Steckbrief gepostet wurde.
 *   Klicke auf **"Einstellungen speichern"**.
 *   Nach dem Speichern: Überprüfe den "Invite-Bot Status" und klicke ggf. auf **"Bot starten"**. Überprüfe die Logs auf dieser Seite auf Fehlermeldungen.
 
-### 3. Outfit-Bot konfigurieren
+### 4. Outfit-Bot konfigurieren
 
 Navigiere im Browser zum Dashboard des Outfit-Bots: `http://localhost:8080/outfit-bot/dashboard`
 

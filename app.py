@@ -9,8 +9,13 @@ import atexit
 import threading
 import subprocess
 from datetime import datetime
+import hashlib
+from functools import wraps
+from urllib.parse import urlparse
+import uuid
 
-from flask import Flask, render_template, request, flash, redirect, url_for, render_template_string
+from flask import Flask, render_template, request, flash, redirect, url_for, session, make_response
+from flask_session import Session 
 import telegram
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
@@ -29,7 +34,7 @@ log = logging.getLogger(__name__)
 
 # --- Globale Variablen ---
 app = Flask(__name__, template_folder='src')
-app.secret_key = os.urandom(24)
+app.secret_key = 'b13f172933b9a1274adb024d47fc7552d2e85864693cb9a2'
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Dateipfade
@@ -47,6 +52,8 @@ QUIZFRAGEN_FILE = 'quizfragen.json'
 GESTELLTE_QUIZFRAGEN_FILE = 'gestellte_quizfragen.json'
 UMFRAGEN_FILE = 'umfragen.json'
 GESTELLTE_UMFRAGEN_FILE = 'gestellte_umfragen.json'
+USERS_FILE = 'users.json'
+USER_INTERACTIONS_LOG_FILE = 'user_interactions.log'
 
 # Prozess-Variablen
 outfit_bot_process = None
@@ -60,7 +67,7 @@ def load_json(file_path, default_data):
         with open(file_path, 'r', encoding='utf-8') as f: return json.load(f)
     except json.JSONDecodeError: return default_data
 
-def save_json(file_path, data): 
+def save_json(file_path, data):
     with open(file_path, 'w', encoding='utf-8') as f: json.dump(data, f, indent=4, ensure_ascii=False)
 
 def load_config():
@@ -73,18 +80,40 @@ def load_bot_settings_config():
         "bot_token": "",
         "main_chat_id": "",
         "topic_id": "",
-        "link_ttl_minutes": 15
+        "link_ttl_minutes": 15,
+        "repost_profile_for_existing_members": True
     }
     return load_json(BOT_SETTINGS_CONFIG_FILE, default)
 
 def save_bot_settings_config(data):
     save_json(BOT_SETTINGS_CONFIG_FILE, data)
 
+def load_users():
+    return load_json(USERS_FILE, {})
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# --- Login & Session Management (Temporär deaktiviert) ---
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    return redirect(url_for('index'))
+
+@app.route('/logout')
+def logout():
+    return redirect(url_for('index'))
+
 # --- Hilfsfunktionen für Bot Management (Generisch) ---
 def is_bot_running(process):
     return process and process.poll() is None
 
-def get_bot_logs(log_file, lines=30):
+def get_bot_logs(log_file, lines=100):
     if not os.path.exists(log_file):
         return ["Keine Log-Datei vorhanden."]
     try:
@@ -96,6 +125,16 @@ def get_bot_logs(log_file, lines=30):
 def start_bot_process(script_path, log_path):
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
         return None, "Nicht im Hauptprozess, Bot wird hier nicht gestartet."
+    
+    # Check if a bot process for this script is already running
+    global outfit_bot_process, invite_bot_process, id_finder_bot_process
+    if script_path == OUTFIT_BOT_SCRIPT and is_bot_running(outfit_bot_process):
+        return outfit_bot_process, f"{os.path.basename(script_path)} läuft bereits."
+    if script_path == INVITE_BOT_SCRIPT and is_bot_running(invite_bot_process):
+        return invite_bot_process, f"{os.path.basename(script_path)} läuft bereits."
+    if script_path == ID_FINDER_BOT_SCRIPT and is_bot_running(id_finder_bot_process):
+        return id_finder_bot_process, f"{os.path.basename(script_path)} läuft bereits."
+
     try:
         python_executable = __import__('sys').executable
         with open(log_path, "a", encoding="utf-8") as log_file:
@@ -141,6 +180,7 @@ def get_id_finder_bot_logs(lines=30): return get_bot_logs(ID_FINDER_BOT_LOG, lin
 
 # --- Haupt-Web-Routen ---
 @app.route("/")
+@login_required
 def index():
     return render_template('index.html', config=load_config())
 
@@ -163,11 +203,12 @@ async def send_telegram_poll(bot_token, channel_id, question, options, poll_type
         return False, str(e)
 
 @app.route('/send_quizfrage', methods=['POST'])
+@login_required
 def send_quizfrage_route():
     config = load_config().get('quiz', {})
     bot_token, channel_id, topic_id = config.get('token'), config.get('channel_id'), config.get('topic_id')
     if not bot_token or not channel_id:
-        flash("Bot Token oder Channel ID für Quiz nicht konfiguriert.", "danger")
+        flash("Bot Token oder Channel ID für Quiz nicht konfiguri(ert.", "danger")
         return redirect(url_for('index'))
     
     all_q = load_json(QUIZFRAGEN_FILE, [])
@@ -200,11 +241,12 @@ def send_quizfrage_route():
     return redirect(url_for('index'))
 
 @app.route('/send_umfrage', methods=['POST'])
+@login_required
 def send_umfrage_route():
     config = load_config().get('umfrage', {})
     bot_token, channel_id, topic_id = config.get('token'), config.get('channel_id'), config.get('topic_id')
     if not bot_token or not channel_id:
-        flash("Bot Token oder Channel ID für Umfrage nicht konfiguriert.", "danger")
+        flash("Bot Token oder Channel ID für Umfrage nicht konfiguri(ert.", "danger")
         return redirect(url_for('index'))
 
     all_p = load_json(UMFRAGEN_FILE, [])
@@ -237,6 +279,7 @@ def send_umfrage_route():
     return redirect(url_for('index'))
 
 @app.route('/save_settings', methods=['POST'])
+@login_required
 def handle_settings():
     config = load_config()
     form = request.form
@@ -257,18 +300,28 @@ def handle_settings():
 
 # --- Web-Routen für Invite-Bot ---
 @app.route("/bot-settings", methods=['GET', 'POST'])
+@login_required
 def bot_settings():
     config = load_bot_settings_config()
     if request.method == 'POST':
-        if 'action' in request.form:
-            action = request.form['action']
+        action = request.form.get('action')
+        if action:
             if action == 'start_invite_bot':
                 success, msg = start_invite_bot()
+                flash(msg, "success" if success else "danger")
             elif action == 'stop_invite_bot':
                 success, msg = stop_invite_bot()
-            flash(msg, "success" if success else "danger")
+                flash(msg, "success" if success else "danger")
+            elif action == 'clear_user_interactions_log':
+                try:
+                    with open(USER_INTERACTIONS_LOG_FILE, 'w') as f:
+                        f.write('')
+                    flash("Benutzer-Interaktions-Log erfolgreich gelöscht.", "success")
+                except Exception as e:
+                    flash(f"Fehler beim Löschen des Logs: {e}", "danger")
         else:
             config['is_enabled'] = 'is_enabled' in request.form
+            config['repost_profile_for_existing_members'] = 'repost_profile_for_existing_members' in request.form
             config['bot_token'] = request.form.get('bot_token', '').strip()
             config['main_chat_id'] = request.form.get('main_chat_id', '').strip()
             config['topic_id'] = request.form.get('topic_id', '').strip()
@@ -281,11 +334,13 @@ def bot_settings():
         'bot_settings.html', 
         config=config, 
         is_invite_running=is_invite_bot_running(), 
-        invite_bot_logs=get_invite_bot_logs(30)
+        invite_bot_logs=get_invite_bot_logs(30),
+        user_interaction_logs=get_bot_logs(USER_INTERACTIONS_LOG_FILE, 1000)
     )
 
 # --- Web-Routen für ID-Finder-Bot ---
 @app.route("/id-finder", methods=['GET', 'POST'])
+@login_required
 def id_finder_dashboard():
     config = load_json(ID_FINDER_CONFIG_FILE, {"is_enabled": False, "bot_token": ""})
     if request.method == 'POST':
@@ -312,6 +367,7 @@ def id_finder_dashboard():
 
 # --- Web-Routen für Outfit-Bot ---
 @app.route("/outfit-bot/dashboard")
+@login_required
 def outfit_bot_dashboard():
     config = load_json(OUTFIT_BOT_CONFIG_FILE, {})
     return render_template(
@@ -322,18 +378,21 @@ def outfit_bot_dashboard():
     )
 
 @app.route("/outfit-bot/start", methods=['POST'])
+@login_required
 def outfit_bot_start():
     success, msg = start_outfit_bot()
     flash(msg, "success" if success else "danger")
     return redirect(url_for('outfit_bot_dashboard'))
 
 @app.route("/outfit-bot/stop", methods=['POST'])
+@login_required
 def outfit_bot_stop():
     success, msg = stop_outfit_bot()
     flash(msg, "success" if success else "danger")
     return redirect(url_for('outfit_bot_dashboard'))
 
 @app.route("/outfit-bot/save-config", methods=['POST'])
+@login_required
 def outfit_bot_save_config():
     config = load_json(OUTFIT_BOT_CONFIG_FILE, {})
     form = request.form
@@ -351,13 +410,12 @@ def outfit_bot_save_config():
     flash("Outfit-Bot Konfiguration gespeichert!", "success")
     return redirect(url_for('outfit_bot_dashboard'))
 
-# NEU: Wiederhergestellte Routen für manuelle Aktionen
 def trigger_bot_command(command_name):
-    """Erstellt eine temporäre Datei, um einen Befehl an den Bot zu signalisieren."""
     with open(f"command_{command_name}.tmp", 'w') as f:
         f.write('trigger')
 
 @app.route("/outfit-bot/start-contest", methods=['POST'])
+@login_required
 def outfit_bot_start_contest():
     if not is_outfit_bot_running():
         flash("Bot läuft nicht! Bitte erst starten.", "danger")
@@ -367,6 +425,7 @@ def outfit_bot_start_contest():
     return redirect(url_for('outfit_bot_dashboard'))
 
 @app.route("/outfit-bot/announce-winner", methods=['POST'])
+@login_required
 def outfit_bot_announce_winner():
     if not is_outfit_bot_running():
         flash("Bot läuft nicht! Bitte erst starten.", "danger")
@@ -387,9 +446,8 @@ def shutdown_background_processes():
     stop_id_finder_bot()
 
 # === ANWENDUNGSSTART ===
-if __name__ == '__main__':
-    atexit.register(shutdown_background_processes)
-    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-         start_background_processes() 
+atexit.register(shutdown_background_processes)
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    start_background_processes()
 
-    app.run(host='0.0.0.0', port=8080, debug=True, use_reloader=True)
+app.run(host='0.0.0.0', port=8080, debug=True, use_reloader=False)

@@ -84,6 +84,8 @@
             margin-bottom: 20px;
         }
         .button-group form { flex: 1; }
+        .logout-section { text-align: right; margin-bottom: 1rem; }
+        .logout-section strong { margin-right: 1rem; }
 
         @media (min-width: 600px) {
             .button-group {
@@ -94,6 +96,13 @@
 </head>
 <body>
     <div class="container">
+        {% if session['user'] %}
+        <div class="logout-section">
+            Eingeloggt als: <strong>{{ session['user'] }}</strong>
+            <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+        </div>
+        {% endif %}
+
         <a href="/" class="button-style" style="margin-bottom: 20px;">← Zurück zur Hauptseite</a>
         
         <h1>ID-Finder Bot Steuerung</h1>
