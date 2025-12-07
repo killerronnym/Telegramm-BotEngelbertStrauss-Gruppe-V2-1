@@ -32,12 +32,28 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# --- Globale Variablen ---
+# Separater Logger für Quizbot
+quiz_log = logging.getLogger('quiz_bot')
+quiz_log.setLevel(logging.INFO)
+quiz_handler = RotatingFileHandler('quizbot.log', maxBytes=10240, backupCount=5)
+quiz_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+quiz_log.addHandler(quiz_handler)
+quiz_log.propagate = False  # Verhindert, dass Logs an den Root-Logger weitergegeben werden
+
+# Separater Logger für Umfragenbot
+umfragen_log = logging.getLogger('umfragen_bot')
+umfragen_log.setLevel(logging.INFO)
+umfragen_handler = RotatingFileHandler('umfragenbot.log', maxBytes=10240, backupCount=5)
+umfragen_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+umfragen_log.addHandler(umfragen_handler)
+umfragen_log.propagate = False  # Verhindert, dass Logs an den Root-Logger weitergegeben werden
+
+# --- Flask App Initialisierung ---
 app = Flask(__name__, template_folder='src')
 app.secret_key = 'b13f172933b9a1274adb024d47fc7552d2e85864693cb9a2'
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-# Dateipfade
+# --- Globale Variablen & Dateipfade ---
 CONFIG_FILE = 'config.json'
 OUTFIT_BOT_CONFIG_FILE = 'outfit_bot_config.json'
 BOT_SETTINGS_CONFIG_FILE = 'bot_settings_config.json'
@@ -48,12 +64,16 @@ INVITE_BOT_SCRIPT = 'invite_bot.py'
 INVITE_BOT_LOG = 'invite_bot.log'
 ID_FINDER_BOT_SCRIPT = 'id_finder_bot.py'
 ID_FINDER_BOT_LOG = 'id_finder_bot.log'
+ID_FINDER_COMMAND_LOG = 'id_finder_command.log' # Neues Befehls-Log
 QUIZFRAGEN_FILE = 'quizfragen.json'
 GESTELLTE_QUIZFRAGEN_FILE = 'gestellte_quizfragen.json'
 UMFRAGEN_FILE = 'umfragen.json'
 GESTELLTE_UMFRAGEN_FILE = 'gestellte_umfragen.json'
 USERS_FILE = 'users.json'
 USER_INTERACTIONS_LOG_FILE = 'user_interactions.log'
+QUIZ_BOT_LOG = 'quizbot.log' # Neuer Log-Dateipfad für Quizbot
+UMFRAGEN_BOT_LOG = 'umfragenbot.log' # Neuer Log-Dateipfad für Umfragenbot
+
 
 # Prozess-Variablen
 outfit_bot_process = None
@@ -118,9 +138,11 @@ def get_bot_logs(log_file, lines=100):
         return ["Keine Log-Datei vorhanden."]
     try:
         with open(log_file, 'r', encoding='utf-8') as f:
-            return f.readlines()[-lines:]
+            # Lese die letzten `lines` Zeilen, aber kehre die Reihenfolge um, damit die neueste oben ist
+            return reversed(f.readlines()[-lines:])
     except Exception as e:
         return [f"Fehler beim Lesen der Logs: {e}"]
+
 
 def start_bot_process(script_path, log_path):
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
@@ -139,7 +161,7 @@ def start_bot_process(script_path, log_path):
         python_executable = __import__('sys').executable
         with open(log_path, "a", encoding="utf-8") as log_file:
             process = subprocess.Popen(
-                [python_executable, script_path],
+                [python_executable, script_path],\
                 stdout=log_file, stderr=log_file, text=True, bufsize=1, universal_newlines=True
             )
         log.info(f"{script_path} gestartet mit PID: {process.pid}")
@@ -176,6 +198,7 @@ def is_id_finder_bot_running(): global id_finder_bot_process; return is_bot_runn
 def start_id_finder_bot(): global id_finder_bot_process; id_finder_bot_process, msg = start_bot_process(ID_FINDER_BOT_SCRIPT, ID_FINDER_BOT_LOG); return bool(id_finder_bot_process), msg
 def stop_id_finder_bot(): global id_finder_bot_process; id_finder_bot_process, msg = stop_bot_process(id_finder_bot_process); return not bool(id_finder_bot_process), msg
 def get_id_finder_bot_logs(lines=30): return get_bot_logs(ID_FINDER_BOT_LOG, lines)
+def get_id_finder_command_logs(lines=100): return get_bot_logs(ID_FINDER_COMMAND_LOG, lines) # Neue Funktion
 
 
 # --- Haupt-Web-Routen ---
@@ -206,14 +229,16 @@ async def send_telegram_poll(bot_token, channel_id, question, options, poll_type
 @login_required
 def send_quizfrage_route():
     config = load_config().get('quiz', {})
-    bot_token, channel_id, topic_id = config.get('token'), config.get('channel_id'), config.get('topic_id')
+    bot_token, channel_id, topic_id = config.get('token'), config.get('channel'), config.get('topic_id')
     if not bot_token or not channel_id:
-        flash("Bot Token oder Channel ID für Quiz nicht konfiguri(ert.", "danger")
+        flash("Bot Token oder Channel ID für Quiz nicht konfiguriert.", "danger")
+        # quiz_log.error("Quizfrage konnte nicht gesendet werden: Bot Token oder Channel ID nicht konfiguriert.")
         return redirect(url_for('index'))
     
     all_q = load_json(QUIZFRAGEN_FILE, [])
     if not all_q:
         flash("Keine Quizfragen in quizfragen.json gefunden.", "warning")
+        # quiz_log.warning("Keine Quizfragen in quizfragen.json gefunden.")
         return redirect(url_for('index'))
 
     for i, q in enumerate(all_q):
@@ -227,6 +252,7 @@ def send_quizfrage_route():
     
     if not available:
         flash("Alle Quizfragen wurden bereits gestellt.", "info")
+        # quiz_log.info("Alle Quizfragen wurden bereits gestellt, Liste wird zurückgesetzt.")
         return redirect(url_for('index'))
         
     question = random.choice(available)
@@ -236,8 +262,10 @@ def send_quizfrage_route():
         asked_q_ids.append(question['id'])
         save_json(GESTELLTE_QUIZFRAGEN_FILE, asked_q_ids)
         flash('Quizfrage gesendet!', 'success')
+        # quiz_log.info(f"Quizfrage '{question['frage']}' (ID: {question['id']}) erfolgreich gesendet.")
     else:
         flash(f"Fehler beim Senden der Quizfrage: {error}", "danger")
+        # quiz_log.error(f"Fehler beim Senden der Quizfrage '{question['frage']}' (ID: {question['id']}): {error}")
     return redirect(url_for('index'))
 
 @app.route('/send_umfrage', methods=['POST'])
@@ -246,12 +274,14 @@ def send_umfrage_route():
     config = load_config().get('umfrage', {})
     bot_token, channel_id, topic_id = config.get('token'), config.get('channel_id'), config.get('topic_id')
     if not bot_token or not channel_id:
-        flash("Bot Token oder Channel ID für Umfrage nicht konfiguri(ert.", "danger")
+        flash("Bot Token oder Channel ID für Umfrage nicht konfiguriert.", "danger")
+        # umfragen_log.error("Umfrage konnte nicht gesendet werden: Bot Token oder Channel ID nicht konfiguriert.")
         return redirect(url_for('index'))
 
     all_p = load_json(UMFRAGEN_FILE, [])
     if not all_p:
         flash("Keine Umfragen in umfragen.json gefunden.", "warning")
+        # umfragen_log.warning("Keine Umfragen in umfragen.json gefunden.")
         return redirect(url_for('index'))
 
     for i, p in enumerate(all_p):
@@ -265,6 +295,7 @@ def send_umfrage_route():
 
     if not available:
         flash("Alle Umfragen wurden bereits gestellt.", "info")
+        # umfragen_log.info("Alle Umfragen wurden bereits gestellt, Liste wird zurückgesetzt.")
         return redirect(url_for('index'))
 
     poll = random.choice(available)
@@ -274,8 +305,10 @@ def send_umfrage_route():
         asked_p_ids.append(poll['id'])
         save_json(GESTELLTE_UMFRAGEN_FILE, asked_p_ids)
         flash('Umfrage gesendet!', 'success')
+        # umfragen_log.info(f"Umfrage '{poll['frage']}' (ID: {poll['id']}) erfolgreich gesendet.")
     else:
         flash(f"Fehler beim Senden der Umfrage: {error}", "danger")
+        # umfragen_log.error(f"Fehler beim Senden der Umfrage '{poll['frage']}' (ID: {poll['id']}): {error}")
     return redirect(url_for('index'))
 
 @app.route('/save_settings', methods=['POST'])
@@ -294,6 +327,10 @@ def handle_settings():
             'time': form.get('time', '12:00')
         })
         flash(f'{config_type.capitalize()}-Einstellungen gespeichert.', 'success')
+        # if config_type == 'quiz':
+        #     quiz_log.info("Quiz-Einstellungen gespeichert.")
+        # elif config_type == 'umfrage':
+        #     umfragen_log.info("Umfrage-Einstellungen gespeichert.")
     
     save_json(CONFIG_FILE, config)
     return redirect(url_for('index'))
@@ -340,30 +377,47 @@ def bot_settings():
 
 # --- Web-Routen für ID-Finder-Bot ---
 @app.route("/id-finder", methods=['GET', 'POST'])
-@login_required
 def id_finder_dashboard():
-    config = load_json(ID_FINDER_CONFIG_FILE, {"is_enabled": False, "bot_token": ""})
+    config = load_json(ID_FINDER_CONFIG_FILE, {})
+    
     if request.method == 'POST':
         action = request.form.get('action')
+        
+        config['bot_token'] = request.form.get('bot_token', '').strip()
+        config['main_group_id'] = request.form.get('main_group_id', '').strip()
+        config['log_topic_id'] = request.form.get('log_topic_id', '').strip() or None
+
         if action == 'save_config':
-            config['is_enabled'] = 'is_enabled' in request.form
-            config['bot_token'] = request.form.get('bot_token', '').strip()
             save_json(ID_FINDER_CONFIG_FILE, config)
-            flash("ID-Finder-Bot Einstellungen gespeichert!", "success")
+            flash("Einstellungen erfolgreich gespeichert!", "success")
+
         elif action == 'start_bot':
+            config['is_enabled'] = True
+            save_json(ID_FINDER_CONFIG_FILE, config)
             success, msg = start_id_finder_bot()
             flash(msg, "success" if success else "danger")
+
         elif action == 'stop_bot':
+            config['is_enabled'] = False
+            save_json(ID_FINDER_CONFIG_FILE, config)
             success, msg = stop_id_finder_bot()
             flash(msg, "success" if success else "danger")
+            
         return redirect(url_for('id_finder_dashboard'))
 
     return render_template(
         'id_finder_dashboard.html',
         config=config,
         is_running=is_id_finder_bot_running(),
-        logs=get_id_finder_bot_logs(30)
+        command_logs=get_id_finder_command_logs(200),
+        system_logs=get_id_finder_bot_logs(100)
     )
+
+@app.route("/id-finder/commands")
+def id_finder_commands():
+    """Zeigt die neue Seite für die Befehlsdokumentation an."""
+    return render_template('id_finder_commands.html')
+
 
 # --- Web-Routen für Outfit-Bot ---
 @app.route("/outfit-bot/dashboard")

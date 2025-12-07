@@ -1,4 +1,4 @@
-# Installationsanleitung für den Telegram Bot Control Panel
+# Installationsanleitung für das Telegram Bot Control Panel
 
 Diese Anleitung führt dich durch die Schritte zur Einrichtung und zum Starten der Flask-Webanwendung und der integrierten Telegram-Bots.
 
@@ -6,10 +6,9 @@ Diese Anleitung führt dich durch die Schritte zur Einrichtung und zum Starten d
 
 *   **Python 3.11+**: Die Anwendung basiert auf Python.
 *   **Git**: Zum Klonen des Repositorys.
-*   **Telegram Bots**: Du benötigst zwei separate Telegram Bots, die du bei [@BotFather](https://t.me/BotFather) erstellen musst:
-    *   Einen Bot für die **Einladungs- und Profilverwaltung** (für `invite_bot.py`). Notiere dir den **Bot Token** und mache diesen Bot zum Administrator deiner Gruppe, damit er Einladungslinks erstellen und Beitrittsanfragen verwalten kann.
-    *   Einen Bot für den **Outfit-Wettbewerb** (für `outfit_bot.py`). Notiere dir den **Bot Token** und füge diesen Bot ebenfalls zu deiner Gruppe hinzu.
-*   **Telegram Gruppen Chat ID**: Du benötigst die Chat ID deiner Haupt-Telegram-Gruppe. Diese beginnt oft mit `-100` gefolgt von vielen Ziffern (z.B. `-1001234567890`).
+*   **Telegram Bot**: Du benötigst mindestens einen Telegram Bot, den du bei [@BotFather](https://t.me/BotFather) erstellen musst. Für die volle Funktionalität (ID-Finder, Einladungs-Bot, Outfit-Bot) könnten bis zu drei separate Bots erforderlich sein, oder du nutzt einen Bot für mehrere Zwecke.
+    *   Notiere dir den **Bot Token** und mache diesen Bot zum Administrator deiner Gruppe(n), damit er Nachrichten löschen, Mitglieder bannen/einschränken und Einladungslinks erstellen kann.
+*   **Telegram Gruppen Chat ID**: Du benötigst die Chat ID deiner Haupt-Telegram-Gruppe. Diese beginnt oft mit `-100` gefolgt von vielen Ziffern (z.B. `-1001234567890`). Nutze den `/ChatID` Befehl des ID-Finder Bots, um diese zu erhalten.
 
 ## Einrichtung des Projekts
 
@@ -47,35 +46,48 @@ Starte die Flask-Anwendung. Dies versucht auch, die Bots im Hintergrund zu start
 *   **Wichtiger Hinweis:** Die Flask-Anwendung läuft jetzt mit `use_reloader=False`, um Konflikte mit den Telegram-Bots zu vermeiden. Das bedeutet, dass Änderungen am Code einen **manuellen Neustart** des `./devserver.sh`-Skripts erfordern, damit sie wirksam werden.
 *   Beachte die Terminal-Ausgabe auf Fehler.
 
-### 2. Standard-Konfigurationsdateien initialisieren (falls nicht vorhanden)
+### 2. ID-Finder & Moderations-Bot (NexusMod Bot) konfigurieren
 
-Beim ersten Start oder wenn `bot_settings_config.json` leer ist, werden Standardwerte erstellt. Du musst diese mit deinen tatsächlichen Bot-Informationen aktualisieren.
+Navigiere im Browser zum ID-Finder Dashboard: `http://localhost:8080/id-finder`
 
-### 3. Einladungs-Bot konfigurieren
+*   **Bot Token**: Gib hier den **Bot Token deines NexusMod Bots** ein.
+*   **Haupt-Gruppen-ID**: Gib hier die Chat ID deiner Haupt-Telegram-Gruppe ein (z.B. `-1001234567890`).
+*   **Log-Topic-ID (Optional)**: Gib hier die Topic-ID ein, falls Bot-Bestätigungen und Logs in ein spezifisches Topic innerhalb deiner Hauptgruppe gesendet werden sollen. Lass es leer, wenn der Bot direkt im Kontext antworten soll.
+*   Klicke auf **"Nur Speichern"**.
+*   Nach dem Speichern: Klicke auf **"Start"**, um den Bot zu starten. Überprüfe die Logs auf dieser Seite auf Fehlermeldungen.
 
-Navigiere im Browser zu den Einstellungen des Einladungs-Bots: `http://localhost:8080/bot-settings`
+### 3. Admin-Gruppe des NexusMod Bots einrichten (WICHTIG!)
 
-*   **"Bot aktivieren"**: Aktiviere diesen Haken.
-*   **"Bot Token"**: Gib hier den **Bot Token deines EINLADUNGS-BOTS** ein (vom BotFather).
-*   **"Haupt-Chat ID der Gruppe (für Einladungslinks)"**: Gib hier die Chat ID deiner Haupt-Telegram-Gruppe ein (z.B. `-1001234567890`).
-*   **"Gültigkeit des Einladungslinks (Minuten)"**: Lege die gewünschte Gültigkeitsdauer fest.
-*   **"Steckbrief für bestehende Mitglieder erneut posten"**: Aktiviere diesen Haken, wenn der Steckbrief eines Nutzers, der bereits Mitglied der Gruppe ist und das Formular erneut ausfüllt, wieder in der Gruppe gepostet werden soll. Ist dies aktiviert, erhält der Benutzer keinen neuen Einladungslink, sondern eine Bestätigung, dass der Steckbrief gepostet wurde.
-*   Klicke auf **"Einstellungen speichern"**.
-*   Nach dem Speichern: Überprüfe den "Invite-Bot Status" und klicke ggf. auf **"Bot starten"**. Überprüfe die Logs auf dieser Seite auf Fehlermeldungen.
+Nachdem der NexusMod Bot gestartet ist:
 
-### 4. Outfit-Bot konfigurieren
+1.  **Erstelle eine neue PRIVATE Telegram-Gruppe** (nur für dich und den Bot).
+2.  Füge deinen **NexusMod Bot** zu dieser Gruppe hinzu und mache ihn zum **Administrator**.
+3.  Sende in dieser **privaten Admin-Gruppe** den Befehl: `/setadmingroup`
+    *   Der Bot wird bestätigen, dass dieser Chat als Admin-Gruppe festgelegt wurde. Von nun an können wichtige Bot-Konfigurationen und Rollen-Management-Befehle nur hier ausgeführt werden.
 
-Navigiere im Browser zum Dashboard des Outfit-Bots: `http://localhost:8080/outfit-bot/dashboard`
+### 4. Weitere Bots konfigurieren (Einladungs-Bot, Outfit-Bot)
 
-*   **"Bot Token"**: Gib hier den **Bot Token deines OUTFIT-BOTS** ein (vom BotFather).
-*   **"Chat ID"**: Gib hier ebenfalls die Chat ID deiner Telegram-Gruppe ein.
-*   Konfiguriere `POST_TIME`, `WINNER_TIME` und `AUTO_POST_ENABLED` nach deinen Wünschen.
-*   **"Admin User IDs"**: Gib die Telegram User IDs der Administratoren an, die Admin-Befehle nutzen dürfen (kommagetrennt).
-*   Klicke auf **"Outfit-Bot Konfiguration speichern!"**.
-*   Nach dem Speichern: Überprüfe den "Outfit-Bot Status" und klicke ggf. auf **"Bot starten"**. Überprüfe die Logs auf dieser Seite auf Fehlermeldungen.
+Navigiere zu den Dashboards der anderen Bots über die Hauptseite (`http://localhost:8080/`). Dort findest du die jeweiligen Einstellungsseiten und kannst sie wie gewohnt konfigurieren.
+
+*   **Einladungs-Bot (`/bot-settings`):**
+    *   **"Bot aktivieren"**: Aktiviere diesen Haken.
+    *   **"Bot Token"**: Gib hier den **Bot Token deines EINLADUNGS-BOTS** ein.
+    *   **"Haupt-Chat ID der Gruppe"**: Gib hier die Chat ID deiner Haupt-Telegram-Gruppe ein.
+    *   **"Topic-ID (Optional)"**: ID des Themas für Steckbriefe.
+    *   **"Gültigkeit des Einladungslinks (Minuten)"**: Lege die Dauer fest.
+    *   **"Steckbrief für bestehende Mitglieder erneut posten"**: Haken setzen, wenn gewünscht.
+*   **Outfit-Bot (`/outfit-bot/dashboard`):**
+    *   **"Bot Token"**: Gib hier den **Bot Token deines OUTFIT-BOTS** ein.
+    *   **"Gruppen-Chat-ID"**: Gib hier die Chat ID deiner Haupt-Telegram-Gruppe ein.
+    *   **"Topic ID (Optional)"**: ID des Themas für Outfit-Posts.
+    *   Konfiguriere `Automatische Posts`, `Start-Uhrzeit`, `Gewinner-Uhrzeit` nach deinen Wünschen.
+    *   **"Admin User IDs"**: Gib die Telegram User IDs der Administratoren an, die Admin-Befehle nutzen dürfen (kommagetrennt).
+
+Speichere die Einstellungen auf den jeweiligen Seiten und starte die Bots bei Bedarf.
 
 ## Wichtige Hinweise
 
-*   **Einzige Bot-Instanz**: Stelle IMMER sicher, dass nur eine Instanz jedes Bots läuft. Starte die Bots ausschließlich über die Flask-Webanwendung, nachdem diese gestartet wurde. Manuelles Starten der `invite_bot.py` oder `outfit_bot.py` aus dem Terminal, während die Flask-App läuft, führt zu Konflikten mit der Telegram API (`Conflict: terminated by other getUpdates request`).
-*   **Bot Tokens**: Verwende für den Einladungs-Bot und den Outfit-Bot **zwei unterschiedliche Bot Tokens**.
-*   **Flask-App beenden**: Um die Flask-App und damit beide Bots sauber zu beenden, drücke `Strg + C` im Terminal, in dem `devserver.sh` läuft.
+*   **Telegram Bot Administratorrechte**: Stelle sicher, dass die Bots in den relevanten Gruppen die notwendigen Admin-Rechte besitzen (Nachrichten löschen, Mitglieder bannen/einschränken, etc.).
+*   **Einzige Bot-Instanz**: Starte die Bots IMMER ausschließlich über die Flask-Webanwendung. Manuelles Starten der Bot-Skripte aus dem Terminal führt zu Konflikten.
+*   **Bot Tokens**: Verwende für jeden Bot (falls du mehrere nutzt) **unterschiedliche Bot Tokens**.
+*   **Flask-App beenden**: Um die Flask-App und damit alle Bots sauber zu beenden, drücke `Strg + C` im Terminal, in dem `devserver.sh` läuft.

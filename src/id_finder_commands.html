@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="de" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Befehlsübersicht - ID-Finder Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #212529; color: #dee2e6; }
+        .command-card { background-color: #343a40; border: 1px solid #495057; margin-bottom: 20px; }
+        .command-card .card-header { background-color: #495057; font-weight: bold; }
+        .command-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-bottom: 1px solid #495057; }
+        .command-item:last-child { border-bottom: none; }
+        .command-name { font-family: monospace; color: #ffc107; font-size: 1.1em; }
+        .info-icon { cursor: pointer; color: #0dcaf0; font-size: 1.2em; }
+        .navbar-brand { font-weight: bold; }
+        .container { max-width: 960px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('id_finder_dashboard') }}">
+                <i class="bi bi-arrow-left-circle"></i> Zurück zum Dashboard
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1 class="mb-4 text-center">Bot Befehlsübersicht</h1>
+
+        <!-- Kategorie: Grundlagen & ID -->
+        <div class="card command-card">
+            <div class="card-header">Grundlagen & ID</div>
+            <div class="list-group list-group-flush">
+                <div class="command-item">
+                    <span class="command-name">/ChatID</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Chat & Topic ID abrufen" data-bs-content="Sendet eine Nachricht mit der ID der Gruppe und des Topics, in dem der Befehl ausgeführt wird. Nützlich, um die Gruppen-ID für die Konfiguration zu erhalten."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/UserID</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Eigene User-ID abrufen" data-bs-content="Zeigt deine persönliche Telegram User-ID an."></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Kategorie: Globale Konfiguration (Nur Top-Admins) -->
+        <div class="card command-card">
+            <div class="card-header">Globale Bot-Konfiguration (Nur Top-Admins)</div>
+            <div class="list-group list-group-flush">
+                <div class="command-item">
+                    <span class="command-name">/setadmingroup</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Admin-Gruppe setzen" data-bs-content="Setzt den Chat, in dem der Befehl ausgeführt wird, als private Admin-Gruppe. Nur hier können kritische Bot-Einstellungen geändert werden."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/setmaingroup [gruppen_id]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Hauptgruppe festlegen" data-bs-content="Legt fest, in welcher Gruppe Moderationsaktionen (Mute, Ban etc.) stattfinden sollen."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/antispam on|off</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Anti-Spam an/aus" data-bs-content="Aktiviert oder deaktiviert alle automatischen Moderationsfunktionen wie Flood-Control, Link-Filter etc."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/raidmode on|off</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Raid-Modus an/aus" data-bs-content="Ein Notfallmodus. Wenn aktiviert, werden neue Mitglieder sofort stummgeschaltet und alle Nachrichten mit Links blockiert."></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kategorie: Verwarnungen -->
+        <div class="card command-card">
+            <div class="card-header">Verwarnungssystem</div>
+            <div class="list-group list-group-flush">
+                <div class="command-item">
+                    <span class="command-name">/warn @user [grund]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Benutzer verwarnen" data-bs-content="Verwarnt einen Benutzer. Kann als Antwort auf eine Nachricht oder durch Angabe der User-ID erfolgen."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/warnings @user</span>
+                     <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Verwarnungen anzeigen" data-bs-content="Zeigt alle aktiven Verwarnungen für einen bestimmten Benutzer an."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/unwarn @user [anzahl]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Verwarnung entfernen" data-bs-content="Entfernt eine (oder die angegebene Anzahl) der letzten Verwarnungen eines Benutzers."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/clearwarns @user</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Alle Verwarnungen löschen" data-bs-content="Setzt den Verwarnungszähler eines Benutzers komplett auf Null zurück."></i>
+                </div>
+                 <div class="command-item">
+                    <span class="command-name">/setwarnlimit [zahl]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Warn-Limit festlegen" data-bs-content="Legt fest, nach wie vielen Verwarnungen eine automatische Aktion erfolgen soll. (Nur Top-Admin)"></i>
+                </div>
+                 <div class="command-item">
+                    <span class="command-name">/setwarnaction [aktion]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Automatische Aktion festlegen" data-bs-content="Definiert die Aktion (mute, kick, ban, none), die bei Erreichen des Warn-Limits ausgeführt wird. (Nur Top-Admin)"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Kategorie: Stummschaltung, Kick & Ban -->
+        <div class="card command-card">
+            <div class="card-header">Stummschaltung, Kick & Ban</div>
+            <div class="list-group list-group-flush">
+                 <div class="command-item">
+                    <span class="command-name">/mute @user [dauer] [grund]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Benutzer stummschalten" data-bs-content="Schaltet einen Benutzer stumm. Dauer ist optional (z.B. 30m, 5h, 7d). Ohne Dauer ist der Mute permanent."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/unmute @user</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Stummschaltung aufheben" data-bs-content="Erlaubt einem stummgeschalteten Benutzer wieder zu schreiben."></i>
+                </div>
+                 <div class="command-item">
+                    <span class="command-name">/mutelist</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Mute-Liste anzeigen" data-bs-content="Zeigt alle aktuell stummgeschalteten Benutzer, Grund und verbleibende Dauer an."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/kick @user [grund]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Benutzer kicken" data-bs-content="Entfernt einen Benutzer aus der Gruppe. Er kann aber sofort wieder beitreten, falls er einen Link hat."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/ban @user [dauer] [grund]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Benutzer bannen" data-bs-content="Verbannt einen Benutzer aus der Gruppe. Dauer ist optional."></i>
+                </div>
+                 <div class="command-item">
+                    <span class="command-name">/unban [user_id]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Benutzer entbannen" data-bs-content="Hebt eine permanente Verbannung auf. Da der Benutzer nicht mehr sichtbar ist, muss seine ID angegeben werden."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/softban @user</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Soft-Ban" data-bs-content="Bannt und entbannt einen Benutzer sofort wieder. Dieser Trick löscht alle Nachrichten des Benutzers aus dem Chat."></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kategorie: Nachrichten-Moderation -->
+        <div class="card command-card">
+            <div class="card-header">Nachrichten-Moderation</div>
+            <div class="list-group list-group-flush">
+                <div class="command-item">
+                    <span class="command-name">/del</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Nachricht löschen" data-bs-content="Muss als Antwort auf eine Nachricht gesendet werden. Löscht die beantwortete Nachricht und den Befehl selbst."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/purge [anzahl]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Nachrichten löschen (Purge)" data-bs-content="Muss als Antwort auf eine Nachricht gesendet werden. Löscht die letzten X Nachrichten ab der beantworteten. Standard ist 10."></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kategorie: Auto-Moderation (Nur Top-Admins) -->
+        <div class="card command-card">
+            <div class="card-header">Auto-Moderation (Nur Top-Admins)</div>
+             <div class="list-group list-group-flush">
+                <div class="command-item">
+                    <span class="command-name">/setflood [nachrichten]/[sekunden]s</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Flood-Control einstellen" data-bs-content="Legt fest, wie viele Nachrichten ein User in X Sekunden senden darf, bevor sie gelöscht werden. Beispiel: 5/10s."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/setcaps [prozent]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="CAPS-Limit einstellen" data-bs-content="Legt den maximal erlaubten Prozentsatz an Großbuchstaben in einer Nachricht fest (z.B. 70)."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/setlinks [allow|block|whitelist]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Link-Richtlinie festlegen" data-bs-content="Erlaubt Links (allow), blockiert sie für alle (block) oder erlaubt sie nur für gewhitelistete User (whitelist)."></i>
+                </div>
+                 <div class="command-item">
+                    <span class="command-name">/whitelist add|remove [user_id]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Whitelist für Links verwalten" data-bs-content="Fügt einen Benutzer zur Link-Whitelist hinzu oder entfernt ihn."></i>
+                </div>
+                 <div class="command-item">
+                    <span class="command-name">/filter add|remove|list "wort"</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Wortfilter verwalten" data-bs-content="Fügt ein Wort zur Blacklist hinzu (Nachrichten werden gelöscht), entfernt es oder listet alle Filter. Das Wort muss in Anführungszeichen stehen."></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kategorie: Rollen-Management (Nur Top-Admins) -->
+        <div class="card command-card">
+            <div class="card-header">Rollen-Management (Nur Top-Admins)</div>
+             <div class="list-group list-group-flush">
+                <div class="command-item">
+                    <span class="command-name">/role add [user_id] [rolle]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Rolle zuweisen" data-bs-content="Gibt einem Benutzer eine vordefinierte Rolle (z.B. 'mod'), die ihm Zugriff auf bestimmte Befehle gewährt."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/role remove [user_id]</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Rolle entfernen" data-bs-content="Entfernt die zugewiesene Rolle von einem Benutzer."></i>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/roles</span>
+                    <i class="bi bi-info-circle-fill info-icon" data-bs-toggle="popover" title="Rollen-Liste anzeigen" data-bs-content="Zeigt alle Benutzer an, denen aktuell eine Rolle zugewiesen ist."></i>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialisiert die Popover-Funktion von Bootstrap
+        const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
+        const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl, {
+            trigger: 'hover focus',
+            html: true
+        }));
+    </script>
+</body>
+</html>

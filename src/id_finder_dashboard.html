@@ -1,155 +1,90 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ID-Finder Bot Steuerung</title>
+    <title>ID-Finder Bot Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        body {
-            font-family: sans-serif;
-            margin: 0;
-            padding: 1rem;
-            background-color: #121212;
-            color: #e0e0e0;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: #1e1e1e;
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-        }
-        h1, h2, h3 { color: #bb86fc; }
-        p { line-height: 1.6; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; }
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #333;
-            border-radius: 4px;
-            box-sizing: border-box;
-            background-color: #2a2a2a;
-            color: #e0e0e0;
-        }
-        input[type="checkbox"] { margin-right: 10px; }
-        .button-style, button {
-            display: block;
-            width: 100%;
-            padding: 12px 20px;
-            margin-top: 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            text-align: center;
-            text-decoration: none;
-            transition: background-color 0.3s ease;
-            background-color: #6200ee;
-            color: white;
-            box-sizing: border-box;
-        }
-        button:hover, .button-style:hover { background-color: #3700b3; }
-        .success-message { color: #03dac6; }
-        .danger-message { color: #cf6679; }
-        .status-section {
-            margin-top: 30px;
-            padding: 20px;
-            background-color: #2a2a2a;
-            border-radius: 8px;
-        }
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        .status-running { background-color: #28a745; }
-        .status-stopped { background-color: #dc3545; }
-        pre {
-            background-color: #000;
-            padding: 10px;
-            border-radius: 4px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            color: #03dac6;
-        }
-        .button-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .button-group form { flex: 1; }
-        .logout-section { text-align: right; margin-bottom: 1rem; }
-        .logout-section strong { margin-right: 1rem; }
-
-        @media (min-width: 600px) {
-            .button-group {
-                flex-direction: row;
-            }
-        }
+        body { background-color: #212529; color: #dee2e6; }
+        .card { background-color: #343a40; border: 1px solid #495057; }
+        .card-header { background-color: #212529; border-bottom: 1px solid #495057; }
+        .log-box { background-color: #1a1a1a; color: #f0f0f0; font-family: monospace; white-space: pre-wrap; word-wrap: break-word; padding: 15px; border-radius: 5px; height: 400px; overflow-y: scroll; font-size: 0.85em; border: 1px solid #495057; }
+        .status-badge { font-size: 1.2rem; }
     </style>
 </head>
 <body>
-    <div class="container">
-        {% if session['user'] %}
-        <div class="logout-section">
-            Eingeloggt als: <strong>{{ session['user'] }}</strong>
-            <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}"> <i class="bi bi-arrow-left-circle"></i> Zurück zum Haupt-Dashboard</a>
         </div>
-        {% endif %}
+    </nav>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">ID-Finder & Moderations-Bot</h4>
+                        <span class="badge status-badge {{ 'bg-success' if is_running else 'bg-danger' }}">
+                            {{ 'Läuft' if is_running else 'Gestoppt' }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('id_finder_dashboard') }}">
+                            <!-- Konfiguration -->
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <label for="bot_token" class="form-label">Bot Token</label>
+                                    <input type="password" class="form-control" id="bot_token" name="bot_token" value="{{ config.bot_token or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="main_group_id" class="form-label">Haupt-Gruppen-ID</label>
+                                    <input type="text" class="form-control" id="main_group_id" name="main_group_id" value="{{ config.main_group_id or '' }}" placeholder="-100123456789">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="log_topic_id" class="form-label">Log-Topic-ID (Optional)</label>
+                                    <input type="text" class="form-control" id="log_topic_id" name="log_topic_id" value="{{ config.log_topic_id or '' }}" placeholder="z.B. 123">
+                                </div>
+                            </div>
 
-        <a href="/" class="button-style" style="margin-bottom: 20px;">← Zurück zur Hauptseite</a>
-        
-        <h1>ID-Finder Bot Steuerung</h1>
-        <p>Dieser Bot hilft dir, die `Group-ID` und `Topic-ID` von jeder Telegram-Gruppe herauszufinden, in der er Mitglied ist. Füge ihn einfach zur Gruppe hinzu und sende den Befehl `/id`.</p>
+                            <!-- Steuerung -->
+                            <div class="d-flex justify-content-end align-items-center mb-4">
+                                <button type="submit" name="action" value="save_config" class="btn btn-primary me-2"><i class="bi bi-floppy"></i> Nur Speichern</button>
+                                {% if is_running %}
+                                    <button type="submit" name="action" value="stop_bot" class="btn btn-danger"><i class="bi bi-stop-circle"></i> Stopp</button>
+                                {% else %}
+                                    <button type="submit" name="action" value="start_bot" class="btn btn-success"><i class="bi bi-play-circle"></i> Start</button>
+                                {% endif %}
+                            </div>
+                        </form>
+                        <hr>
+                        
+                        <!-- Button zur Befehlsübersicht -->
+                        <div class="d-grid gap-2 mb-4">
+                             <a href="{{ url_for('id_finder_commands') }}" class="btn btn-outline-info btn-lg"><i class="bi bi-book"></i> Zur Befehls-Dokumentation</a>
+                        </div>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <p class="{{ category }}-message">{{ message }}</p>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        <form action="/id-finder" method="POST">
-            <input type="hidden" name="action" value="save_config">
-            <div class="form-group">
-                <label for="is_enabled">
-                    <input type="checkbox" id="is_enabled" name="is_enabled" {% if config.is_enabled %}checked{% endif %}>
-                    Bot aktivieren
-                </label>
+                        <!-- Logbücher -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Befehls-Logbuch</h5>
+                                <div class="log-box">
+                                    {% for line in command_logs %}{{ line.strip() }}\n{% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>System- & Fehler-Log</h5>
+                                <div class="log-box">
+                                    {% for line in system_logs %}{{ line.strip() }}\n{% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="bot_token">Bot Token:</label>
-                <input type="text" id="bot_token" name="bot_token" value="{{ config.bot_token or '' }}" placeholder="Dein neuer Bot Token für den ID-Finder">
-            </div>
-            <button type="submit">Einstellungen speichern</button>
-        </form>
-
-        <div class="status-section">
-            <h2>ID-Finder Bot Status</h2>
-            <p>
-                <span class="status-indicator {% if is_running %}status-running{% else %}status-stopped{% endif %}"></span>
-                Status: <strong>{% if is_running %}Läuft{% else %}Gestoppt{% endif %}</strong>
-            </p>
-            <div class="button-group">
-                <form action="/id-finder" method="POST" style="flex: 1;">
-                    <input type="hidden" name="action" value="start_bot">
-                    <button type="submit" {% if is_running %}disabled{% endif %}>Bot starten</button>
-                </form>
-                <form action="/id-finder" method="POST" style="flex: 1;">
-                    <input type="hidden" name="action" value="stop_bot">
-                    <button type="submit" {% if not is_running %}disabled{% endif %}>Bot stoppen</button>
-                </form>
-            </div>
-            <h3>Logs:</h3>
-            <pre>{{ logs|join('') or 'Keine Logs verfügbar.' }}</pre>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
