@@ -70,6 +70,24 @@ def load_json(file_path, default_data):
 def save_json(file_path, data):
     with open(file_path, 'w', encoding='utf-8') as f: json.dump(data, f, indent=4, ensure_ascii=False)
 
+def load_config():
+    default = {"quiz": {}, "umfrage": {}}
+    return load_json(CONFIG_FILE, default)
+
+def load_bot_settings_config():
+    default = {
+        "is_enabled": False,
+        "bot_token": "",
+        "main_chat_id": "",
+        "topic_id": "",
+        "link_ttl_minutes": 15,
+        "repost_profile_for_existing_members": True
+    }
+    return load_json(BOT_SETTINGS_CONFIG_FILE, default)
+
+def save_bot_settings_config(data):
+    save_json(BOT_SETTINGS_CONFIG_FILE, data)
+
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
