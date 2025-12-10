@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Invite Bot Einstellungen{% endblock %}
+
+{% block content %}
+    <a href="/" class="btn btn-secondary mb-3" style="width: auto;">← Zurück zum Haupt-Dashboard</a>
+    <h1>👋 Einladungs-Bot Einstellungen</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="settings-section">
+        <h3>⚙️ Konfiguration</h3>
+        <form action="/bot-settings" method="POST">
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" id="is_enabled" name="is_enabled" {% if config.is_enabled %}checked{% endif %}>
+                <label class="form-check-label" for="is_enabled">Bot aktivieren</label>
+            </div>
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" role="switch" id="repost_profile" name="repost_profile_for_existing_members" {% if config.repost_profile_for_existing_members %}checked{% endif %}>
+                <label class="form-check-label" for="repost_profile">Steckbrief für bestehende Mitglieder erneut posten</label>
+            </div>
+
+            <div class="form-group">
+                <label for="bot_token">Bot Token</label>
+                <input type="password" class="form-control" id="bot_token" name="bot_token" value="{{ config.bot_token or '' }}" placeholder="Ihr Bot Token">
+            </div>
+            <div class="form-group">
+                <label for="main_chat_id">Haupt-Chat ID der Gruppe</label>
+                <input type="text" class="form-control" id="main_chat_id" name="main_chat_id" value="{{ config.main_chat_id or '' }}" placeholder="-100xxxxxxxxxx">
+            </div>
+            <div class="form-group">
+                <label for="topic_id">Topic-ID (Optional)</label>
+                <input type="text" class="form-control" id="topic_id" name="topic_id" value="{{ config.topic_id or '' }}" placeholder="ID des Themas für Steckbriefe">
+            </div>
+            <div class="form-group">
+                <label for="link_ttl_minutes">Gültigkeit des Einladungslinks (Minuten)</label>
+                <input type="number" class="form-control" id="link_ttl_minutes" name="link_ttl_minutes" value="{{ config.link_ttl_minutes or 15 }}" min="1">
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">💾 Einstellungen speichern</button>
+        </form>
+    </div>
+
+    <div class="settings-section mt-4">
+        <h3>Prozess-Steuerung</h3>
+        <p>
+            Status: 
+            <span class="badge {{ 'bg-success' if is_invite_running else 'bg-danger' }}">
+                {{ 'Läuft' if is_invite_running else 'Gestoppt' }}
+            </span>
+        </p>
+        <div class="d-flex gap-2">
+            <form action="/bot-settings" method="POST">
+                <input type="hidden" name="action" value="start_invite_bot">
+                <button type="submit" class="btn btn-success" {% if is_invite_running %}disabled{% endif %}>▶️ Starten</button>
+            </form>
+            <form action="/bot-settings" method="POST">
+                <input type="hidden" name="action" value="stop_invite_bot">
+                <button type="submit" class="btn btn-danger" {% if not is_invite_running %}disabled{% endif %}>🛑 Stoppen</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="settings-section">
+                <h3>🖥️ Bot Logs</h3>
+                <div class="log-display">{% for line in invite_bot_logs %}{{ line.strip() }}
+{% endfor %}</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="settings-section">
+                <h3>💬 Benutzer-Interaktionen</h3>
+                <div class="log-display">{% for line in user_interaction_logs %}{{ line.strip() }}
+{% endfor %}</div>
+                <form action="/bot-settings" method="POST" class="mt-2">
+                    <input type="hidden" name="action" value="clear_user_interactions_log">
+                    <button type="submit" class="btn btn-sm btn-danger">Interaktions-Log löschen</button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

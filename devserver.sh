@@ -1,7 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+# Start script pointing to the root app.py (proxy)
 source .venv/bin/activate
-export FLASK_APP=app
-export FLASK_DEBUG=1
-# Setzt PORT auf 8080, falls es nicht bereits gesetzt ist
-PORT=${PORT:-8080}
-python -m flask run --port $PORT
+export FLASK_APP=app.py
+export FLASK_ENV=development
+python app.py

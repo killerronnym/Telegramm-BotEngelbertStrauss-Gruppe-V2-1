@@ -1,3 +1,4 @@
+
 import logging
 import os
 import json
@@ -24,10 +25,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # --- Dateien & Speicher -----------------------------------------
+# Pfade relativ zum Ausführungsort (was das invite_bot Verzeichnis sein sollte)
 BOT_SETTINGS_CONFIG_FILE = 'bot_settings_config.json'
 USER_INTERACTIONS_LOG_FILE = 'user_interactions.log'
 
-DATA_DIR = Path("data")
+# Data Ordner liegt eine Ebene höher
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+DATA_DIR = Path(os.path.join(PROJECT_ROOT, "data"))
 DATA_DIR.mkdir(exist_ok=True)
 PROFILES_FILE = DATA_DIR / "profiles.json"
 

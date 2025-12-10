@@ -10,13 +10,16 @@ import logging
 from telebot import types
 
 # --- LOGGING SETUP ---
+# Logging jetzt im gleichen Verzeichnis
+LOG_FILE = 'outfit_bot.log'
 logging.basicConfig(
-    filename='outfit_bot.log',
+    filename=LOG_FILE,
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
 # --- CONFIG & DATA MANAGEMENT ---
+# Pfade relativ zum Skript (das jetzt im outfit_bot Ordner liegt)
 CONFIG_FILE = 'outfit_bot_config.json'
 DATA_FILE = 'outfit_bot_data.json'
 
@@ -255,6 +258,7 @@ def command_listener():
     logging.info("Befehls-listener gestartet.")
     while True:
         try:
+            # Dateien liegen jetzt im selben Verzeichnis (outfit_bot)
             if os.path.exists("command_start_contest.tmp"):
                 send_daily_post()
                 os.remove("command_start_contest.tmp")

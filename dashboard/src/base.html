@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bot Steuerung{% endblock %}</title>
+    <style>
+        body { background-color: #121212; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 1rem; }
+        .container { max-width: 800px; margin: 0 auto; background-color: #1e1e1e; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        h1, h2, h3 { color: #ffffff; border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
+        .btn { background-color: #007bff; color: white; border: none; padding: 12px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; border-radius: 5px; transition: background-color 0.3s; width: 100%; box-sizing: border-box; }
+        .btn:hover { background-color: #0056b3; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-secondary:hover { background-color: #5a6268; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover { background-color: #c82333; }
+        .btn-success { background-color: #28a745; }
+        .btn-success:hover { background-color: #218838; }
+        .btn-primary { background-color: #007bff; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .form-group { margin-bottom: 1rem; }
+        .action-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 2px solid #333;}
+        .action-group form { width: 100%; }
+        label { display: block; margin-bottom: 0.5rem; }
+        input[type="text"], input[type="time"], input[type="password"] { width: 100%; padding: 0.75rem; background-color: #333; border: 1px solid #555; color: #e0e0e0; border-radius: 4px; box-sizing: border-box; }
+        .alert { padding: 1rem; margin-bottom: 1rem; border-radius: 4px; }
+        .alert-success { background-color: #28a745; color: white; }
+        .alert-warning { background-color: #ffc107; color: #333; }
+        .alert-danger { background-color: #dc3545; color: white; }
+        .status { padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold; display: inline-block; margin-left: 1rem; }
+        .status-active { background-color: #28a745; color: white; }
+        .status-inactive { background-color: #dc3545; color: white; }
+        .settings-section { background-color: #2a2a2a; padding: 1.5rem; border-radius: 8px; margin-top: 1.5rem; border: 1px solid #444; }
+        .nav-section { background-color: #2a2a2a; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; text-align: center; border: 1px solid #444; }
+        .logout-section { text-align: right; margin-bottom: 1rem; }
+        .logout-section strong { margin-right: 1rem; }
+        .log-display { background-color: #111; color: #0f0; padding: 1rem; border-radius: 4px; height: 300px; overflow-y: scroll; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap; word-break: break-all; }
+
+        @media (min-width: 600px) {
+            .action-group {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .action-group form {
+                width: auto;
+            }
+            .btn {
+                width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="logout-section">
+        {% if session.logged_in %}
+            <strong>Angemeldet als: {{ session.user }}</strong>
+            <a href="/logout" class="btn btn-secondary" style="width: auto;">Abmelden</a>
+        {% else %}
+            <a href="/login" class="btn btn-primary" style="width: auto;">Anmelden</a>
+        {% endif %}
+    </div>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

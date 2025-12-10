@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Bot Steuerung{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>🏠 Bot Steuerung</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="nav-section">
+        <h2>Sofort-Aktionen</h2>
+        <div class="action-group" style="border-bottom: none; padding-bottom: 0;">
+            <form action="/send_quizfrage" method="POST">
+                <button type="submit" class="btn btn-primary">❔ Quizfrage Senden</button>
+            </form>
+            <form action="/send_umfrage" method="POST">
+                <button type="submit" class="btn btn-secondary">📊 Umfrage Senden</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="nav-section">
+        <h2>❔ Quiz Bot</h2>
+        <p>Verwaltung der Quizfragen und Einstellungen.</p>
+        <a href="/quiz-settings" class="btn btn-primary">Quiz Einstellungen & Aktionen</a>
+    </div>
+
+    <div class="nav-section">
+        <h2>📊 Umfrage Bot</h2>
+        <p>Verwaltung der Umfragen und Einstellungen.</p>
+        <a href="/umfrage-settings" class="btn btn-primary">Umfrage Einstellungen & Aktionen</a>
+    </div>
+
+    <div class="nav-section">
+        <h2>👗 Outfit-Wettbewerb Bot</h2>
+        <p>Steuerung für den Outfit-Contest und Gewinnerauslosung.</p>
+        <a href="/outfit-bot/dashboard" class="btn btn-success">Outfit-Bot Dashboard</a>
+    </div>
+
+    <div class="nav-section">
+        <h2>👋 Einladungs-Bot</h2>
+        <p>Einstellungen für Begrüßungen und Beitrittsanfragen.</p>
+        <a href="/bot-settings" class="btn btn-success">Einladungs-Bot Einstellungen</a>
+    </div>
+
+    <div class="nav-section">
+        <h2>🆔 ID-Finder Bot</h2>
+        <p>Hilfsmittel zum Ermitteln von Chat- und Topic-IDs.</p>
+        <a href="/id-finder" class="btn btn-secondary">ID-Finder Dashboard</a>
+    </div>
+</div>
+{% endblock %}

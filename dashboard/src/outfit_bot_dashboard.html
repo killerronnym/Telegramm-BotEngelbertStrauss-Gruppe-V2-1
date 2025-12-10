@@ -1,59 +1,8 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Outfit-Bot Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        body { background-color: #121212; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 1rem; }
-        .container { max-width: 900px; margin: auto; background-color: #1e1e1e; padding: 1.5rem; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
-        h1, h2, h3 { color: #ffffff; border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="time"], textarea, select { 
-            width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; box-sizing: border-box; 
-            background-color: #333; color: #e0e0e0; 
-        }
-        .btn { padding: 10px 15px; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 16px; margin-top: 5px; transition: background-color 0.3s; width: 100%; box-sizing: border-box;}
-        .btn-save { background-color: #28a745; }
-        .btn-save:hover { background-color: #218838; }
-        .btn-action { background-color: #007bff; }
-        .btn-action:hover { background-color: #0056b3; }
-        .btn-danger { background-color: #dc3545; }
-        .btn-danger:hover { background-color: #c82333; }
-        .btn-warning { background-color: #ffc107; color: #333; }
-        .btn-warning:hover { background-color: #e0a800; }
-        
-        .status-box { padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: center; font-weight: bold; font-size: 1.2em; }
-        .status-active { background-color: #1e4620; color: #d4edda; border: 1px solid #28a745; }
-        .status-inactive { background-color: #4c1d21; color: #f8d7da; border: 1px solid #dc3545; }
+{% extends "base.html" %}
 
-        .log-window { background-color: #000; color: #00ff00; font-family: 'Courier New', Courier, monospace; padding: 15px; border-radius: 5px; height: 300px; overflow-y: scroll; border: 1px solid #333; font-size: 0.9em; white-space: pre-wrap; }
-        .alert { padding: 1rem; margin-bottom: 1rem; border-radius: 4px; }
-        .alert-success { background-color: #1e4620; color: #d4edda; }
-        .alert-info { background-color: #0c5460; color: #d1ecf1; }
-        .alert-danger { background-color: #721c24; color: #f8d7da; }
+{% block title %}Outfit-Bot Dashboard{% endblock %}
 
-        hr { border: 0; border-top: 1px solid #333; margin: 2em 0; }
-        .flex-row { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; }
-        .flex-row a { margin-top: 10px; }
-
-        .action-buttons { display: flex; flex-direction: column; gap: 10px; }
-
-        .logout-section { text-align: right; margin-bottom: 1rem; }
-        .logout-section strong { margin-right: 1rem; }
-
-        @media (min-width: 600px) {
-            .flex-row { flex-direction: row; align-items: center; }
-            .flex-row a { margin-top: 0; }
-            .btn { width: auto; }
-            .action-buttons { flex-direction: row; }
-        }
-    </style>
-</head>
-<body>
+{% block content %}
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}"> <i class="bi bi-arrow-left-circle"></i> Zurück zum Haupt-Dashboard</a>
@@ -154,5 +103,4 @@
             {% for line in logs %}{{ line }}{% endfor %}
         </div>
     </div>
-</body>
-</html>
+{% endblock %}
