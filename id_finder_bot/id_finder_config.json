@@ -11,11 +11,27 @@
         "messages": 5,
         "seconds": 10
     },
+    "flood_limit": 5,
+    "flood_window_seconds": 10,
     "caps_limit_percent": 70,
     "link_policy": "allow",
     "link_whitelist": [],
+    "link_mode": "allow",
+    "locks": {
+        "links": false,
+        "media": false,
+        "stickers": false
+    },
     "raid_mode_enabled": false,
+    "welcome_enabled": false,
+    "welcome_text": "Willkommen {user} in {group}! 👋",
+    "rules_text": "Es wurden noch keine Regeln gesetzt.",
+    "verify_enabled": false,
+    "debug_enabled": false,
+    "delete_commands": true,
+    "bot_message_cleanup_seconds": 3,
     "filters": {},
+    "blacklist": [],
     "roles": {},
     "role_permissions": {
         "mod": [

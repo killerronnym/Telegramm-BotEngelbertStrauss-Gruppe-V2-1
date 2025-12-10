@@ -1,4 +1,3 @@
-
 import os
 import random
 import json
@@ -71,15 +70,46 @@ id_finder_process = None
 invite_bot_process = None
 
 # --- Constants ---
+# Gruppierte Berechtigungen (für modernes Admin-Panel UI)
+AVAILABLE_PERMISSION_GROUPS = {
+    "Basis-Moderation": {
+        "can_warn": "Verwarnen (/warn, /unwarn, /warnings, /clearwarnings)",
+        "can_kick": "Kicken (/kick)",
+        "can_ban": "Bannen (/ban)",
+        "can_unban": "Entbannen (/unban)",
+        "can_mute": "Stummschalten (/mute, /unmute)",
+        "can_clear_warns": "Warns löschen (/clearwarnings)"
+    },
+    "Nachrichten-Management": {
+        "can_manage_messages": "Nachrichten verwalten (/del, /purge, /pin, /unpin, /lock, /unlock)"
+    },
+    "Anti-Spam & Filter": {
+        "can_antispam": "Anti-Spam steuern (/antispam)",
+        "can_setflood": "Flood-Limit setzen (/setflood)",
+        "can_setlinkmode": "Link-Modus setzen (/setlinkmode)",
+        "can_blacklist": "Blacklist verwalten (/blacklist add/remove/list)"
+    },
+    "Rollen & Bot-Rechte": {
+        "can_roles": "Rollen/Mods verwalten (/mod, /setrole, /permissions)"
+    },
+    "Konfiguration & Community": {
+        "can_config": "Einstellungen/Onboarding (/settings, /config, /status, /reload, /welcome, /setwelcome, /rules, /setrules, /verify)"
+    },
+    "System & Debug": {
+        "can_debug": "Debug-Modus (/debug)"
+    },
+    "Tools": {
+        "can_see_ids": "IDs anzeigen (/id, /chatid, /userid, /topicid)",
+        "can_see_logs": "Logs einsehen",
+        "can_manage_admins": "Admins verwalten (Nur Top-Admin)"
+    }
+}
+
+# Flat-Fallback für ältere Templates/Logik
 AVAILABLE_PERMISSIONS = {
-    "can_warn": "Verwarnen (/warn)",
-    "can_kick": "Kicken (/kick)",
-    "can_ban": "Bannen (/ban)",
-    "can_mute": "Stummschalten (/mute)",
-    "can_unban": "Entbannen (/unban)",
-    "can_clear_warns": "Warns löschen (/clearwarns)",
-    "can_see_logs": "Logs einsehen",
-    "can_manage_admins": "Admins verwalten (Nur Top-Admin)"
+    k: v
+    for group in AVAILABLE_PERMISSION_GROUPS.values()
+    for k, v in group.items()
 }
 
 # --- Hilfsfunktionen für JSON ---
@@ -112,7 +142,15 @@ def start_bot_process(script_path, log_path):
         os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
         with open(log_path, "a", encoding="utf-8") as log_f:
-            process = subprocess.Popen([py_exec, script_path], cwd=cwd, stdout=log_f, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
+            process = subprocess.Popen(
+                [py_exec, script_path],
+                cwd=cwd,
+                stdout=log_f,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
         return process, f"{os.path.basename(script_path)} erfolgreich gestartet."
     except Exception as e:
         return None, str(e)
@@ -372,6 +410,14 @@ def id_finder_dashboard():
             config['main_group_id'] = request.form.get('main_group_id', '').strip()
             config['log_topic_id'] = request.form.get('log_topic_id', '').strip() or None
             
+            # --- NEUE EINSTELLUNGEN START ---
+            config['delete_commands'] = 'delete_commands' in request.form
+            try:
+                config['bot_message_cleanup_seconds'] = int(request.form.get('bot_message_cleanup_seconds', 0))
+            except ValueError:
+                config['bot_message_cleanup_seconds'] = 0
+            # --- NEUE EINSTELLUNGEN ENDE ---
+
             save_json(ID_FINDER_CONFIG_FILE, config)
             flash("ID Finder Konfiguration gespeichert.", "success")
 
@@ -395,7 +441,12 @@ def id_finder_commands():
 @app.route("/id-finder/admin-panel")
 def id_finder_admin_panel():
     admins = load_json(ADMINS_FILE)
-    return render_template('id_finder_admin_panel.html', admins=admins, available_permissions=AVAILABLE_PERMISSIONS)
+    return render_template(
+        'id_finder_admin_panel.html',
+        admins=admins,
+        available_permissions=AVAILABLE_PERMISSIONS,
+        available_permission_groups=AVAILABLE_PERMISSION_GROUPS
+    )
 
 @app.route("/id-finder/add-admin", methods=['POST'])
 def id_finder_add_admin():
@@ -541,107 +592,85 @@ async def send_telegram_quiz(token, chat_id, topic_id, question, options, correc
             is_anonymous=False,
             message_thread_id=message_thread_id
         )
-        return True, "Quizfrage erfolgreich gesendet!"
+        return True, "Quiz erfolgreich gesendet!"
     except Exception as e:
-        log.error(f"Fehler beim Senden der Quizfrage: {e}")
+        log.error(f"Fehler beim Senden des Quiz: {e}")
         return False, str(e)
 
-@app.route("/send_quizfrage", methods=['POST'])
-def send_quizfrage():
+
+# --- QUIZ SENDER ROUTES ---
+@app.route("/quiz/send-random", methods=['POST'])
+def send_random_quiz_route():
     config = load_json(DASHBOARD_CONFIG_FILE)
-    if 'quiz' not in config or not config['quiz'].get('token') or not config['quiz'].get('channel_id'):
-        flash("Fehler: Quiz Bot nicht konfiguriert (Token oder Channel ID fehlen).", "danger")
-        return redirect(request.referrer or url_for('index'))
+    quiz_cfg = config.get('quiz', {})
+    token = quiz_cfg.get('token')
+    chat_id = quiz_cfg.get('channel_id')
+    topic_id = quiz_cfg.get('topic_id')
 
-    token = config['quiz']['token']
-    chat_id = config['quiz']['channel_id']
-    topic_id = config['quiz'].get('topic_id')
+    if not token or not chat_id:
+        flash("Quiz Token oder Channel ID fehlt.", "danger")
+        return redirect(url_for('quiz_settings'))
 
-    # Load quiz questions
-    try:
-        with open(QUIZ_DATA_FILE, 'r', encoding='utf-8') as f:
-            questions = json.load(f)
-    except Exception as e:
-        flash(f"Fehler beim Laden der Quizfragen: {e}", "danger")
-        return redirect(request.referrer or url_for('index'))
-
+    data = load_json(QUIZ_DATA_FILE, {"questions": []})
+    questions = data.get("questions", [])
     if not questions:
-        flash("Keine Quizfragen gefunden.", "warning")
-        return redirect(request.referrer or url_for('index'))
+        flash("Keine Quizfragen vorhanden.", "warning")
+        return redirect(url_for('quiz_settings'))
 
-    # Pick random question
     q = random.choice(questions)
-    question_text = q.get('frage')
-    options = q.get('optionen')
-    correct_option_id = q.get('antwort_index', 0) # Default to 0 if missing
+    question = q.get("frage")
+    options = q.get("optionen", [])
+    correct = q.get("antwort", 0)
 
-    if not question_text or not options:
-        flash("Fehlerhafte Frage in Datenbank gefunden.", "danger")
-        return redirect(request.referrer or url_for('index'))
+    async def _send():
+        return await send_telegram_quiz(token, chat_id, topic_id, question, options, correct)
 
-    # Send asynchronously
-    try:
-        success, msg = asyncio.run(send_telegram_quiz(token, chat_id, topic_id, question_text, options, correct_option_id))
-        if success:
-            flash(f"Quizfrage gesendet: {question_text}", "success")
-        else:
-            flash(f"Fehler beim Senden: {msg}", "danger")
-    except Exception as e:
-        flash(f"Kritischer Fehler beim Senden: {e}", "danger")
+    success, msg = asyncio.run(_send())
+    flash(msg, "success" if success else "danger")
+    return redirect(url_for('quiz_settings'))
 
-    return redirect(request.referrer or url_for('index'))
-
-@app.route("/send_umfrage", methods=['POST'])
-def send_umfrage():
+@app.route("/umfrage/send-random", methods=['POST'])
+def send_random_poll_route():
     config = load_json(DASHBOARD_CONFIG_FILE)
-    if 'umfrage' not in config or not config['umfrage'].get('token') or not config['umfrage'].get('channel_id'):
-        flash("Fehler: Umfrage Bot nicht konfiguriert (Token oder Channel ID fehlen).", "danger")
-        return redirect(request.referrer or url_for('index'))
+    poll_cfg = config.get('umfrage', {})
+    token = poll_cfg.get('token')
+    chat_id = poll_cfg.get('channel_id')
+    topic_id = poll_cfg.get('topic_id')
 
-    token = config['umfrage']['token']
-    chat_id = config['umfrage']['channel_id']
-    topic_id = config['umfrage'].get('topic_id')
+    if not token or not chat_id:
+        flash("Umfrage Token oder Channel ID fehlt.", "danger")
+        return redirect(url_for('umfrage_settings'))
 
-    # Load polls
-    try:
-        with open(UMFRAGE_DATA_FILE, 'r', encoding='utf-8') as f:
-            polls = json.load(f)
-    except Exception as e:
-        flash(f"Fehler beim Laden der Umfragen: {e}", "danger")
-        return redirect(request.referrer or url_for('index'))
-
+    data = load_json(UMFRAGE_DATA_FILE, {"polls": []})
+    polls = data.get("polls", [])
     if not polls:
-        flash("Keine Umfragen gefunden.", "warning")
-        return redirect(request.referrer or url_for('index'))
+        flash("Keine Umfragen vorhanden.", "warning")
+        return redirect(url_for('umfrage_settings'))
 
-    # Pick random poll
     p = random.choice(polls)
-    question_text = p.get('frage')
-    options = p.get('optionen')
+    question = p.get("frage")
+    options = p.get("optionen", [])
 
-    if not question_text or not options:
-        flash("Fehlerhafte Umfrage in Datenbank gefunden.", "danger")
-        return redirect(request.referrer or url_for('index'))
+    async def _send():
+        return await send_telegram_poll(token, chat_id, topic_id, question, options)
 
-    # Send asynchronously
-    try:
-        success, msg = asyncio.run(send_telegram_poll(token, chat_id, topic_id, question_text, options))
-        if success:
-            flash(f"Umfrage gesendet: {question_text}", "success")
-        else:
-            flash(f"Fehler beim Senden: {msg}", "danger")
-    except Exception as e:
-        flash(f"Kritischer Fehler beim Senden: {e}", "danger")
-
-    return redirect(request.referrer or url_for('index'))
+    success, msg = asyncio.run(_send())
+    flash(msg, "success" if success else "danger")
+    return redirect(url_for('umfrage_settings'))
 
 
-# --- Auto-Start & Shutdown ---
-def shutdown_background_processes():
-    stop_outfit_bot()
-    stop_id_finder_bot()
-    stop_invite_bot()
+# --- Cleanup beim Beenden ---
+def cleanup_processes():
+    global outfit_bot_process, id_finder_process, invite_bot_process
+    for proc in [outfit_bot_process, id_finder_process, invite_bot_process]:
+        try:
+            if proc and proc.poll() is None:
+                proc.terminate()
+        except Exception:
+            pass
 
-if __name__ == '__main__':
-    atexit.register(shutdown_background_processes)
-    app.run(host='0.0.0.0', port=8080, debug=False, use_reloader=False)
+atexit.register(cleanup_processes)
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=9001, debug=False)

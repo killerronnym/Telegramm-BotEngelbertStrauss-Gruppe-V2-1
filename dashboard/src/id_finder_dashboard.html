@@ -24,6 +24,7 @@
         {% endif %}
     {% endwith %}
 
+    <!-- Konfiguration & Steuerung -->
     <div class="card mb-4">
         <div class="card-header">
             <h3>⚙️ Konfiguration & Steuerung</h3>
@@ -45,6 +46,29 @@
                     </div>
                 </div>
 
+                <!-- Neue Einstellungen: Auto-Cleanup -->
+                <div class="row mb-3 mt-4 border-top pt-3">
+                    <div class="col-md-12">
+                         <h5 class="mb-3">🧹 Automatische Bereinigung</h5>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="delete_commands" name="delete_commands" {% if config.delete_commands %}checked{% endif %}>
+                            <label class="form-check-label" for="delete_commands">Admin-Befehle automatisch löschen</label>
+                            <small class="form-text text-muted d-block">
+                                Löscht Nachrichten wie <code>/warn @user</code> sofort nach Ausführung.
+                            </small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="bot_message_cleanup_seconds" class="form-label">Bot-Antworten löschen nach (Sekunden)</label>
+                        <input type="number" class="form-control" id="bot_message_cleanup_seconds" name="bot_message_cleanup_seconds" value="{{ config.bot_message_cleanup_seconds or 0 }}" min="0">
+                        <small class="form-text text-muted">
+                            0 = Nie löschen (Antworten bleiben stehen).
+                        </small>
+                    </div>
+                </div>
+
                 <div class="d-flex justify-content-end align-items-center mt-4">
                     <button type="submit" name="action" value="save_config" class="btn btn-primary me-2">💾 Nur Speichern</button>
                     {% if is_running %}
@@ -62,6 +86,174 @@
         </div>
     </div>
 
+    <!-- NEU: Module & Status-Übersicht -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>🧩 Module & Status</h3>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+
+                <!-- Anti-Spam -->
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">🛡️ Anti-Spam</h5>
+                            <p class="mb-2">
+                                Status:
+                                {% if config.antispam_enabled %}
+                                    <span class="badge bg-success">Aktiv</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Aus</span>
+                                {% endif %}
+                            </p>
+                            <small class="text-muted">
+                                Steuerung über <code>/antispam on|off</code>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flood -->
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">🌊 Flood-Control</h5>
+                            <p class="mb-1">
+                                Limit:
+                                <span class="badge bg-dark">
+                                    {{ config.flood_limit or (config.flood_control.messages if config.flood_control else 5) }}
+                                </span>
+                            </p>
+                            <p class="mb-2">
+                                Fenster:
+                                <span class="badge bg-dark">
+                                    {{ config.flood_window_seconds or (config.flood_control.seconds if config.flood_control else 10) }}s
+                                </span>
+                            </p>
+                            <small class="text-muted">
+                                Setzen über <code>/setflood</code>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Link Mode -->
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">🔗 Link-Handling</h5>
+                            <p class="mb-2">
+                                Modus:
+                                <span class="badge bg-dark">
+                                    {{ config.link_mode or config.link_policy or 'allow' }}
+                                </span>
+                            </p>
+                            <small class="text-muted">
+                                Setzen über <code>/setlinkmode</code>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Locks -->
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">🔒 Locks</h5>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="badge {{ 'bg-danger' if config.locks and config.locks.links else 'bg-secondary' }}">
+                                    Links {{ 'gesperrt' if config.locks and config.locks.links else 'frei' }}
+                                </span>
+                                <span class="badge {{ 'bg-danger' if config.locks and config.locks.media else 'bg-secondary' }}">
+                                    Media {{ 'gesperrt' if config.locks and config.locks.media else 'frei' }}
+                                </span>
+                                <span class="badge {{ 'bg-danger' if config.locks and config.locks.stickers else 'bg-secondary' }}">
+                                    Stickers {{ 'gesperrt' if config.locks and config.locks.stickers else 'frei' }}
+                                </span>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Steuerung über <code>/lock</code> & <code>/unlock</code>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Welcome / Rules / Verify -->
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">👋 Community</h5>
+                            <p class="mb-1">
+                                Welcome:
+                                {% if config.welcome_enabled %}
+                                    <span class="badge bg-success">Aktiv</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Aus</span>
+                                {% endif %}
+                            </p>
+                            <p class="mb-1">
+                                Verify:
+                                {% if config.verify_enabled %}
+                                    <span class="badge bg-success">Aktiv</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Aus</span>
+                                {% endif %}
+                            </p>
+                            <p class="mb-2">
+                                Regeln:
+                                <span class="badge bg-dark">
+                                    {{ 'gesetzt' if config.rules_text else 'nicht gesetzt' }}
+                                </span>
+                            </p>
+                            <small class="text-muted">
+                                <code>/welcome</code>, <code>/setwelcome</code>, <code>/rules</code>, <code>/setrules</code>, <code>/verify</code>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Debug -->
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">🧪 Debug</h5>
+                            <p class="mb-2">
+                                Status:
+                                {% if config.debug_enabled %}
+                                    <span class="badge bg-warning text-dark">Aktiv</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Aus</span>
+                                {% endif %}
+                            </p>
+                            <small class="text-muted">
+                                Steuerung über <code>/debug on|off</code>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick-Info -->
+                <div class="col-md-8">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">ℹ️ Hinweise</h5>
+                            <ul class="mb-0">
+                                <li>Wenn Moderationsaktionen nicht greifen, prüfe die Telegram-Adminrechte des Bots in der Gruppe.</li>
+                                <li>Die internen Bot-Rechte steuerst du im <strong>Admin Panel</strong> über die Permission-Skills.</li>
+                                <li>Mit <code>/reload</code> kannst du Änderungen an der Config schnell neu einlesen.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs -->
     <div class="row">
         <div class="col-md-6 mb-4">
             <div class="card h-100">
@@ -72,7 +264,6 @@
                     </form>
                 </div>
                 <div class="card-body">
-                    <!-- Anzeige der command_logs -->
                     <div style="background-color: #212529; color: #f8f9fa; border-radius: 5px; padding: 15px; height: 300px; overflow-y: scroll; font-family: monospace; white-space: pre-wrap;">
 {% for line in command_logs %}{{ line }}{% endfor %}
                     </div>

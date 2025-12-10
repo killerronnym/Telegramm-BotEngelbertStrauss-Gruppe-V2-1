@@ -11,7 +11,14 @@
             "can_see_logs": true,
             "can_manage_admins": true,
             "can_see_ids": true,
-            "can_manage_messages": true
+            "can_manage_messages": true,
+            "can_antispam": true,
+            "can_setflood": true,
+            "can_setlinkmode": true,
+            "can_blacklist": true,
+            "can_roles": true,
+            "can_config": true,
+            "can_debug": true
         }
     }
 }

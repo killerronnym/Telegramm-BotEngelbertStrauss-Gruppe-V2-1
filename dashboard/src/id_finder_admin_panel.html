@@ -46,7 +46,9 @@
                                     <td><strong>{{ admin_data.name }}</strong></td>
                                     <td><code>{{ admin_id }}</code></td>
                                     <td>
-                                        <span class="badge bg-info text-dark">{{ admin_data.permissions.values() | select("equalto", true) | list | length }} Skills aktiv</span>
+                                        <span class="badge bg-info text-dark">
+                                            {{ admin_data.permissions.values() | select("equalto", true) | list | length }} Skills aktiv
+                                        </span>
                                     </td>
                                     <td>
                                         <button class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#editPermsModal{{ admin_id }}">
@@ -63,7 +65,7 @@
 
                                 <!-- Modal für Rechte (Permissions) -->
                                 <div class="modal fade" id="editPermsModal{{ admin_id }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog">
+                                    <div class="modal-dialog modal-lg">
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title">Rechte verwalten für: {{ admin_data.name }}</h5>
@@ -72,18 +74,77 @@
                                             <form method="POST" action="{{ url_for('id_finder_update_admin_permissions') }}">
                                                 <div class="modal-body">
                                                     <input type="hidden" name="admin_id" value="{{ admin_id }}">
-                                                    <p class="text-muted">Wähle die Befehle aus, die dieser Admin nutzen darf:</p>
-                                                    
-                                                    <div class="list-group">
-                                                        {% for perm_key, perm_desc in available_permissions.items() %}
-                                                            <label class="list-group-item">
-                                                                <input class="form-check-input me-1" type="checkbox" name="{{ perm_key }}" 
-                                                                    {% if admin_data.permissions.get(perm_key) %}checked{% endif %}>
-                                                                {{ perm_desc }}
-                                                            </label>
-                                                        {% endfor %}
-                                                    </div>
+                                                    <p class="text-muted">
+                                                        Wähle die Befehle/Module aus, die dieser Admin nutzen darf.
+                                                        <br>
+                                                        <small>Hinweis: Telegram-Gruppenrechte des Bots müssen zusätzlich in Telegram selbst vergeben werden.</small>
+                                                    </p>
+
+                                                    {# 
+                                                        NEU: Gruppen-UI falls das Backend `available_permission_groups` liefert.
+                                                        Struktur-Empfehlung fürs Backend:
+                                                        available_permission_groups = {
+                                                          "Basis-Moderation": { "can_warn": "...", ... },
+                                                          "Nachrichten-Management": { ... },
+                                                          ...
+                                                        }
+                                                    #}
+
+                                                    {% if available_permission_groups %}
+                                                        <div class="accordion" id="permAccordion{{ admin_id }}">
+                                                            {% for group_title, group_permissions in available_permission_groups.items() %}
+                                                                <div class="accordion-item">
+                                                                    <h2 class="accordion-header" id="heading{{ admin_id }}{{ loop.index }}">
+                                                                        <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button"
+                                                                                data-bs-toggle="collapse"
+                                                                                data-bs-target="#collapse{{ admin_id }}{{ loop.index }}"
+                                                                                aria-expanded="{% if loop.first %}true{% else %}false{% endif %}"
+                                                                                aria-controls="collapse{{ admin_id }}{{ loop.index }}">
+                                                                            {{ group_title }}
+                                                                        </button>
+                                                                    </h2>
+                                                                    <div id="collapse{{ admin_id }}{{ loop.index }}"
+                                                                         class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
+                                                                         aria-labelledby="heading{{ admin_id }}{{ loop.index }}"
+                                                                         data-bs-parent="#permAccordion{{ admin_id }}">
+                                                                        <div class="accordion-body">
+
+                                                                            <div class="row">
+                                                                                {% for perm_key, perm_desc in group_permissions.items() %}
+                                                                                    <div class="col-md-6">
+                                                                                        <div class="form-check mb-2">
+                                                                                            <input class="form-check-input" type="checkbox" id="{{ admin_id }}_{{ perm_key }}" name="{{ perm_key }}"
+                                                                                                   {% if admin_data.permissions.get(perm_key) %}checked{% endif %}>
+                                                                                            <label class="form-check-label" for="{{ admin_id }}_{{ perm_key }}">
+                                                                                                {{ perm_desc }}
+                                                                                            </label>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                {% endfor %}
+                                                                            </div>
+
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% else %}
+                                                        {# Fallback: altes Verhalten, wenn nur `available_permissions` existiert #}
+                                                        <div class="list-group">
+                                                            {% for perm_key, perm_desc in available_permissions.items() %}
+                                                                <label class="list-group-item d-flex align-items-center justify-content-between">
+                                                                    <span>
+                                                                        <input class="form-check-input me-2" type="checkbox" name="{{ perm_key }}"
+                                                                            {% if admin_data.permissions.get(perm_key) %}checked{% endif %}>
+                                                                        {{ perm_desc }}
+                                                                    </span>
+                                                                    <small class="text-muted"><code>{{ perm_key }}</code></small>
+                                                                </label>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
                                                 </div>
+
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
                                                     <button type="submit" class="btn btn-primary">💾 Speichern</button>
@@ -111,7 +172,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Neuen Admin hinzufügen</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
             <form method="POST" action="{{ url_for('id_finder_add_admin') }}">
                 <div class="modal-body">
@@ -122,7 +183,9 @@
                     <div class="mb-3">
                         <label for="admin_id" class="form-label">Telegram User ID</label>
                         <input type="number" class="form-control" id="admin_id" name="admin_id" required placeholder="123456789">
-                        <div class="form-text">Die ID kann mit dem Befehl <code>/id</code> oder <code>/UserID</code> herausgefunden werden.</div>
+                        <div class="form-text">
+                            Die ID kann mit dem Befehl <code>/id</code> oder <code>/userid</code> herausgefunden werden.
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -1,192 +1,666 @@
 {% extends "base.html" %}
 
-{% block title %}Befehlsübersicht - ID-Finder Bot{% endblock %}
+{% block title %}Befehlsübersicht - NexusMod Bot{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <a href="{{ url_for('id_finder_dashboard') }}" class="btn btn-secondary mb-3">← Zurück zum ID-Finder Dashboard</a>
 
-    <h1 class="display-5 mb-4 text-center">Bot Befehlsübersicht</h1>
+    <h1 class="display-5 mb-2 text-center">🧩 NexusMod Bot – Befehlsübersicht</h1>
+    <p class="text-center text-muted mb-4">
+        Diese Übersicht kombiniert deine neuen Board-Commands mit bestehenden/älteren Einträgen.
+        <br>
+        <span class="badge bg-success">Neu / Board</span>
+        <span class="badge bg-secondary">Legacy / evtl. geplant</span>
+    </p>
 
     <div class="row row-cols-1 row-cols-md-2 g-4">
+
         <!-- Kategorie: Grundlagen & ID -->
         <div class="col">
             <div class="card h-100 command-card">
                 <div class="card-header fw-bold">Grundlagen & ID</div>
                 <ul class="list-group list-group-flush">
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/ChatID</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Chat & Topic ID abrufen" data-bs-content="Sendet eine Nachricht mit der ID der Gruppe und des Topics, in dem der Befehl ausgeführt wird. Nützlich, um die Gruppen-ID für die Konfiguration zu erhalten."></i>
+                        <span>
+                            <span class="command-name fw-bold">/chatid</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Chat-ID anzeigen"
+                           data-bs-content="Gibt die Chat-ID der Gruppe aus. Wenn in einem Forum-Topic ausgeführt, zeigt der Befehl zusätzlich die Topic-ID."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/UserID</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Eigene User-ID abrufen" data-bs-content="Zeigt deine persönliche Telegram User-ID an."></i>
+                        <span>
+                            <span class="command-name fw-bold">/userid</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="User-ID anzeigen"
+                           data-bs-content="Zeigt deine eigene User-ID. Wenn du auf eine Nachricht antwortest, wird zusätzlich die ID des Ziel-Users angezeigt."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/topicid</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Topic-ID anzeigen"
+                           data-bs-content="Gibt die Topic-/Thread-ID aus, sofern Forum-Topics aktiv sind."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/id</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Kombi-ID-Ausgabe"
+                           data-bs-content="Kombiniert User-, Chat- und Topic-ID in einer Ausgabe. Nützlich für Setup & Debugging."></i>
                     </li>
                 </ul>
             </div>
         </div>
 
-        <!-- Kategorie: Globale Konfiguration (Nur Top-Admins) -->
+        <!-- Kategorie: Basis-Moderation -->
         <div class="col">
             <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Globale Bot-Konfiguration (Nur Top-Admins)</div>
+                <div class="card-header fw-bold">Basis-Moderation</div>
                 <ul class="list-group list-group-flush">
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/setadmingroup</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Admin-Gruppe setzen" data-bs-content="Setzt den Chat, in dem der Befehl ausgeführt wird, als private Admin-Gruppe. Nur hier können kritische Bot-Einstellungen geändert werden."></i>
+                        <span>
+                            <span class="command-name fw-bold">/warn @user [Grund]</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Benutzer verwarnen"
+                           data-bs-content="Gibt eine Verwarnung. Nutzbar per Reply oder User-ID."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/setmaingroup [gruppen_id]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Hauptgruppe festlegen" data-bs-content="Legt fest, in welcher Gruppe Moderationsaktionen (Mute, Ban etc.) stattfinden sollen."></i>
+                        <span>
+                            <span class="command-name fw-bold">/warnings @user</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Verwarnungen anzeigen"
+                           data-bs-content="Zeigt aktuelle Verwarnungen und (optional) die jüngste Historie."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/antispam on|off</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Anti-Spam an/aus" data-bs-content="Aktiviert oder deaktiviert alle automatischen Moderationsfunktionen wie Flood-Control, Link-Filter etc."></i>
+                        <span>
+                            <span class="command-name fw-bold">/unwarn @user</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Verwarnung entfernen"
+                           data-bs-content="Entfernt eine Verwarnung."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/raidmode on|off</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Raid-Modus an/aus" data-bs-content="Ein Notfallmodus. Wenn aktiviert, werden neue Mitglieder sofort stummgeschaltet und alle Nachrichten mit Links blockiert."></i>
+                        <span>
+                            <span class="command-name fw-bold">/clearwarnings @user</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Warnungen zurücksetzen"
+                           data-bs-content="Setzt den Verwarnungszähler komplett zurück."></i>
                     </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/mute @user 10m [Grund]</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Benutzer stummschalten"
+                           data-bs-content="Stummschalten für Dauer (z.B. 10m, 2h, 1d)."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/unmute @user</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Mute aufheben"
+                           data-bs-content="Hebt eine Stummschaltung auf."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/ban @user [Grund]</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Benutzer bannen"
+                           data-bs-content="Bannt einen Nutzer aus der Gruppe."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/unban @user</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Ban aufheben"
+                           data-bs-content="Hebt den Bann auf. Häufig per User-ID genutzt."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/kick @user [Grund]</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Benutzer kicken"
+                           data-bs-content="Entfernt Nutzer aus der Gruppe (kann wieder beitreten)."></i>
+                    </li>
+
+                    <!-- Legacy / zusätzliche Einträge aus deiner älteren Übersicht -->
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/softban @user</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Softban (Konzept-Eintrag)"
+                           data-bs-content="Aus älterer Übersicht: Ban + sofortiges Unban zum 'Aufräumen'. Nur nutzen, wenn im Bot wirklich implementiert."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/mutelist</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Mute-Liste (Konzept-Eintrag)"
+                           data-bs-content="Aus älterer Übersicht. Nur sichtbar lassen, wenn der Bot dafür eine Liste führt."></i>
+                    </li>
+
                 </ul>
             </div>
         </div>
 
-        <!-- Kategorie: Verwarnungen -->
+        <!-- Kategorie: Nachrichten- und Chat-Management -->
         <div class="col">
             <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Verwarnungssystem</div>
+                <div class="card-header fw-bold">Nachrichten- & Chat-Management</div>
                 <ul class="list-group list-group-flush">
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/warn @user [grund]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Benutzer verwarnen" data-bs-content="Verwarnt einen Benutzer. Kann als Antwort auf eine Nachricht oder durch Angabe der User-ID erfolgen."></i>
+                        <span>
+                            <span class="command-name fw-bold">/del</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Nachricht löschen"
+                           data-bs-content="Löscht die Nachricht, auf die geantwortet wurde."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/warnings @user</span>
-                         <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Verwarnungen anzeigen" data-bs-content="Zeigt alle aktiven Verwarnungen für einen bestimmten Benutzer an."></i>
+                        <span>
+                            <span class="command-name fw-bold">/purge</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Nachrichten löschen (Purge)"
+                           data-bs-content="Löscht mehrere Nachrichten ab der beantworteten Nachricht bis zur aktuellen. (Nur falls im Bot aktiviert.)"></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/unwarn @user [anzahl]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Verwarnung entfernen" data-bs-content="Entfernt eine (oder die angegebene Anzahl) der letzten Verwarnungen eines Benutzers."></i>
+                        <span>
+                            <span class="command-name fw-bold">/pin</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Nachricht anpinnen"
+                           data-bs-content="Pinnt die beantwortete Nachricht."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/clearwarns @user</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Alle Verwarnungen löschen" data-bs-content="Setzt den Verwarnungszähler eines Benutzers komplett auf Null zurück."></i>
+                        <span>
+                            <span class="command-name fw-bold">/unpin</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Pin entfernen"
+                           data-bs-content="Entfernt einen Pin."></i>
                     </li>
-                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/setwarnlimit [zahl]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Warn-Limit festlegen" data-bs-content="Legt fest, nach wie vielen Verwarnungen eine automatische Aktion erfolgen soll. (Nur Top-Admin)"></i>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/lock links|media|stickers</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Feature sperren"
+                           data-bs-content="Sperrt z.B. Links oder Medien (je nach Konfiguration)."></i>
                     </li>
-                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/setwarnaction [aktion]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Automatische Aktion festlegen" data-bs-content="Definiert die Aktion (mute, kick, ban, none), die bei Erreichen des Warn-Limits ausgeführt wird. (Nur Top-Admin)"></i>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/unlock links|media|stickers</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Feature entsperren"
+                           data-bs-content="Hebt die Sperre wieder auf."></i>
                     </li>
+
                 </ul>
             </div>
         </div>
-        
-        <!-- Kategorie: Stummschaltung, Kick & Ban -->
+
+        <!-- Kategorie: Anti-Spam / Auto-Moderation -->
         <div class="col">
             <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Stummschaltung, Kick & Ban</div>
+                <div class="card-header fw-bold">Anti-Spam / Auto-Moderation</div>
                 <ul class="list-group list-group-flush">
-                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/mute @user [dauer] [grund]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Benutzer stummschalten" data-bs-content="Schaltet einen Benutzer stumm. Dauer ist optional (z.B. 30m, 5h, 7d). Ohne Dauer ist der Mute permanent."></i>
-                    </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/unmute @user</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Stummschaltung aufheben" data-bs-content="Erlaubt einem stummgeschalteten Benutzer wieder zu schreiben."></i>
+                        <span>
+                            <span class="command-name fw-bold">/antispam on|off</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Spam-Schutz an/aus"
+                           data-bs-content="Aktiviert/Deaktiviert Spam-Schutz."></i>
                     </li>
-                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/mutelist</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Mute-Liste anzeigen" data-bs-content="Zeigt alle aktuell stummgeschalteten Benutzer, Grund und verbleibende Dauer an."></i>
-                    </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/kick @user [grund]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Benutzer kicken" data-bs-content="Entfernt einen Benutzer aus der Gruppe. Er kann aber sofort wieder beitreten, falls er einen Link hat."></i>
+                        <span>
+                            <span class="command-name fw-bold">/setflood 5</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Flood-Limit setzen"
+                           data-bs-content="Setzt die max. Nachrichten in kurzem Zeitfenster."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/ban @user [dauer] [grund]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Benutzer bannen" data-bs-content="Verbannt einen Benutzer aus der Gruppe. Dauer ist optional."></i>
+                        <span>
+                            <span class="command-name fw-bold">/setlinkmode allow|warn|mute|ban</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Linkbehandlung"
+                           data-bs-content="Definiert, wie Links behandelt werden."></i>
                     </li>
-                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/unban [user_id]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Benutzer entbannen" data-bs-content="Hebt eine permanente Verbannung auf. Da der Benutzer nicht mehr sichtbar ist, muss seine ID angegeben werden."></i>
-                    </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/softban @user</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Soft-Ban" data-bs-content="Bannt und entbannt einen Benutzer sofort wieder. Dieser Trick löscht alle Nachrichten des Benutzers aus dem Chat."></i>
+                        <span>
+                            <span class="command-name fw-bold">/blacklist add [wort]</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Blacklist verwalten"
+                           data-bs-content="Fügt Begriffe/Patterns zur Blacklist hinzu."></i>
                     </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/blacklist remove [wort]</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Blacklist verwalten"
+                           data-bs-content="Entfernt Begriffe/Patterns aus der Blacklist."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/blacklist list</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Blacklist anzeigen"
+                           data-bs-content="Listet alle Blacklist-Einträge auf."></i>
+                    </li>
+
+                    <!-- Legacy aus alter Datei -->
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/setcaps [prozent]</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="CAPS-Limit (Alt-Konzept)"
+                           data-bs-content="War in älterer Übersicht enthalten. Nur nutzen, wenn im Bot implementiert."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/setlinks [allow|block|whitelist]</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Link-Richtlinie (Alt-Konzept)"
+                           data-bs-content="Älterer Ansatz. Du nutzt jetzt /setlinkmode als Board-Standard."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/whitelist add|remove [user_id]</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Whitelist (Alt-Konzept)"
+                           data-bs-content="Optionales Legacy-Feature."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/filter add|remove|list \"wort\"</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Wortfilter (Alt-Konzept)"
+                           data-bs-content="Du nutzt jetzt /blacklist als Board-Standard."></i>
+                    </li>
+
                 </ul>
             </div>
         </div>
 
-        <!-- Kategorie: Nachrichten-Moderation -->
+        <!-- Kategorie: Rollen & Rechte -->
         <div class="col">
             <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Nachrichten-Moderation</div>
+                <div class="card-header fw-bold">Rollen & Rechte</div>
                 <ul class="list-group list-group-flush">
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/del</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Nachricht löschen" data-bs-content="Muss als Antwort auf eine Nachricht gesendet werden. Löscht die beantwortete Nachricht und den Befehl selbst."></i>
+                        <span>
+                            <span class="command-name fw-bold">/adminlist</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Admin-Liste"
+                           data-bs-content="Zeigt Bot-Admins/Permissions (je nach Implementierung)."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/purge [anzahl]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Nachrichten löschen (Purge)" data-bs-content="Muss als Antwort auf eine Nachricht gesendet werden. Löscht die letzten X Nachrichten ab der beantworteten. Standard ist 10."></i>
+                        <span>
+                            <span class="command-name fw-bold">/mod add @user</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Bot-Moderatoren"
+                           data-bs-content="Fügt Bot-interne Moderatoren hinzu."></i>
                     </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/mod remove @user</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Bot-Moderatoren"
+                           data-bs-content="Entfernt Bot-interne Moderatoren."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/permissions</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Bot-Rechte/Module"
+                           data-bs-content="Zeigt Bot-Rechte, Feature-Flags und Module an."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/setrole @user admin|mod|trusted|user</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Rollensystem"
+                           data-bs-content="Setzt eine Bot-interne Rolle für einen Nutzer."></i>
+                    </li>
+
+                    <!-- Legacy Rollen-Kommandos aus alter Datei -->
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/role add [user_id] [rolle]</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Alt-Rollen-System"
+                           data-bs-content="Ältere Rollen-Syntax. Board-Standard ist /setrole."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/role remove [user_id]</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Alt-Rollen-System"
+                           data-bs-content="Ältere Rollen-Syntax."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/roles</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Alt-Rollen-Liste"
+                           data-bs-content="Älterer Sammelbefehl."></i>
+                    </li>
+
                 </ul>
             </div>
         </div>
 
-        <!-- Kategorie: Auto-Moderation (Nur Top-Admins) -->
+        <!-- Kategorie: Onboarding & Community -->
         <div class="col">
             <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Auto-Moderation (Nur Top-Admins)</div>
-                 <ul class="list-group list-group-flush">
+                <div class="card-header fw-bold">Onboarding & Community</div>
+                <ul class="list-group list-group-flush">
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/setflood [nachrichten]/[sekunden]s</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Flood-Control einstellen" data-bs-content="Legt fest, wie viele Nachrichten ein User in X Sekunden senden darf, bevor sie gelöscht werden. Beispiel: 5/10s."></i>
+                        <span>
+                            <span class="command-name fw-bold">/welcome on|off</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Welcome an/aus"
+                           data-bs-content="Aktiviert/Deaktiviert Begrüßungsnachrichten."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/setcaps [prozent]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="CAPS-Limit einstellen" data-bs-content="Legt den maximal erlaubten Prozentsatz an Großbuchstaben in einer Nachricht fest (z.B. 70)."></i>
+                        <span>
+                            <span class="command-name fw-bold">/setwelcome [Text]</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Welcome-Text setzen"
+                           data-bs-content="Setzt den Welcome-Text. Platzhalter: {user}, {group}."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/setlinks [allow|block|whitelist]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Link-Richtlinie festlegen" data-bs-content="Erlaubt Links (allow), blockiert sie für alle (block) oder erlaubt sie nur für gewhitelistete User (whitelist)."></i>
+                        <span>
+                            <span class="command-name fw-bold">/rules</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Regeln anzeigen"
+                           data-bs-content="Zeigt die gespeicherten Gruppenregeln."></i>
                     </li>
-                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/whitelist add|remove [user_id]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Whitelist für Links verwalten" data-bs-content="Fügt einen Benutzer zur Link-Whitelist hinzu oder entfernt ihn."></i>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/setrules [Text]</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Regeln setzen"
+                           data-bs-content="Speichert/aktualisiert die Gruppenregeln."></i>
                     </li>
-                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/filter add|remove|list "wort"</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Wortfilter verwalten" data-bs-content="Fügt ein Wort zur Blacklist hinzu (Nachrichten werden gelöscht), entfernt es oder listet alle Filter. Das Wort muss in Anführungszeichen stehen."></i>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/verify on|off</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Verifikation an/aus"
+                           data-bs-content="Aktiviert/Deaktiviert eine einfache Verifikationslogik."></i>
                     </li>
+
                 </ul>
             </div>
         </div>
 
-        <!-- Kategorie: Rollen-Management (Nur Top-Admins) -->
+        <!-- Kategorie: Konfiguration / System -->
         <div class="col">
             <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Rollen-Management (Nur Top-Admins)</div>
-                 <ul class="list-group list-group-flush">
+                <div class="card-header fw-bold">Konfiguration / System</div>
+                <ul class="list-group list-group-flush">
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/role add [user_id] [rolle]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Rolle zuweisen" data-bs-content="Gibt einem Benutzer eine vordefinierte Rolle (z.B. 'mod'), die ihm Zugriff auf bestimmte Befehle gewährt."></i>
+                        <span>
+                            <span class="command-name fw-bold">/settings</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Settings (kurz)"
+                           data-bs-content="Kurze Übersicht über wichtige Settings."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/role remove [user_id]</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Rolle entfernen" data-bs-content="Entfernt die zugewiesene Rolle von einem Benutzer."></i>
+                        <span>
+                            <span class="command-name fw-bold">/config</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Config (detailliert)"
+                           data-bs-content="Detaillierte Ausgabe der Bot-Konfiguration."></i>
                     </li>
+
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="command-name fw-bold">/roles</span>
-                        <i class="bi bi-info-circle-fill text-info" data-bs-toggle="popover" title="Rollen-Liste anzeigen" data-bs-content="Zeigt alle Benutzer an, denen aktuell eine Rolle zugewiesen ist."></i>
+                        <span>
+                            <span class="command-name fw-bold">/status</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Status"
+                           data-bs-content="Bot-Status + aktivierte Module/Locks."></i>
                     </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/reload</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Config neu laden"
+                           data-bs-content="Lädt die Konfiguration neu (praktisch fürs Web-Panel)."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/debug on|off</span>
+                            <span class="badge bg-success ms-2">Neu / Board</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Debug-Modus"
+                           data-bs-content="Schaltet Debug-Ausgaben/Verhalten ein oder aus."></i>
+                    </li>
+
+                    <!-- Legacy / alte Admin-Setup-Kommandos aus deiner bisherigen Seite -->
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/setadmingroup</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Admin-Gruppe setzen (Alt-Konzept)"
+                           data-bs-content="War in älterer Übersicht enthalten. Nur nutzen, wenn der Bot diese Logik tatsächlich implementiert."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/setmaingroup [gruppen_id]</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Hauptgruppe setzen (Alt-Konzept)"
+                           data-bs-content="Älterer Setup-Ansatz. In deinem neuen Board-Ansatz steuerst du das primär über die Config/ das Dashboard."></i>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <span class="command-name fw-bold">/raidmode on|off</span>
+                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
+                        </span>
+                        <i class="bi bi-info-circle-fill text-info"
+                           data-bs-toggle="popover"
+                           title="Raid-Mode (Alt-Konzept)"
+                           data-bs-content="Optionales Notfall-Feature aus älterer Übersicht."></i>
+                    </li>
+
                 </ul>
             </div>
         </div>
+
     </div>
 </div>
 {% endblock %}
