@@ -7,6 +7,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <span class="navbar-brand">Outfit-Bot Dashboard</span>
+             <a href="/" class="btn btn-outline-light ms-auto">🏠 Zurück zur Übersicht</a>
         </div>
     </nav>
     <div class="container mt-4">
@@ -35,11 +36,11 @@
                             Status: {{ '🟢 AKTIV (Läuft)' if is_running else '🔴 INAKTIV (Gestoppt)' }}
                         </p>
                         {% if is_running %}
-                            <form action="{{ url_for('outfit_bot_stop') }}" method="post">
+                            <form action="{{ url_for('outfit_bot_stop_route') }}" method="post">
                                 <button type="submit" class="btn btn-danger w-100">🛑 Bot stoppen</button>
                             </form>
                         {% else %}
-                            <form action="{{ url_for('outfit_bot_start') }}" method="post">
+                            <form action="{{ url_for('outfit_bot_start_route') }}" method="post">
                                 <button type="submit" class="btn btn-success w-100">▶️ Bot starten</button>
                             </form>
                         {% endif %}

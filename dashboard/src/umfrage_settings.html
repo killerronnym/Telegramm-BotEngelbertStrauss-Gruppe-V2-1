@@ -1,59 +1,69 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <a href="/" class="btn btn-secondary mb-3" style="width: auto;">← Zurück zum Haupt-Dashboard</a>
-    <h1>Umfrage Einstellungen</h1>
+<div class="container mt-4">
+    <a href="/" class="btn btn-secondary mb-3">← Zurück zum Haupt-Dashboard</a>
+    <h1 class="display-5 mb-4">Umfrage Einstellungen</h1>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="alert alert-{{ category }}">{{ message }}</div>
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <div class="settings-section">
-        <h3>Konfiguration</h3>
-        <form action="/umfrage-settings" method="POST">
-            <input type="hidden" name="config_type" value="umfrage">
-            <input type="hidden" name="action" value="save_settings">
-            
-            <div class="form-group">
-                <label>Telegram Bot Token</label>
-                <input type="text" name="token" value="{{ config.umfrage.token or '' }}" placeholder="123456:ABC-DEF...">
-            </div>
-            <div class="form-group">
-                <label>Channel ID</label>
-                <input type="text" name="channel_id" value="{{ config.umfrage.channel_id or '' }}" placeholder="-100...">
-            </div>
-            <div class="form-group">
-                <label>Topic ID (Optional)</label>
-                <input type="text" name="topic_id" value="{{ config.umfrage.topic_id or '' }}" placeholder="123">
-            </div>
-            
-            <button type="submit" class="btn btn-primary">Einstellungen Speichern</button>
-        </form>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Konfiguration</h3>
+        </div>
+        <div class="card-body">
+            <form action="/umfrage-settings" method="POST">
+                <input type="hidden" name="config_type" value="umfrage">
+                <input type="hidden" name="action" value="save_settings">
+                
+                <div class="mb-3">
+                    <label for="token" class="form-label">Telegram Bot Token</label>
+                    <input type="text" id="token" name="token" class="form-control" value="{{ config.umfrage.token or '' }}" placeholder="123456:ABC-DEF...">
+                </div>
+                <div class="mb-3">
+                    <label for="channel_id" class="form-label">Channel ID</label>
+                    <input type="text" id="channel_id" name="channel_id" class="form-control" value="{{ config.umfrage.channel_id or '' }}" placeholder="-100...">
+                </div>
+                <div class="mb-3">
+                    <label for="topic_id" class="form-label">Topic ID (Optional)</label>
+                    <input type="text" id="topic_id" name="topic_id" class="form-control" value="{{ config.umfrage.topic_id or '' }}" placeholder="123">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Einstellungen Speichern</button>
+            </form>
+        </div>
+    </div>
 
-        <hr style="border-color: #444; margin: 2rem 0;">
-
-        <h3>Aktionen</h3>
-        <div class="action-group">
-            <form action="/send_umfrage" method="POST" style="margin-right: 10px;">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Aktionen</h3>
+        </div>
+        <div class="card-body">
+            <form action="/send_umfrage" method="POST">
                 <button type="submit" class="btn btn-success">Jetzt zufällige Umfrage senden</button>
             </form>
         </div>
     </div>
 
-    <div class="settings-section" style="margin-top: 2rem;">
-        <h3>📜 Fehler & Aktivitäts-Log</h3>
-        <form action="/umfrage-settings" method="POST" style="text-align: right; margin-bottom: 0.5rem;">
-             <input type="hidden" name="action" value="clear_log">
-             <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;">Log löschen</button>
-        </form>
-        <div style="background-color: #111; color: #0f0; padding: 1rem; border-radius: 4px; height: 300px; overflow-y: scroll; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;">
-{% for line in logs %}
-{{ line }}{% endfor %}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>📜 Fehler & Aktivitäts-Log</h3>
+            <form action="/umfrage-settings" method="POST" class="m-0">
+                 <input type="hidden" name="action" value="clear_log">
+                 <button type="submit" class="btn btn-danger btn-sm">Log löschen</button>
+            </form>
+        </div>
+        <div class="card-body">
+            <pre class="log-display bg-dark text-white p-3 rounded" style="height: 300px; overflow-y: scroll; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;">{% for line in logs %}{{ line }}{% endfor %}</pre>
         </div>
     </div>
 </div>

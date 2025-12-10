@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from telegram import Update, ChatInviteLink
 from telegram.helpers import escape_markdown
+from telegram.error import TelegramError
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # --- Dateien & Speicher -----------------------------------------
 # Pfade relativ zum Ausführungsort (was das invite_bot Verzeichnis sein sollte)
-BOT_SETTINGS_CONFIG_FILE = 'bot_settings_config.json'
+BOT_SETTINGS_CONFIG_FILE = 'invite_bot_config.json' # CORRECTED FILE NAME
 USER_INTERACTIONS_LOG_FILE = 'user_interactions.log'
 
 # Data Ordner liegt eine Ebene höher
@@ -298,20 +299,23 @@ async def get_rules_ok(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("✅ Dein Steckbrief wurde erfolgreich in der Gruppe gepostet\\.", parse_mode="MarkdownV2")
             else:
                 await update.message.reply_text("⚠️ Fehler beim Posten des Steckbriefs in der Gruppe\\.", parse_mode="MarkdownV2")
+            remove_profile(user_id) # Profil sofort löschen, wenn schon gepostet
         else:
             logger.error(f"[get_rules_ok] Profil für User {user_id} konnte nicht geladen werden, obwohl es gespeichert sein sollte.")
             await update.message.reply_text("⚠️ Ein interner Fehler ist aufgetreten\\. Dein Steckbrief konnte nicht gefunden werden\\.", parse_mode="MarkdownV2")
+            remove_profile(user_id) # Bereinigung bei Fehler
     else:
         logger.info(f"[get_rules_ok] User {user_id} ist kein Mitglied ODER Reposting ist deaktiviert. Sende Einladungslink.")
         try:
             link: ChatInviteLink = await context.bot.create_chat_invite_link(chat_id=GROUP_ID, expire_date=datetime.utcnow() + timedelta(minutes=LINK_TTL_MINUTES), creates_join_request=True)
             await update.message.reply_text(f"✅ Super\\! Hier ist dein Einladungslink \\(gültig für {LINK_TTL_MINUTES} Minuten\\):\n{escape_markdown(link.invite_link, version=2)}", parse_mode='MarkdownV2')
+            # Hier NICHT remove_profile() aufrufen! Profil wird in handle_join_request benötigt.
         except Exception as e:
             logger.error(f"[get_rules_ok] Fehler beim Link-Erstellen für User {user_id}: {e}")
             await update.message.reply_text(f"⚠️ Fehler beim Erstellen des Links\\: {escape_markdown(str(e), version=2)}", parse_mode="MarkdownV2")
+            remove_profile(user_id) # Bereinigung bei Fehler
     
     user_data_temp.pop(user_id, None)
-    remove_profile(user_id)
     return ConversationHandler.END
 
 async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):

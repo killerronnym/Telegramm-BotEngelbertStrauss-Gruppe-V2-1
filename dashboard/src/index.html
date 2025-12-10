@@ -23,10 +23,10 @@
       </div>
       <div class="card-body">
         <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-            <form action="/send_quizfrage" method="POST" class="d-inline">
+            <form action="{{ url_for('send_quizfrage') }}" method="POST" class="d-inline">
                 <button type="submit" class="btn btn-primary btn-lg">❔ Quizfrage Senden</button>
             </form>
-            <form action="/send_umfrage" method="POST" class="d-inline">
+            <form action="{{ url_for('send_umfrage') }}" method="POST" class="d-inline">
                 <button type="submit" class="btn btn-secondary btn-lg">📊 Umfrage Senden</button>
             </form>
         </div>
@@ -40,7 +40,7 @@
                     <h2 class="card-title">❔ Quiz Bot</h2>
                     <p class="card-text">Verwaltung der Quizfragen und Einstellungen.</p>
                     <div class="mt-auto">
-                        <a href="/quiz-settings" class="btn btn-primary">Quiz Einstellungen & Aktionen</a>
+                        <a href="{{ url_for('quiz_settings') }}" class="btn btn-primary">Quiz Einstellungen & Aktionen</a>
                     </div>
                 </div>
             </div>
@@ -52,7 +52,7 @@
                     <h2 class="card-title">📊 Umfrage Bot</h2>
                     <p class="card-text">Verwaltung der Umfragen und Einstellungen.</p>
                     <div class="mt-auto">
-                        <a href="/umfrage-settings" class="btn btn-primary">Umfrage Einstellungen & Aktionen</a>
+                        <a href="{{ url_for('umfrage_settings') }}" class="btn btn-primary">Umfrage Einstellungen & Aktionen</a>
                     </div>
                 </div>
             </div>
@@ -64,7 +64,7 @@
                     <h2 class="card-title">👗 Outfit-Wettbewerb Bot</h2>
                     <p class="card-text">Steuerung für den Outfit-Contest und Gewinnerauslosung.</p>
                     <div class="mt-auto">
-                        <a href="/outfit-bot/dashboard" class="btn btn-success">Outfit-Bot Dashboard</a>
+                        <a href="{{ url_for('outfit_bot_dashboard') }}" class="btn btn-success">Outfit-Bot Dashboard</a>
                     </div>
                 </div>
             </div>
@@ -76,7 +76,7 @@
                     <h2 class="card-title">👋 Einladungs-Bot</h2>
                     <p class="card-text">Einstellungen für Begrüßungen und Beitrittsanfragen.</p>
                     <div class="mt-auto">
-                        <a href="/bot-settings" class="btn btn-success">Einladungs-Bot Einstellungen</a>
+                        <a href="{{ url_for('bot_settings') }}" class="btn btn-success">Einladungs-Bot Einstellungen</a>
                     </div>
                 </div>
             </div>
@@ -88,7 +88,7 @@
                     <h2 class="card-title">🆔 ID-Finder Bot</h2>
                     <p class="card-text">Hilfsmittel zum Ermitteln von Chat- und Topic-IDs.</p>
                     <div class="mt-auto">
-                        <a href="/id-finder" class="btn btn-secondary">ID-Finder Dashboard</a>
+                        <a href="{{ url_for('id_finder_dashboard') }}" class="btn btn-secondary">ID-Finder Dashboard</a>
                     </div>
                 </div>
             </div>

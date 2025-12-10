@@ -34,14 +34,37 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
+# Bot Directories
 OUTFIT_BOT_DIR = os.path.join(PROJECT_ROOT, 'outfit_bot')
+ID_FINDER_BOT_DIR = os.path.join(PROJECT_ROOT, 'id_finder_bot')
+INVITE_BOT_DIR = os.path.join(PROJECT_ROOT, 'invite_bot')
+
+# Config Files
 OUTFIT_BOT_CONFIG_FILE = os.path.join(OUTFIT_BOT_DIR, 'outfit_bot_config.json')
-OUTFIT_BOT_SCRIPT = os.path.join(OUTFIT_BOT_DIR, 'outfit_bot.py')
+ID_FINDER_CONFIG_FILE = os.path.join(ID_FINDER_BOT_DIR, 'id_finder_config.json')
+INVITE_BOT_CONFIG_FILE = os.path.join(INVITE_BOT_DIR, 'invite_bot_config.json')
+DASHBOARD_CONFIG_FILE = os.path.join(BASE_DIR, 'config.json')
+
+# Log Files
 OUTFIT_BOT_LOG = os.path.join(OUTFIT_BOT_DIR, 'outfit_bot.log')
+ID_FINDER_BOT_LOG = os.path.join(ID_FINDER_BOT_DIR, 'id_finder_bot.log')
+INVITE_BOT_LOG = os.path.join(INVITE_BOT_DIR, 'invite_bot.log')
+INVITE_BOT_USER_LOG = os.path.join(INVITE_BOT_DIR, 'user_interactions.log') # Added Invite Bot User Log
+
+# Script Files
+OUTFIT_BOT_SCRIPT = os.path.join(OUTFIT_BOT_DIR, 'outfit_bot.py')
+ID_FINDER_BOT_SCRIPT = os.path.join(ID_FINDER_BOT_DIR, 'id_finder_bot.py')
+INVITE_BOT_SCRIPT = os.path.join(INVITE_BOT_DIR, 'invite_bot.py')
+
+# Data Files
 OUTFIT_BOT_DATA_FILE = os.path.join(OUTFIT_BOT_DIR, 'outfit_bot_data.json')
+QUIZ_DATA_FILE = os.path.join(PROJECT_ROOT, 'data', 'quizfragen.json')
+UMFRAGE_DATA_FILE = os.path.join(PROJECT_ROOT, 'data', 'umfragen.json')
 
 # --- Prozess-Variablen ---
 outfit_bot_process = None
+id_finder_process = None
+invite_bot_process = None
 
 # --- Hilfsfunktionen für JSON ---
 def load_json(file_path, default_data={}):
@@ -65,11 +88,16 @@ def get_bot_logs(log_file, lines=100):
 
 def start_bot_process(script_path, log_path):
     global outfit_bot_process
-    if is_bot_running(outfit_bot_process):
-        return outfit_bot_process, f"{os.path.basename(script_path)} läuft bereits."
+    # Generic check for any process running the script
+    # This prevents starting multiple instances of the same bot
+    
     try:
         cwd = os.path.dirname(script_path)
         py_exec = sys.executable
+        
+        # Ensure log directory exists
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
         with open(log_path, "a", encoding="utf-8") as log_f:
             process = subprocess.Popen([py_exec, script_path], cwd=cwd, stdout=log_f, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
         return process, f"{os.path.basename(script_path)} erfolgreich gestartet."
@@ -89,6 +117,7 @@ def stop_bot_process(process):
 def is_outfit_bot_running(): return is_bot_running(outfit_bot_process)
 def start_outfit_bot():
     global outfit_bot_process
+    if is_outfit_bot_running(): return True, "Outfit Bot läuft bereits."
     outfit_bot_process, msg = start_bot_process(OUTFIT_BOT_SCRIPT, OUTFIT_BOT_LOG)
     return bool(outfit_bot_process), msg
 def stop_outfit_bot():
@@ -97,11 +126,37 @@ def stop_outfit_bot():
     return not bool(outfit_bot_process), msg
 def get_outfit_bot_logs(lines=30): return get_bot_logs(OUTFIT_BOT_LOG, lines)
 
+# --- ID Finder Bot Wrappers ---
+def is_id_finder_running(): return is_bot_running(id_finder_process)
+def start_id_finder_bot():
+    global id_finder_process
+    if is_id_finder_running(): return True, "ID Finder Bot läuft bereits."
+    id_finder_process, msg = start_bot_process(ID_FINDER_BOT_SCRIPT, ID_FINDER_BOT_LOG)
+    return bool(id_finder_process), msg
+def stop_id_finder_bot():
+    global id_finder_process
+    id_finder_process, msg = stop_bot_process(id_finder_process)
+    return not bool(id_finder_process), msg
+
+# --- Invite Bot Wrappers ---
+def is_invite_bot_running(): return is_bot_running(invite_bot_process)
+def start_invite_bot():
+    global invite_bot_process
+    if is_invite_bot_running(): return True, "Invite Bot läuft bereits."
+    invite_bot_process, msg = start_bot_process(INVITE_BOT_SCRIPT, INVITE_BOT_LOG)
+    return bool(invite_bot_process), msg
+def stop_invite_bot():
+    global invite_bot_process
+    invite_bot_process, msg = stop_bot_process(invite_bot_process)
+    return not bool(invite_bot_process), msg
+
+
 # --- ROUTEN ---
 @app.route("/")
 def index():
-    return redirect(url_for('outfit_bot_dashboard'))
+    return render_template('index.html')
 
+# --- OUTFIT BOT ROUTES ---
 @app.route("/outfit-bot/dashboard")
 def outfit_bot_dashboard():
     config = load_json(OUTFIT_BOT_CONFIG_FILE)
@@ -117,13 +172,13 @@ def outfit_bot_dashboard():
     return render_template('outfit_bot_dashboard.html', config=config, is_running=is_outfit_bot_running(), logs=get_outfit_bot_logs(30), duel_status=duel_status)
 
 @app.route("/outfit-bot/start", methods=['POST'])
-def outfit_bot_start():
+def outfit_bot_start_route():
     success, msg = start_outfit_bot()
     flash(msg, "success" if success else "danger")
     return redirect(url_for('outfit_bot_dashboard'))
 
 @app.route("/outfit-bot/stop", methods=['POST'])
-def outfit_bot_stop():
+def outfit_bot_stop_route():
     success, msg = stop_outfit_bot()
     flash(msg, "success" if success else "danger")
     return redirect(url_for('outfit_bot_dashboard'))
@@ -155,7 +210,7 @@ def outfit_bot_save_config():
         'WINNER_TIME': form.get('WINNER_TIME', '22:00'),
         'DUEL_TYPE': form.get('DUEL_TYPE', 'tie_breaker'),
         'DUEL_DURATION_MINUTES': int(form.get('DUEL_DURATION_MINUTES', 60)),
-        'TEMPORARY_MESSAGE_DURATION_SECONDS': int(form.get('TEMPORARY_MESSAGE_DURATION_SECONDS', 30)) # NEW: Save temporary message duration
+        'TEMPORARY_MESSAGE_DURATION_SECONDS': int(form.get('TEMPORARY_MESSAGE_DURATION_SECONDS', 30))
     })
 
     config['AUTO_POST_ENABLED'] = 'AUTO_POST_ENABLED' in form
@@ -204,9 +259,159 @@ def outfit_bot_end_duel():
         flash("Bot läuft nicht!", "danger")
     return redirect(url_for('outfit_bot_dashboard'))
 
+
+# --- INVITE BOT ROUTES ---
+@app.route("/bot-settings", methods=['GET', 'POST'])
+def bot_settings():
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'start_invite_bot':
+            success, msg = start_invite_bot()
+            flash(msg, "success" if success else "danger")
+        
+        elif action == 'stop_invite_bot':
+            success, msg = stop_invite_bot()
+            flash(msg, "success" if success else "danger")
+            
+        elif action == 'clear_user_interactions_log':
+            try:
+                with open(INVITE_BOT_USER_LOG, 'w') as f: f.write('')
+                flash("Benutzer-Interaktions-Log geleert.", "success")
+            except Exception as e:
+                flash(f"Fehler beim Leeren des Logs: {e}", "danger")
+        
+        else:
+            # Save Configuration
+            was_running = is_invite_bot_running()
+            if was_running: stop_invite_bot()
+
+            config = load_json(INVITE_BOT_CONFIG_FILE)
+            config['bot_token'] = request.form.get('bot_token', '').strip()
+            config['main_chat_id'] = request.form.get('main_chat_id', '').strip()
+            config['topic_id'] = request.form.get('topic_id', '').strip() or None
+            config['is_enabled'] = 'is_enabled' in request.form
+            config['repost_profile_for_existing_members'] = 'repost_profile_for_existing_members' in request.form
+            try:
+                config['link_ttl_minutes'] = int(request.form.get('link_ttl_minutes', 15))
+            except ValueError:
+                config['link_ttl_minutes'] = 15
+            
+            save_json(INVITE_BOT_CONFIG_FILE, config)
+            flash("Invite Bot Einstellungen gespeichert.", "success")
+
+            if was_running:
+                start_invite_bot()
+                flash("Invite Bot neu gestartet.", "info")
+
+        return redirect(url_for('bot_settings'))
+
+    config = load_json(INVITE_BOT_CONFIG_FILE)
+    invite_bot_logs = get_bot_logs(INVITE_BOT_LOG)
+    user_interaction_logs = get_bot_logs(INVITE_BOT_USER_LOG)
+
+    return render_template('bot_settings.html', config=config, is_invite_running=is_invite_bot_running(), invite_bot_logs=invite_bot_logs, user_interaction_logs=user_interaction_logs)
+
+
+# --- ID FINDER BOT ROUTES ---
+@app.route("/id-finder", methods=['GET', 'POST'])
+def id_finder_dashboard():
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'start_bot':
+            success, msg = start_id_finder_bot()
+            flash(msg, "success" if success else "danger")
+        
+        elif action == 'stop_bot':
+            success, msg = stop_id_finder_bot()
+            flash(msg, "success" if success else "danger")
+
+        elif action == 'save_config':
+            was_running = is_id_finder_running()
+            if was_running: stop_id_finder_bot()
+
+            config = load_json(ID_FINDER_CONFIG_FILE)
+            config['bot_token'] = request.form.get('bot_token', '').strip()
+            config['main_group_id'] = request.form.get('main_group_id', '').strip()
+            config['log_topic_id'] = request.form.get('log_topic_id', '').strip() or None
+            
+            save_json(ID_FINDER_CONFIG_FILE, config)
+            flash("ID Finder Konfiguration gespeichert.", "success")
+
+            if was_running:
+                start_id_finder_bot()
+                flash("ID Finder Bot neu gestartet.", "info")
+        
+        return redirect(url_for('id_finder_dashboard'))
+
+    config = load_json(ID_FINDER_CONFIG_FILE)
+    system_logs = get_bot_logs(ID_FINDER_BOT_LOG)
+    command_logs = [] # Placeholder, implement command logs file if needed for ID finder
+
+    return render_template('id_finder_dashboard.html', config=config, is_running=is_id_finder_running(), system_logs=system_logs, command_logs=command_logs)
+
+@app.route("/id-finder/commands")
+def id_finder_commands():
+    return render_template('id_finder_commands.html')
+
+# --- QUIZ & UMFRAGE ROUTES ---
+@app.route("/quiz-settings", methods=['GET', 'POST'])
+def quiz_settings():
+    if request.method == 'POST':
+        if request.form.get('action') == 'save_settings':
+             dashboard_config = load_json(DASHBOARD_CONFIG_FILE)
+             if 'quiz' not in dashboard_config: dashboard_config['quiz'] = {}
+             dashboard_config['quiz']['token'] = request.form.get('token', '').strip()
+             dashboard_config['quiz']['channel_id'] = request.form.get('channel_id', '').strip()
+             dashboard_config['quiz']['topic_id'] = request.form.get('topic_id', '').strip() or None
+             save_json(DASHBOARD_CONFIG_FILE, dashboard_config)
+             flash("Quiz Einstellungen gespeichert.", "success")
+        elif request.form.get('action') == 'clear_log':
+             flash("Log geleert (Dummy).", "success")
+
+        return redirect(url_for('quiz_settings'))
+    
+    dashboard_config = load_json(DASHBOARD_CONFIG_FILE)
+    return render_template('quiz_settings.html', config=dashboard_config, logs=[]) # Add logs if available
+
+@app.route("/umfrage-settings", methods=['GET', 'POST'])
+def umfrage_settings():
+    if request.method == 'POST':
+         if request.form.get('action') == 'save_settings':
+             dashboard_config = load_json(DASHBOARD_CONFIG_FILE)
+             if 'umfrage' not in dashboard_config: dashboard_config['umfrage'] = {}
+             dashboard_config['umfrage']['token'] = request.form.get('token', '').strip()
+             dashboard_config['umfrage']['channel_id'] = request.form.get('channel_id', '').strip()
+             dashboard_config['umfrage']['topic_id'] = request.form.get('topic_id', '').strip() or None
+             save_json(DASHBOARD_CONFIG_FILE, dashboard_config)
+             flash("Umfrage Einstellungen gespeichert.", "success")
+         elif request.form.get('action') == 'clear_log':
+             flash("Log geleert (Dummy).", "success")
+         
+         return redirect(url_for('umfrage_settings'))
+
+    dashboard_config = load_json(DASHBOARD_CONFIG_FILE)
+    return render_template('umfrage_settings.html', config=dashboard_config, logs=[]) # Add logs if available
+
+@app.route("/send_quizfrage", methods=['POST'])
+def send_quizfrage():
+    # Implementation for sending quiz question using stored config and data
+    flash("Quizfrage gesendet (Simulation).", "info")
+    return redirect(request.referrer or url_for('index'))
+
+@app.route("/send_umfrage", methods=['POST'])
+def send_umfrage():
+    # Implementation for sending poll using stored config and data
+    flash("Umfrage gesendet (Simulation).", "info")
+    return redirect(request.referrer or url_for('index'))
+
+
 # --- Auto-Start & Shutdown ---
 def shutdown_background_processes():
     stop_outfit_bot()
+    stop_id_finder_bot()
+    stop_invite_bot()
 
 if __name__ == '__main__':
     atexit.register(shutdown_background_processes)
