@@ -16,9 +16,11 @@
             "can_roles": true,
             "can_config": true,
             "can_debug": true,
-            "can_see_ids": false,
-            "can_see_logs": false,
-            "can_manage_admins": false
+            "can_see_ids": true,
+            "can_see_logs": true,
+            "can_manage_admins": true,
+            "can_delete_messages": true,
+            "can_pin_messages": true
         }
     }
 }

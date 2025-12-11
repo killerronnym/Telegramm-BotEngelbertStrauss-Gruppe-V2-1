@@ -29,7 +29,7 @@
     "verify_enabled": false,
     "debug_enabled": false,
     "delete_commands": true,
-    "bot_message_cleanup_seconds": 3,
+    "bot_message_cleanup_seconds": 10,
     "filters": {},
     "blacklist": [],
     "roles": {},
