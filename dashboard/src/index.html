@@ -23,10 +23,10 @@
       </div>
       <div class="card-body">
         <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-            <form action="{{ url_for('send_quizfrage') }}" method="POST" class="d-inline">
+            <form action="{{ url_for('send_random_quiz_route') }}" method="POST" class="d-inline">
                 <button type="submit" class="btn btn-primary btn-lg">❔ Quizfrage Senden</button>
             </form>
-            <form action="{{ url_for('send_umfrage') }}" method="POST" class="d-inline">
+            <form action="{{ url_for('send_random_poll_route') }}" method="POST" class="d-inline">
                 <button type="submit" class="btn btn-secondary btn-lg">📊 Umfrage Senden</button>
             </form>
         </div>

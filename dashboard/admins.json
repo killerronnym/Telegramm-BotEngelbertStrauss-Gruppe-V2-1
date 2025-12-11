@@ -5,12 +5,9 @@
             "can_warn": true,
             "can_kick": true,
             "can_ban": true,
-            "can_mute": true,
             "can_unban": true,
+            "can_mute": true,
             "can_clear_warns": true,
-            "can_see_logs": true,
-            "can_manage_admins": true,
-            "can_see_ids": true,
             "can_manage_messages": true,
             "can_antispam": true,
             "can_setflood": true,
@@ -18,7 +15,10 @@
             "can_blacklist": true,
             "can_roles": true,
             "can_config": true,
-            "can_debug": true
+            "can_debug": true,
+            "can_see_ids": false,
+            "can_see_logs": false,
+            "can_manage_admins": false
         }
     }
 }
