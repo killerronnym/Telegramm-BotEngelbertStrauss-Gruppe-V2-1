@@ -3,12 +3,36 @@
     "mutes": {},
     "bans": {},
     "1032410054": {
-        "warns": 1,
+        "warns": 5,
         "history": [
             {
                 "type": "warn",
-                "reason": "@Kronym okok",
-                "date": "2025-12-11T14:45:05.076172",
+                "reason": "esddsf",
+                "date": "2025-12-15T21:01:22.559069",
+                "by": 5544098336
+            },
+            {
+                "type": "warn",
+                "reason": "rt",
+                "date": "2025-12-15T21:36:02.946343",
+                "by": 5544098336
+            },
+            {
+                "type": "warn",
+                "reason": "www",
+                "date": "2025-12-15T21:36:29.537745",
+                "by": 5544098336
+            },
+            {
+                "type": "warn",
+                "reason": "ggg",
+                "date": "2025-12-15T21:37:02.167757",
+                "by": 5544098336
+            },
+            {
+                "type": "warn",
+                "reason": "hat den Tim geärgert LOL",
+                "date": "2025-12-17T17:06:01+01:00",
                 "by": 5544098336
             }
         ]
@@ -20,6 +44,17 @@
                 "type": "warn",
                 "reason": "@Kronym t",
                 "date": "2025-12-11T13:12:05.433367",
+                "by": 5544098336
+            }
+        ]
+    },
+    "7386906637": {
+        "warns": 1,
+        "history": [
+            {
+                "type": "warn",
+                "reason": "8599553392 kein Bild von sich",
+                "date": "2025-12-16T09:51:55.769388",
                 "by": 5544098336
             }
         ]

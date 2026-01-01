@@ -1,0 +1,754 @@
+{% extends "base.html" %}
+
+{% block title %}ID-Finder Analytics{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <a href="{{ url_for('id_finder_dashboard') }}" class="btn btn-secondary mb-3">← Zurück zum ID-Finder Dashboard</a>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="display-5 mb-0">📊 ID-Finder Analytics</h1>
+        <span class="badge bg-dark" style="font-size: 1rem; padding: 0.8rem;">
+            {{ user_registry_count if user_registry_count is defined else (user_registry|length if user_registry is defined else 0) }} Users
+        </span>
+    </div>
+
+    <!-- Quick Stats (Registry) -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header fw-bold">👥 Registry</div>
+                <div class="card-body">
+                    <div style="font-size: 2rem; font-weight: 700;">
+                        {{ stats.total_users if stats is defined else 0 }}
+                    </div>
+                    <div class="text-muted">gespeicherte User</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header fw-bold">💬 Chats</div>
+                <div class="card-body">
+                    <div style="font-size: 2rem; font-weight: 700;">
+                        {{ stats.unique_chats if stats is defined else 0 }}
+                    </div>
+                    <div class="text-muted">einzigartige Chat-IDs</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header fw-bold">⏱️ Letzter Kontakt</div>
+                <div class="card-body">
+                    {% if stats is defined and stats.most_recent_user %}
+                        <div class="fw-bold">
+                            {{ stats.most_recent_user.full_name or (('@' ~ stats.most_recent_user.username) if stats.most_recent_user.username else stats.most_recent_user.id) }}
+                        </div>
+                        <div class="text-muted">
+                            {{ stats.most_recent_user.last_seen }}
+                        </div>
+                        <div class="mt-2">
+                            <code>{{ stats.most_recent_user.id }}</code>
+                        </div>
+                    {% else %}
+                        <div class="text-muted">Keine Daten</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== Group Activity Overview ===================== -->
+    <style>
+        .ga-card {
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: 14px;
+            background: rgba(0,0,0,.10);
+        }
+        .ga-kpi-title { font-size: .92rem; opacity: .85; }
+        .ga-kpi-value { font-size: 2rem; font-weight: 800; letter-spacing: .2px; line-height: 1.1; }
+        .ga-kpi-sub { font-size: .85rem; opacity: .7; }
+        .ga-avatar {
+            width: 34px; height: 34px; border-radius: 999px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: .85rem;
+            border: 1px solid rgba(255,255,255,.18);
+            background: rgba(255,255,255,.06);
+            margin-right: .6rem;
+            flex: 0 0 auto;
+        }
+        .ga-clickable-row { cursor: pointer; }
+        .ga-selected {
+            outline: 2px solid rgba(255,255,255,.18);
+            outline-offset: -2px;
+        }
+        .ga-error {
+            border: 1px solid rgba(220,53,69,.35);
+            background: rgba(220,53,69,.08);
+            color: rgba(255,255,255,.9);
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+
+        /* ✅ Wichtig: feste Höhe für Charts */
+        .ga-chart-wrap {
+            position: relative;
+            width: 100%;
+            height: 220px;
+        }
+        .ga-chart-wrap-sm {
+            position: relative;
+            width: 100%;
+            height: 220px;
+        }
+        @media (max-width: 992px) {
+            .ga-chart-wrap, .ga-chart-wrap-sm { height: 200px; }
+        }
+    
+        .ga-leaderboard-table { table-layout: fixed; min-width: 750px !important; }
+        .ga-col-rank { width: 60px; }
+        .ga-col-user { width: auto; }
+        .ga-col-msg { width: 100px; }
+        .ga-col-media { width: 100px; }
+        .ga-col-react { width: 150px; }
+    </style>
+
+
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-end mb-2">
+            <div>
+                <h2 class="h3 mb-1">Group Activity Overview</h2>
+                <div class="text-muted">Aktivität & Auswertung.</div>
+            </div>
+
+            <div class="d-flex gap-2 align-items-end">
+                <div>
+                    <label class="form-label mb-1">Tage</label>
+                    <input id="gaDays" class="form-control" type="number" min="1" max="365" value="30" style="width: 110px;">
+                </div>
+                <div>
+                    <label class="form-label mb-1">Chat-ID (optional)</label>
+                    <input id="gaChatId" class="form-control" placeholder="-100..." style="width: 180px;">
+                </div>
+                <button id="gaLoadBtn" class="btn btn-primary" style="height: 38px;">Laden</button>
+                <button id="gaResetBtn" class="btn btn-secondary" style="height: 38px;">Reset</button>
+            </div>
+        </div>
+
+        <div id="gaErrorBox" class="ga-error mb-3" style="display:none;"></div>
+
+        <!-- KPI Boxen -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="p-3 ga-card h-100">
+                    <div class="d-flex justify-content-between">
+                        <div class="ga-kpi-title">Total Messages</div><div>💬</div>
+                    </div>
+                    <div class="ga-kpi-value" id="kpiTotalMessages">—</div>
+                    <div class="ga-kpi-sub" id="kpiDaysHint">in den letzten 30 Tagen</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="p-3 ga-card h-100">
+                    <div class="d-flex justify-content-between">
+                        <div class="ga-kpi-title">Active Users</div><div>👥</div>
+                    </div>
+                    <div class="ga-kpi-value" id="kpiActiveUsers">—</div>
+                    <div class="ga-kpi-sub">mind. 1 Nachricht</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="p-3 ga-card h-100">
+                    <div class="d-flex justify-content-between">
+                        <div class="ga-kpi-title">Busiest Day</div><div>📅</div>
+                    </div>
+                    <div class="ga-kpi-value" id="kpiBusiestDay">—</div>
+                    <div class="ga-kpi-sub">meiste Nachrichten</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="p-3 ga-card h-100">
+                    <div class="d-flex justify-content-between">
+                        <div class="ga-kpi-title">Media Shared</div><div>🖼️</div>
+                    </div>
+                    <div class="ga-kpi-value" id="kpiMediaShared">—</div>
+                    <div class="ga-kpi-sub">Bilder/Videos/Dateien</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="p-3 ga-card h-100">
+                    <div class="d-flex justify-content-between">
+                        <div class="ga-kpi-title">Reaktionen (gegeben)</div><div>⚡</div>
+                    </div>
+                    <div class="ga-kpi-value" id="kpiTotalReactions">—</div>
+                    <div class="ga-kpi-sub">Likes/Reaktionen</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="p-3 ga-card h-100">
+                    <div class="d-flex justify-content-between">
+                        <div class="ga-kpi-title">Top Contributor</div><div>🏆</div>
+                    </div>
+                    <div class="ga-kpi-value" id="kpiTopContributor" style="font-size: 1.55rem;">—</div>
+                    <div class="ga-kpi-sub">meiste Nachrichten</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="p-3 ga-card h-100">
+                    <div class="d-flex justify-content-between">
+                        <div class="ga-kpi-title">Most Liked User</div><div>❤️</div>
+                    </div>
+                    <div class="ga-kpi-value" id="kpiMostLikedUser" style="font-size: 1.55rem;">—</div>
+                    <div class="ga-kpi-sub">meiste Reaktionen</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="p-3 ga-card h-100">
+                    <div class="d-flex justify-content-between">
+                        <div class="ga-kpi-title">Top Chat</div><div>💬</div>
+                    </div>
+                    <div class="ga-kpi-value" id="kpiTopChat" style="font-size: 1.35rem;">—</div>
+                    <div class="ga-kpi-sub">aktivste Gruppe</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline + Leaderboard -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-6">
+                <div class="p-3 ga-card">
+                    <h4 class="mb-0">Activity Timeline</h4>
+                    <div class="text-muted mb-2">Nachrichtenverlauf im Zeitraum.</div>
+
+                    <div class="ga-chart-wrap">
+                        <canvas id="gaTimelineCanvas"></canvas>
+                    </div>
+
+                    <div class="small text-muted mt-2">
+                        Klick im Leaderboard rechts → (optional) User wird im Chart hervorgehoben.
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="p-3 ga-card h-100">
+                    <h4 class="mb-0">User Leaderboard</h4>
+                    <div class="text-muted mb-2">Top-User (klickbar).</div>
+
+                    <div class="table-responsive" style="max-height: 420px; overflow-y:auto;">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
+                                <tr>
+                                    <th style="width: 70px;">Rank</th>
+                                    <th>User</th>
+                                    <th class="text-end" style="width: 100px;">Messages</th>
+                                    <th class="text-end" style="width: 80px;">Media</th>
+                                    <th class="text-end" style="width: 140px;">Reaktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="gaLeaderboardBody">
+                                <tr><td colspan="5" class="text-muted">Keine Daten</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Busiest Hours + Days -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-6">
+                <div class="p-3 ga-card h-100">
+                    <h4 class="mb-0">Busiest Hours</h4>
+                    <div class="text-muted mb-2">Nachrichten nach Uhrzeit.</div>
+                    <div class="ga-chart-wrap-sm">
+                        <canvas id="gaHoursCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="p-3 ga-card h-100">
+                    <h4 class="mb-0">Busiest Days</h4>
+                    <div class="text-muted mb-2">Nachrichten nach Wochentag.</div>
+                    <div class="ga-chart-wrap-sm">
+                        <canvas id="gaWeekdaysCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recently Active Users -->
+        <div class="p-3 ga-card">
+            <h4 class="mb-0">Recently Active Users</h4>
+            <div class="text-muted mb-2">Zuletzt aktiv (neueste zuerst).</div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>User</th>
+                            <th style="width: 220px;">User ID</th>
+                            <th class="text-end" style="width: 260px;">Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gaRecentBody">
+                        <tr><td colspan="3" class="text-muted">Keine Daten</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- ===================== /Group Activity Overview ===================== -->
+
+    <!-- Top Chats -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">🏷️ Top Chats (wo User auftauchen)</div>
+        <div class="card-body">
+            {% if stats is defined and stats.top_chats and stats.top_chats|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 60%;">Chat-ID</th>
+                                <th style="width: 40%;">User-Anzahl</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for chat_id, count in stats.top_chats %}
+                            <tr>
+                                <td><code>{{ chat_id }}</code></td>
+                                <td><span class="badge bg-dark">{{ count }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-muted">Keine Chat-Daten vorhanden.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Latest Seen Table -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">🕵️‍♂️ Zuletzt gesehen (Top 30)</div>
+        <div class="card-body">
+            {% if user_registry is not defined or user_registry|length == 0 %}
+                <div class="alert alert-info mb-0">
+                    ℹ️ Noch keine Registry-Daten vorhanden.
+                </div>
+            {% else %}
+                <div class="table-responsive" style="max-height: 520px; overflow-y: auto; border: 1px solid rgba(255,255,255,.08); border-radius: .5rem;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
+                            <tr>
+                                <th style="width: 160px;">User-ID</th>
+                                <th style="width: 200px;">Username</th>
+                                <th>Name</th>
+                                <th style="width: 220px;">Last Seen</th>
+                                <th style="width: 280px;">Chats</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in user_registry[:30] %}
+                            <tr>
+                                <td><code>{{ u.id }}</code></td>
+                                <td>
+                                    {% if u.username %}
+                                        <span>@{{ u.username }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ u.full_name or '' }}</td>
+                                <td><code>{{ u.last_seen or '' }}</code></td>
+                                <td>
+                                    {% if u.chat_ids %}
+                                        <code style="white-space: normal;">{{ u.chat_ids }}</code>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <small class="text-muted d-block mt-2">
+                    Hinweis: Das sind Registry-Analytics. Für “was schreibt/postet der User” brauchst du zusätzlich Message-Logging im Bot.
+                </small>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js (nur für diese Seite) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let gaTimelineChart = null;
+let gaHoursChart = null;
+let gaWeekdaysChart = null;
+
+let __gaPayload = null;
+const selectedUserIds = new Set();
+
+function fmtNumber(n) {
+  try { return Number(n || 0).toLocaleString("de-DE"); } catch { return String(n); }
+}
+function fmtDateShort(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
+}
+function fmtDateTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString("de-DE");
+}
+function initials(name) {
+  if (!name) return "U";
+  const txt = String(name).replace("@","").trim();
+  const parts = txt.split(/\s+/);
+  let a = parts[0] ? [...parts[0]][0] : "U";
+  let b = parts[1] ? [...parts[1]][0] : "";
+  return (a + b).toUpperCase();
+}
+function showError(msg) {
+  const box = document.getElementById("gaErrorBox");
+  box.style.display = "block";
+  box.textContent = msg;
+}
+function clearError() {
+  const box = document.getElementById("gaErrorBox");
+  box.style.display = "none";
+  box.textContent = "";
+}
+
+function displayUser(u) {
+  if (!u) return "—";
+  if (typeof u === "string") return u;
+  const name = u.full_name || u.name || "";
+  const username = u.username ? ("@" + u.username) : "";
+  return name || username || u.user_id || u.id || "—";
+}
+function displayTopChat(v) {
+  if (!v) return "—";
+  if (typeof v === "string") return v;
+  const chatId = v.chat_id ?? v.id ?? "—";
+  const msgs = v.messages ?? v.total_messages ?? v.count ?? null;
+  return msgs !== null ? `${chatId} (${fmtNumber(msgs)})` : String(chatId);
+}
+
+/* ✅ Normalisiert Backend-Format -> Frontend-Format */
+function normalizePayload(p) {
+  const payload = p || {};
+  const meta = payload.meta || {};
+
+  const kpis = payload.kpis || {
+    total_messages: meta.total_messages ?? meta.totalMessages ?? 0,
+    active_users: meta.active_users ?? meta.activeUsers ?? 0,
+    media_shared: meta.media_shared ?? meta.mediaShared ?? 0,
+    total_reactions: payload.kpis?.total_reactions_given ?? meta.total_reactions ?? 0,
+    busiest_day: meta.busiest_day ?? meta.busiestDay ?? null,
+    top_contributor: meta.top_contributor ?? meta.topContributor ?? null,
+    most_liked_user: meta.most_liked_user ?? meta.mostLikedUser ?? null,
+    top_chat: meta.top_chat ?? meta.topChat ?? null,
+  };
+
+  const busiest_hours = payload.busiest_hours || payload.per_hour || Array(24).fill(0);
+  const busiest_days  = payload.busiest_days  || payload.per_weekday || Array(7).fill(0);
+
+  let tlLabels = [];
+  let tlTotal = [];
+  if (Array.isArray(payload.timeline)) {
+    tlLabels = payload.timeline.map(x => x.date).filter(Boolean);
+    tlTotal  = payload.timeline.map(x => Number(x.count || 0));
+  } else if (payload.timeline && payload.timeline.labels && payload.timeline.total) {
+    tlLabels = payload.timeline.labels;
+    tlTotal  = payload.timeline.total;
+  }
+
+  let leaderboard = payload.leaderboard || [];
+  if (Array.isArray(leaderboard)) {
+    leaderboard = leaderboard.map((r, i) => {
+      const uid = String(r.user_id ?? r.id ?? "");
+      return {
+        rank: r.rank ?? (i + 1),
+        user_id: uid,
+        username: r.username ?? "",
+        name: r.full_name ?? r.name ?? "",
+        messages: Number(r.messages ?? 0),
+        media: Number(r.media ?? 0),
+        likes: Number(r.likes_given ?? r.reactions ?? r.likes ?? 0),
+        avatar_url: r.avatar_url ?? "",  // optional (wenn Backend es liefert)
+        last_seen: r.last_seen ?? r.ts ?? ""
+      };
+    });
+  } else {
+    leaderboard = [];
+  }
+
+  let recently_active = payload.recently_active;
+  if (!Array.isArray(recently_active) || recently_active.length === 0) {
+    recently_active = leaderboard
+      .filter(x => x.last_seen)
+      .sort((a,b) => (new Date(b.last_seen) - new Date(a.last_seen)))
+      .slice(0, 10)
+      .map(x => ({ user_id: x.user_id, username: x.username, name: x.name, last_seen: x.last_seen }));
+  }
+
+  return {
+    ok: payload.ok !== false,
+    meta: { ...meta, days: meta.days ?? 30 },
+    kpis,
+    busiest_hours,
+    busiest_days,
+    timeline: { labels: tlLabels, total: tlTotal },
+    leaderboard,
+    recently_active,
+    user_series: payload.user_series || {}
+  };
+}
+
+function setKpis(norm) {
+  const k = norm.kpis || {};
+  const days = norm.meta?.days || 30;
+
+  document.getElementById("kpiTotalMessages").textContent = fmtNumber(k.total_messages);
+  document.getElementById("kpiActiveUsers").textContent = fmtNumber(k.active_users);
+  document.getElementById("kpiBusiestDay").textContent = k.busiest_day ? fmtDateShort(k.busiest_day) : "—";
+  document.getElementById("kpiMediaShared").textContent = fmtNumber(k.media_shared);
+  document.getElementById("kpiTotalReactions").textContent = fmtNumber(k.total_reactions);
+  document.getElementById("kpiTopContributor").textContent = displayUser(k.top_contributor);
+  document.getElementById("kpiMostLikedUser").textContent = displayUser(k.most_liked_user);
+  document.getElementById("kpiTopChat").textContent = displayTopChat(k.top_chat);
+  document.getElementById("kpiDaysHint").textContent = `in den letzten ${days} Tagen`;
+}
+
+function buildTimelineDatasets(norm) {
+  const labelsISO = norm.timeline?.labels || [];
+  const labels = labelsISO.map(fmtDateShort);
+  const total = norm.timeline?.total || [];
+
+  const datasets = [{
+    type: "bar",
+    label: "Total Messages",
+    data: total,
+    borderWidth: 0
+  }];
+
+  const userSeries = norm.user_series || {};
+  const palette = ["#6f42c1","#0dcaf0","#20c997","#ffc107","#fd7e14","#d63384","#0d6efd","#198754","#dc3545","#6610f2"];
+  let idx = 0;
+
+  for (const uid of selectedUserIds) {
+    if (!userSeries[uid]) continue;
+    datasets.push({
+      type: "line",
+      label: `User ${uid}`,
+      data: userSeries[uid],
+      tension: 0.25,
+      borderColor: palette[idx % palette.length],
+      pointRadius: 0,
+      borderWidth: 2
+    });
+    idx++;
+  }
+
+  return { labels, datasets };
+}
+
+function renderTimeline(norm) {
+  const cfg = buildTimelineDatasets(norm);
+  if (gaTimelineChart) gaTimelineChart.destroy();
+
+  gaTimelineChart = new Chart(document.getElementById("gaTimelineCanvas"), {
+    data: { labels: cfg.labels, datasets: cfg.datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: true } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+}
+
+function renderHours(norm) {
+  const hours = norm.busiest_hours || Array(24).fill(0);
+  const labels = [...Array(24).keys()].map(h => String(h).padStart(2,"0") + ":00");
+
+  if (gaHoursChart) gaHoursChart.destroy();
+  gaHoursChart = new Chart(document.getElementById("gaHoursCanvas"), {
+    type: "bar",
+    data: { labels, datasets: [{ label: "Messages", data: hours }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+}
+
+function renderWeekdays(norm) {
+  const wd = norm.busiest_days || Array(7).fill(0);
+  const labels = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+  if (gaWeekdaysChart) gaWeekdaysChart.destroy();
+  gaWeekdaysChart = new Chart(document.getElementById("gaWeekdaysCanvas"), {
+    type: "bar",
+    data: { labels, datasets: [{ label: "Messages", data: wd }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+}
+
+function renderLeaderboard(norm) {
+  const rows = norm.leaderboard || [];
+  const body = document.getElementById("gaLeaderboardBody");
+
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="5" class="text-muted">Keine Daten</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = rows.slice(0, 20).map(r => {
+    const uid = String(r.user_id);
+    const display = r.name ? r.name : (r.username ? "@"+r.username : uid);
+    const selected = selectedUserIds.has(uid);
+
+    const avatarHtml = r.avatar_url
+      ? `<img src="${r.avatar_url}" alt="" class="ga-avatar" style="object-fit:cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+         <span class="ga-avatar" style="display:none;">${initials(display)}</span>`
+      : `<span class="ga-avatar">${initials(display)}</span>`;
+
+    return `
+      <tr class="ga-clickable-row ${selected ? "ga-selected" : ""}" data-uid="${uid}">
+        <td><b>#${r.rank || ""}</b></td>
+        <td>
+          <div class="d-flex align-items-center">
+            ${avatarHtml}
+            <div>
+              <div>${display}</div>
+              ${r.username ? `<div class="small text-muted">@${r.username}</div>` : ``}
+            </div>
+          </div>
+        </td>
+        <td class="text-end">${fmtNumber(r.messages)}</td>
+        <td class="text-end">${fmtNumber(r.media)}</td>
+        <td class="text-end">${fmtNumber(r.likes_given || 0)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  body.querySelectorAll("tr[data-uid]").forEach(tr => {
+    tr.addEventListener("click", () => {
+      const uid = String(tr.getAttribute("data-uid"));
+      if (selectedUserIds.has(uid)) selectedUserIds.delete(uid);
+      else selectedUserIds.add(uid);
+
+      renderTimeline(__gaPayload);
+      renderLeaderboard(__gaPayload);
+    });
+  });
+}
+
+function renderRecent(norm) {
+  const rows = norm.recently_active || [];
+  const body = document.getElementById("gaRecentBody");
+
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="3" class="text-muted">Keine Daten</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = rows.slice(0, 10).map(r => {
+    const display = r.name ? r.name : (r.username ? "@"+r.username : r.user_id);
+    const avatarHtml = r.avatar_url 
+      ? `<img src="${r.avatar_url}" alt="" class="ga-avatar" style="object-fit:cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+         <span class="ga-avatar" style="display:none;">${initials(display)}</span>`
+      : `<span class="ga-avatar">${initials(display)}</span>`;
+    return `
+      <tr>
+        <td>
+          <div class="d-flex align-items-center">
+            ${avatarHtml}
+            <div>
+              <div>${display}</div>
+              ${r.username ? `<div class="small text-muted">@${r.username}</div>` : ``}
+            </div>
+          </div>
+        </td>
+        <td><code>${r.user_id}</code></td>
+        <td class="text-end"><code>${fmtDateTime(r.last_seen)}</code></td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function loadGroupActivity() {
+  clearError();
+
+  const days = (document.getElementById("gaDays").value || "30").trim();
+  const chatId = document.getElementById("gaChatId").value.trim();
+  const btn = document.getElementById("gaLoadBtn");
+
+  btn.disabled = true;
+  btn.textContent = "Lädt…";
+
+  try {
+    const params = new URLSearchParams({ days });
+    if (chatId) params.set("chat_id", chatId);
+
+    const res = await fetch(`/api/id-finder/group-activity?${params.toString()}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const raw = await res.json();
+    const norm = normalizePayload(raw);
+    __gaPayload = norm;
+
+    if (!norm || norm.ok !== true) throw new Error("Backend lieferte kein ok=true");
+
+    setKpis(norm);
+    renderTimeline(norm);
+    renderHours(norm);
+    renderWeekdays(norm);
+    renderLeaderboard(norm);
+    renderRecent(norm);
+
+  } catch (e) {
+    console.error(e);
+    showError("Konnte Group Activity nicht laden. Schau in app.log / Browser-Konsole.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Laden";
+  }
+}
+
+document.getElementById("gaLoadBtn").addEventListener("click", loadGroupActivity);
+document.getElementById("gaResetBtn").addEventListener("click", () => {
+  document.getElementById("gaDays").value = 30;
+  document.getElementById("gaChatId").value = "";
+  selectedUserIds.clear();
+  loadGroupActivity();
+});
+
+// Auto-load
+loadGroupActivity();
+</script>
+{% endblock %}

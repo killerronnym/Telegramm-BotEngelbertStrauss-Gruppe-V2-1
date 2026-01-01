@@ -1,0 +1,18 @@
+{
+    "token": "7520803994:AAGPynp1vlWVjTLRK7s2EPVaMzHyROTetgc",
+    "channel_id": "-1002206300882",
+    "topic_id": "1312",
+    "schedule": {
+        "enabled": true,
+        "time": "10:30",
+        "days": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+        ]
+    }
+}

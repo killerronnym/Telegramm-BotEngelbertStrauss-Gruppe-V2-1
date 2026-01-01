@@ -1,372 +1,544 @@
 [
-    {
-        "frage": "Aus welchem Land stammt Engelbert Strauss?",
-        "optionen": [
-            "Deutschland",
-            "Österreich",
-            "Schweiz",
-            "Niederlande"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Wofür ist Engelbert Strauss am bekanntesten?",
-        "optionen": [
-            "Arbeitskleidung und Arbeitsschutz",
-            "Luxusanzüge",
-            "Sporternährung",
-            "Haushaltsgeräte"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welches Tier ist Teil des Markenzeichens von Engelbert Strauss?",
-        "optionen": [
-            "Adler",
-            "Löwe",
-            "Strauß",
-            "Wolf"
-        ],
-        "antwort": 2
-    },
-    {
-        "frage": "Welche Produktgruppe gehört typisch zu Engelbert Strauss?",
-        "optionen": [
-            "Sicherheitsschuhe",
-            "Krawatten",
-            "Abendkleider",
-            "Badeschlappen"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Aussage passt am besten zu Engelbert Strauss?",
-        "optionen": [
-            "Workwear mit starkem Praxisfokus",
-            "Reine High-Fashion-Marke",
-            "Elektronikhersteller",
-            "Lebensmittelmarke"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Farbe/Farbkombi ist bei Engelbert Strauss besonders verbreitet?",
-        "optionen": [
-            "Schwarz/Rot",
-            "Pink/Gold",
-            "Weiß/Lila",
-            "Türkis/Orange"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Was ist ein typisches Merkmal vieler Arbeitshosen von Engelbert Strauss?",
-        "optionen": [
-            "Viele Funktionstaschen",
-            "Seidenstoff",
-            "Bügelfalten wie bei Anzügen",
-            "Pailletten"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Eigenschaft ist bei Workwear besonders wichtig?",
-        "optionen": [
-            "Robustheit",
-            "Empfindliche Stoffe",
-            "Nur Deko-Optik",
-            "Reiner Laufsteg-Fokus"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Art Jacke ist typisch für Engelbert Strauss?",
-        "optionen": [
-            "Softshelljacke",
-            "Smoking",
-            "Pelzmantel",
-            "Seidenkimono"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Wozu dienen Kniepolstertaschen an Arbeitshosen?",
-        "optionen": [
-            "Zum Einsetzen von Kniepolstern",
-            "Nur als Modedetail",
-            "Für Handy-Lautsprecher",
-            "Für Schmuck"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Schutzklasse ist eine typische Kategorie bei Sicherheitsschuhen?",
-        "optionen": [
-            "S1",
-            "A9",
-            "X5",
-            "Q2"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Was ist ein wichtiger Vorteil von Sicherheitsschuhen?",
-        "optionen": [
-            "Schutz vor Verletzungen am Arbeitsplatz",
-            "Bessere Schwimmleistung",
-            "Höhere Sprungkraft im Basketball",
-            "Perfekt für Opernbälle"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Warum sind reflektierende Elemente an Workwear nützlich?",
-        "optionen": [
-            "Erhöhen die Sichtbarkeit",
-            "Machen das Material weicher",
-            "Reduzieren Taschenanzahl",
-            "Ersetzen die Sicherheitskappe"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche dieser Kategorien ist am ehesten Workwear-typisch?",
-        "optionen": [
-            "Bundhose",
-            "Abendrobe",
-            "Samtanzug",
-            "Strandkaftan"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Wofür sind Latzhosen im Arbeitskontext besonders praktisch?",
-        "optionen": [
-            "Zusätzlicher Schutz und Stauraum",
-            "Weil sie leichter reißen",
-            "Weil sie keine Taschen haben",
-            "Weil sie nur für Mode gedacht sind"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welches Material findet man häufig bei robuster Arbeitskleidung?",
-        "optionen": [
-            "Mischgewebe aus Baumwolle und Polyester",
-            "Reine Seide",
-            "Satin",
-            "Spitze"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Was beschreibt ein sinnvolles Kleidungssystem für wechselndes Wetter?",
-        "optionen": [
-            "Layering (Schichtprinzip)",
-            "Nur ein T-Shirt für alles",
-            "Nur Sommerkleidung im Winter",
-            "Nur Regenjacke ohne Unterbau"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Kombination hält bei Regen am ehesten trocken?",
-        "optionen": [
-            "Regenjacke und Regenhose",
-            "Baumwollhoodie und Jeans",
-            "T-Shirt und Shorts",
-            "Fleecejacke ohne Wetterschutz"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Zielgruppe spricht Engelbert Strauss traditionell stark an?",
-        "optionen": [
-            "Handwerk und Industrie",
-            "Nur Profi-Gamer",
-            "Nur Opernsänger",
-            "Nur Marathonläufer"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Was ist bei einer Arbeitshose meist entscheidender als reine Optik?",
-        "optionen": [
-            "Funktion und Bewegungsfreiheit",
-            "Glitzer",
-            "Designerlabel ohne Nutzen",
-            "Extrem empfindlicher Stoff"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Aussage passt am besten zum aktuellen Image von Engelbert Strauss?",
-        "optionen": [
-            "Workwear mit Lifestyle-Faktor",
-            "Reine Abendmode",
-            "Nur Homewear",
-            "Nur Sporttrikots"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Art Accessoires bietet Engelbert Strauss typischerweise an?",
-        "optionen": [
-            "Gürtel, Mützen, Socken",
-            "Luxusuhren",
-            "Diamantschmuck",
-            "Kochmesser-Sets"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Kopfbedeckung ist bei Workwear-Marken wie Engelbert Strauss üblich?",
-        "optionen": [
-            "Cap",
-            "Zylinder",
-            "Krone",
-            "Tüllhaube"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Eigenschaft ist bei Arbeitshandschuhen besonders wichtig?",
-        "optionen": [
-            "Grip und Schutz",
-            "Glanzoptik",
-            "Parfümduft",
-            "Deko-Fransen"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche dieser Optionen ist am ehesten ein typischer Workwear-Einsatzort?",
-        "optionen": [
-            "Baustelle",
-            "Strandhochzeit",
-            "Opernball",
-            "Laufsteg-Gala"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Eigenschaft unterstützt langes Stehen und Gehen in Arbeitsschuhen?",
-        "optionen": [
-            "Gute Dämpfung und Passform",
-            "Hoher Absatz",
-            "Ultraglatte Sohle",
-            "Sehr harte, ungepolsterte Innensohle"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Was sollte man beim Kauf von Sicherheitsschuhen zuerst prüfen?",
-        "optionen": [
-            "Die passende Schutzklasse",
-            "Nur die Farbe",
-            "Nur das Logo",
-            "Nur die Schnürsenkel"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Warum kann Stretch in Arbeitshosen sinnvoll sein?",
-        "optionen": [
-            "Mehr Bewegungsfreiheit",
-            "Weniger Komfort",
-            "Mehr Rutschen",
-            "Weniger Haltbarkeit grundsätzlich"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Art Hose ist für warme Tage am naheliegendsten?",
-        "optionen": [
-            "Arbeitsshorts",
-            "Gefütterte Winterhose",
-            "Skihose",
-            "Thermohose plus Unterwäsche"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Was ist beim Waschen von Workwear grundsätzlich sinnvoll?",
-        "optionen": [
-            "Pflegeetikett beachten",
-            "Alles immer bei 90°C",
-            "Nie waschen",
-            "Nur mit aggressiven Lösungsmitteln reinigen"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Eigenschaft trägt in einer Community-Gruppe zu einem guten Klima bei?",
-        "optionen": [
-            "Respektvoller Umgang",
-            "Shaming",
-            "Druck auf andere",
-            "Beleidigungen"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Was ist in Kink-/Fetisch-nahen Communities besonders zentral?",
-        "optionen": [
-            "Consent und klare Grenzen",
-            "Grenzen ignorieren",
-            "Andere bloßstellen",
-            "Ungefragt Inhalte teilen"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welches Verhalten hilft neuen Mitgliedern in einer ES-Gruppe am meisten?",
-        "optionen": [
-            "Freundlich begrüßen",
-            "Ignorieren",
-            "Direkt kritisieren",
-            "Mit Spott reagieren"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Art Beitrag ist in einer Engelbert-Strauss-Fangruppe meist am nützlichsten?",
-        "optionen": [
-            "Outfit- und Produkterfahrungen",
-            "Off-Topic-Spam",
-            "Beleidigungen",
-            "Nur Fremdwerbung"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Was beschreibt den Spirit des bekannten Strauss-Slogans am ehesten?",
-        "optionen": [
-            "Positive Haltung zu Arbeit und Ausrüstung",
-            "Arbeit ist immer schlecht",
-            "Nur Freizeit zählt",
-            "Workwear ist unwichtig"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Welche Aussage ist bei Workwear-Kaufentscheidungen am sinnvollsten?",
-        "optionen": [
-            "Einsatzbereich bestimmt die Auswahl",
-            "Nur Trendfarben zählen",
-            "Nur das teuerste Teil ist gut",
-            "Funktion ist egal"
-        ],
-        "antwort": 0
-    },
-    {
-        "frage": "Warum tragen viele Fans Engelbert Strauss als kompletten Look?",
-        "optionen": [
-            "Einheitlicher Worker-Style und Markenfeeling",
-            "Weil man sonst nichts kombinieren darf",
-            "Weil es nur eine Kollektion gibt",
-            "Weil es Pflicht im Alltag ist"
-        ],
-        "antwort": 0
-    }
+  {
+    "frage": "Aus welchem Bundesland stammt der Hauptsitz von Engelbert Strauss?",
+    "optionen": ["Bayern", "Hessen", "Nordrhein-Westfalen", "Sachsen"],
+    "antwort": 1
+  },
+  {
+    "frage": "Wofür steht Engelbert Strauss hauptsächlich?",
+    "optionen": ["Outdoor-Freizeit", "Arbeitskleidung (Workwear)", "Luxusmode", "Sportmode"],
+    "antwort": 1
+  },
+  {
+    "frage": "Welches Kleidungsstück ist besonders typisch für Engelbert Strauss?",
+    "optionen": ["Jeans", "Jogginghose", "Bundhose", "Anzughose"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Branche spricht Engelbert Strauss besonders an?",
+    "optionen": ["Haute Couture", "Medienbranche", "Büro & Verwaltung", "Handwerk & Industrie"],
+    "antwort": 3
+  },
+  {
+    "frage": "Welches Tier ist Teil des Markenzeichens?",
+    "optionen": ["Löwe", "Adler", "Strauß", "Wolf"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Farbkombination ist bei Strauss sehr verbreitet?",
+    "optionen": ["Grün/Gelb", "Blau/Weiß", "Braun/Orange", "Schwarz/Rot"],
+    "antwort": 3
+  },
+  {
+    "frage": "Welche Zielgruppe trägt Strauss auch privat?",
+    "optionen": ["Nur Sicherheitsdienste", "Ausschließlich Azubis", "Fans der Marke", "Nur Profisportler"],
+    "antwort": 2
+  },
+  {
+    "frage": "Wie wird Engelbert Strauss heute oft wahrgenommen?",
+    "optionen": ["Fast Fashion", "Luxusmarke", "Workwear mit Lifestyle-Faktor", "Reine Berufsbekleidung"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Produktgruppe gehört nicht zu Engelbert Strauss?",
+    "optionen": ["Abendmode", "Arbeitsjacken", "Sicherheitsschuhe", "Bundhosen"],
+    "antwort": 0
+  },
+  {
+    "frage": "Warum identifizieren sich viele Menschen mit Strauss?",
+    "optionen": ["Trendfarben", "Praxisnähe & Markenimage", "Starke Rabatte", "Günstige Preise"],
+    "antwort": 1
+  },
+
+  {
+    "frage": "Was ist ein typisches Merkmal von Strauss-Hosen?",
+    "optionen": ["Reiner Modestoff", "Viele Funktionstaschen", "Keine Verstärkungen", "Minimaler Schnitt"],
+    "antwort": 1
+  },
+  {
+    "frage": "Warum ist Stretch bei Arbeitshosen sinnvoll?",
+    "optionen": ["Schnellere Abnutzung", "Mehr Bewegungsfreiheit", "Optischer Effekt", "Geringeres Gewicht"],
+    "antwort": 1
+  },
+  {
+    "frage": "Welche Jackenart ist bei Strauss besonders beliebt?",
+    "optionen": ["Regenponcho", "Softshelljacke", "Ledermantel", "Smoking"],
+    "antwort": 1
+  },
+  {
+    "frage": "Wofür sind Kniepolstertaschen gedacht?",
+    "optionen": ["Handys", "Werkzeug", "Kniepolster", "Belüftung"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welches Material findet man häufig bei robuster Workwear?",
+    "optionen": ["Samt", "Leinen pur", "Reine Seide", "Mischgewebe Baumwolle/Polyester"],
+    "antwort": 3
+  },
+  {
+    "frage": "Welche Hose eignet sich gut für warme Tage?",
+    "optionen": ["Skihose", "Thermohose", "Arbeitsshorts", "Winterhose"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Eigenschaft ist bei Workwear besonders wichtig?",
+    "optionen": ["Empfindlichkeit", "Robustheit", "Trendfaktor", "Glanz"],
+    "antwort": 1
+  },
+  {
+    "frage": "Warum sind viele Taschen bei Arbeitshosen beliebt?",
+    "optionen": ["Gewicht", "Stauraum & Funktion", "Dekoration", "Preis"],
+    "antwort": 1
+  },
+
+  {
+    "frage": "Welche Art Schuhe bietet Engelbert Strauss an?",
+    "optionen": ["Sandalen", "Hausschuhe", "Sicherheitsschuhe", "Laufschuhe"],
+    "antwort": 2
+  },
+  {
+    "frage": "Wofür steht S3 bei Sicherheitsschuhen?",
+    "optionen": ["Materialcode", "Größenangabe", "Designklasse", "Schutzklasse"],
+    "antwort": 3
+  },
+  {
+    "frage": "Was ist ein wichtiger Vorteil von Sicherheitsschuhen?",
+    "optionen": ["Höhere Sprungkraft", "Modewirkung", "Schutz vor Verletzungen", "Wärmeisolierung"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Eigenschaft hilft beim langen Stehen?",
+    "optionen": ["Hoher Absatz", "Harte Sohle", "Gute Dämpfung & Passform", "Glatter Boden"],
+    "antwort": 2
+  },
+  {
+    "frage": "Warum sind rutschfeste Sohlen wichtig?",
+    "optionen": ["Gewichtsersparnis", "Design", "Unfallvermeidung", "Lautstärke"],
+    "antwort": 2
+  },
+  {
+    "frage": "Wozu dienen Zehenschutzkappen?",
+    "optionen": ["Optik", "Schutz der Zehen", "Kälte", "Belüftung"],
+    "antwort": 1
+  },
+  {
+    "frage": "Welche Schuhe sind für die Baustelle ungeeignet?",
+    "optionen": ["High Heels", "Arbeitsschuhe", "S3-Schuhe", "Sicherheitsschuhe"],
+    "antwort": 0
+  },
+  {
+    "frage": "Warum tragen manche Strauss-Schuhe auch privat?",
+    "optionen": ["Pflicht", "Rabatte", "Geringes Gewicht", "Komfort & Optik"],
+    "antwort": 3
+  },
+  {
+    "frage": "Wie hieß das Unternehmen Engelbert Strauss ursprünglich?",
+    "optionen": ["Arbeitsmode Strauss", "Strauss Versand", "Strauss & Co.", "Workwear Versand"],
+    "antwort": 1
+  },
+  {
+    "frage": "In welchem Jahr wurde Engelbert Strauss gegründet?",
+    "optionen": ["1956", "1964", "1948", "1932"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Generation führt Engelbert Strauss heute hauptsächlich?",
+    "optionen": ["Zweite Generation", "Vierte Generation", "Dritte Generation", "Erste Generation"],
+    "antwort": 2
+  },
+  {
+    "frage": "In welchem Ort befindet sich der Hauptsitz von Engelbert Strauss?",
+    "optionen": ["Schlüchtern", "Frankfurt am Main", "Biebergemünd", "Hanau"],
+    "antwort": 2
+  },
+  {
+    "frage": "Zu welcher Branche zählt Engelbert Strauss offiziell?",
+    "optionen": ["Luxusmode", "Sportbekleidung", "Workwear, PSA und Sicherheitsschuhe", "Outdoor-Freizeit"],
+    "antwort": 2
+  },
+  {
+    "frage": "Wofür steht das Konzept \"Strauss World\"?",
+    "optionen": ["Reines Lagerzentrum", "Logistikpark", "Markenerlebnis aus Arbeit und Lifestyle", "Messegelände"],
+    "antwort": 2
+  },
+  {
+    "frage": "Warum setzt Strauss stark auf Eigenmarken?",
+    "optionen": ["Marketingeffekt", "Schnellere Trends", "Geringere Lagerkosten", "Qualitätskontrolle & Markenidentität"],
+    "antwort": 3
+  },
+  {
+    "frage": "Welche Rolle spielen eigene Logistikzentren für Strauss?",
+    "optionen": ["Nur Marketing", "Gesetzliche Vorgabe", "Schnelligkeit & Unabhängigkeit", "Ausschließlich Kostensenkung"],
+    "antwort": 2
+  },
+  {
+    "frage": "Was unterscheidet Strauss von klassischer Berufsbekleidung früherer Jahrzehnte?",
+    "optionen": ["Höhere Normierung", "Niedrigere Preise", "Kombination aus Funktion, Design & Lifestyle", "Geringere Stückzahlen"],
+    "antwort": 2
+  },
+  {
+    "frage": "In welches Ausland expandierte Engelbert Strauss zuerst mit einer Tochtergesellschaft?",
+    "optionen": ["Belgien", "Österreich", "Niederlande", "Tschechien"],
+    "antwort": 1
+  },
+
+  {
+    "frage": "In welchem Jahr wurde die erste Tochtergesellschaft in Österreich eröffnet?",
+    "optionen": ["1990", "2002", "1997", "2006"],
+    "antwort": 2
+  },
+  {
+    "frage": "In welchem Land wurde 2002 eine weitere Tochtergesellschaft eröffnet?",
+    "optionen": ["England", "Luxemburg", "Tschechien", "Belgien"],
+    "antwort": 0
+  },
+  {
+    "frage": "In welcher Stadt befindet sich die CI Factory Deutschland von Strauss?",
+    "optionen": ["Biebergemünd", "Schlüchtern", "Fulda", "Hanau"],
+    "antwort": 1
+  },
+  {
+    "frage": "An welcher Autobahn liegt die CI Factory in Schlüchtern?",
+    "optionen": ["A3", "A7", "A66", "A5"],
+    "antwort": 2
+  },
+  {
+    "frage": "In welchem Jahr wurde die CI Factory Deutschland in Betrieb genommen?",
+    "optionen": ["2018", "2022", "2020", "2024"],
+    "antwort": 2
+  },
+  {
+    "frage": "Wie lang ist die Fördertechnik in der CI Factory in Schlüchtern ungefähr?",
+    "optionen": ["3 km", "20 km", "7 km", "13 km"],
+    "antwort": 3
+  },
+  {
+    "frage": "Welche Fläche umfasst die Logistikzone der CI Factory ungefähr?",
+    "optionen": ["30.000 m²", "50.000 m²", "70.000 m²", "10.000 m²"],
+    "antwort": 2
+  },
+  {
+    "frage": "In welchem Land betreibt Strauss eine weitere CI Factory in Chattogram?",
+    "optionen": ["Indien", "China", "Vietnam", "Bangladesch"],
+    "antwort": 3
+  },
+  {
+    "frage": "Welche Hauptfunktion erfüllt die CI Factory in Chattogram?",
+    "optionen": [
+      "Reines Rohstofflager",
+      "Kleinstserien und kundenspezifische Produktion",
+      "Zentrallager Europa",
+      "Nur Logistik-Outsourcing"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "In welcher Stadt betreibt Strauss ein Design- und Entwicklungszentrum in Bangladesch?",
+    "optionen": ["Dhaka", "Khulna", "Sylhet", "Chattogram"],
+    "antwort": 3
+  },
+
+  {
+    "frage": "Welchen Umsatz meldete Engelbert Strauss für 2023 ungefähr?",
+    "optionen": ["0,8 Mrd. €", "2,1 Mrd. €", "1,4 Mrd. €", "0,5 Mrd. €"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Personen gelten als heutige Markenlenker von Strauss?",
+    "optionen": [
+      "Norbert und Gerlinde Strauss",
+      "Henning und Steffen Strauss",
+      "Engelbert und August Strauss",
+      "Norbert und Henning Strauss"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Wie viele Länder waren laut Social Report 2023 an der Produktion beteiligt?",
+    "optionen": ["18", "10", "38", "28"],
+    "antwort": 3
+  },
+  {
+    "frage": "Welcher Kontinent stellt den Großteil der Produktionsstandorte?",
+    "optionen": ["Europa", "Afrika", "Asien", "Südamerika"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welches Land ist das wichtigste Produktionsland laut Social Report 2023?",
+    "optionen": ["China", "Türkei", "Vietnam", "Bangladesch"],
+    "antwort": 3
+  },
+  {
+    "frage": "Welchen ungefähren Produktionsanteil hat Bangladesch?",
+    "optionen": ["11 %", "21 %", "41 %", "7 %"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welchen ungefähren Produktionsanteil hat China?",
+    "optionen": ["5 %", "21 %", "41 %", "8 %"],
+    "antwort": 1
+  },
+  {
+    "frage": "Wie viele Partnerbetriebe gibt es in Bangladesch laut Social Report 2023?",
+    "optionen": ["5", "10", "15", "25"],
+    "antwort": 2
+  },
+  {
+    "frage": "Wie viele Menschen arbeiten dort ungefähr?",
+    "optionen": ["5.000", "25.000", "50.000", "15.000"],
+    "antwort": 3
+  },
+  {
+    "frage": "Wie heißt der regelmäßig veröffentlichte Nachhaltigkeitsbericht von Strauss?",
+    "optionen": ["CSR Report", "ESG Report", "Social Report", "Impact Report"],
+    "antwort": 2
+  },
+  {
+    "frage": "Warum wird Strauss trotz Hype nicht als Trend-Brand gesehen?",
+    "optionen": ["Zu geringe Nachfrage", "Langfristige Markenstrategie", "Fehlendes Marketing", "Hohe Preise"],
+    "antwort": 1
+  },
+  {
+    "frage": "Welche Norm gilt für Sicherheitsschuhe, wie sie Strauss anbietet?",
+    "optionen": ["EN ISO 20471", "EN 343", "EN ISO 20345", "EN 388"],
+    "antwort": 2
+  },
+  {
+    "frage": "Für welche Eigenschaft steht S3 bei Sicherheitsschuhen?",
+    "optionen": [
+      "Nur rutschhemmende Sohle",
+      "Zehenschutz plus Durchtrittschutz und begrenzte Wasseraufnahme",
+      "Nur Zehenschutzkappe",
+      "Elektrische Isolation"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Welche Norm beschreibt Warnschutzkleidung?",
+    "optionen": ["EN ISO 20345", "EN 343", "EN ISO 20471", "EN 388"],
+    "antwort": 2
+  },
+  {
+    "frage": "In wie viele Klassen ist Warnschutzkleidung eingeteilt?",
+    "optionen": ["2", "3", "4", "5"],
+    "antwort": 1
+  },
+  {
+    "frage": "Welche Warnschutzklasse bietet die höchste Sichtbarkeit?",
+    "optionen": ["Klasse 1", "Klasse 2", "Klasse 3", "Keine Klassen"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Farben sind als fluoreszierende Hintergrundfarben zugelassen?",
+    "optionen": [
+      "Gelb, Orange, Grün",
+      "Gelb, Blau, Rot",
+      "Gelb, Orange-Rot, Rot",
+      "Gelb, Orange, Rot"
+    ],
+    "antwort": 3
+  },
+  {
+    "frage": "Welche Aufgabe hat fluoreszierendes Material bei Warnkleidung?",
+    "optionen": [
+      "Mechanischer Schutz",
+      "Regenabwehr",
+      "Verbesserung der Sichtbarkeit bei Tageslicht",
+      "Wärmedämmung"
+    ],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Aufgabe haben retroreflektierende Streifen?",
+    "optionen": [
+      "Belüftung",
+      "Erhöhung des Komforts",
+      "Sichtbarkeit bei Dunkelheit durch Anstrahlung",
+      "Elektrische Isolation"
+    ],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Norm regelt Knieschutz in Verbindung mit Arbeitshosen?",
+    "optionen": ["EN 343", "EN ISO 20345", "EN 388", "EN 14404"],
+    "antwort": 3
+  },
+  {
+    "frage": "Welche Warnschutzklassen deckt Strauss typischerweise ab?",
+    "optionen": ["Nur Klasse 3", "Klasse 1 und 2", "Nur Klasse 2", "Klasse 1 bis 3"],
+    "antwort": 3
+  },
+
+  {
+    "frage": "Welche Kollektion hebt Strauss mit robustem, modernem Look hervor?",
+    "optionen": ["e.s.trail", "e.s.motion", "e.s.concrete", "e.s.active"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Eigenschaft zeichnet die e.s.motion-Kollektion besonders aus?",
+    "optionen": [
+      "Sehr schwere Stoffe",
+      "Klassischer Business-Stil",
+      "Cooler Look mit vielen Details",
+      "Ausschließlich Regenbekleidung"
+    ],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Hosenform ist typisch für Strauss-Workwear?",
+    "optionen": ["Anzughose", "Jogginghose", "Bundhose", "Kilt"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Linie steht für leichte, flexible Workwear?",
+    "optionen": ["e.s.concrete", "e.s.motion", "Classic Basics", "Business Line"],
+    "antwort": 1
+  },
+  {
+    "frage": "Welche Bezeichnung nutzt Strauss für seine Produktlinien?",
+    "optionen": ["Classic Series", "e.s.-Kollektionen", "Work Sets", "Strauss Fashion"],
+    "antwort": 1
+  },
+  {
+    "frage": "Welches Reflexmaterial hebt Strauss häufig hervor?",
+    "optionen": ["Dyneema Reflect", "Cordura Shine", "3M Scotchlite", "Gore Reflect"],
+    "antwort": 2
+  },
+  {
+    "frage": "Welche Eigenschaft verstärkt den maskulinen Eindruck von Workwear?",
+    "optionen": [
+      "Zarte Stoffe",
+      "Funktionale Details",
+      "Pastellfarben",
+      "Feine Ziernähte"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Warum wirken Workwear-Outfits oft dominant?",
+    "optionen": [
+      "Große Logos",
+      "Materialstärke und klare Linien",
+      "Helle Farben",
+      "Hohe Preise"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Warum empfinden manche Workwear als attraktiv?",
+    "optionen": [
+      "Wegen Rabatten",
+      "Material, Schnitt und Funktion",
+      "Wegen Mode-Trends",
+      "Wegen Werbung"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Was macht Strauss-Kleidung visuell besonders?",
+    "optionen": [
+      "Reine Modefarben",
+      "Klarer, funktionaler Stil",
+      "Trendabhängige Designs",
+      "Luxuriöse Stoffe"
+    ],
+    "antwort": 1
+  },
+
+  {
+    "frage": "Welche Produktgruppe betont Strauss neben Kleidung besonders?",
+    "optionen": ["Elektronik", "Werkzeuge und Zubehör", "Möbel", "Lebensmittel"],
+    "antwort": 1
+  },
+  {
+    "frage": "Welche Zielgruppe bedient Strauss zusätzlich mit eigenen Linien?",
+    "optionen": ["Senioren", "Kinder", "Designer", "Sportler"],
+    "antwort": 1
+  },
+  {
+    "frage": "Welcher Slogan wird für Strauss-Kinderkleidung genutzt?",
+    "optionen": [
+      "Nur für Profis",
+      "Für kleine und große Abenteurer",
+      "Tiny Fashion Icons",
+      "Workwear Next Gen"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Bei welcher Sportveranstaltung ist Strauss offizieller Workwear-Partner?",
+    "optionen": [
+      "UEFA EURO 2024",
+      "Olympische Spiele 2024",
+      "FIFA WM 2022",
+      "Tour de France 2024"
+    ],
+    "antwort": 0
+  },
+  {
+    "frage": "In welchem Jahr wurde Strauss als Partner der UEFA EURO 2024 kommuniziert?",
+    "optionen": ["2020", "2021", "2022", "2023"],
+    "antwort": 3
+  },
+  {
+    "frage": "In welcher US-Stadt betreibt Strauss den Store \"Strauss LA\"?",
+    "optionen": [
+      "San Francisco",
+      "Venice (Los Angeles)",
+      "New York",
+      "Miami Beach"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Welche Aussage beschreibt Strauss international am treffendsten?",
+    "optionen": [
+      "Nur deutscher Anbieter",
+      "Internationaler Workwear- und PSA-Anbieter",
+      "Nur Großhändler",
+      "Reiner Online-Marktplatz"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Welche Produktarten nennt Strauss selbst im PSA-Bereich?",
+    "optionen": [
+      "Textilien, Sicherheitsschuhe, Zubehör",
+      "Fahrzeuge und Maschinen",
+      "Elektronik und Möbel",
+      "Lebensmittel und Drogerie"
+    ],
+    "antwort": 0
+  },
+  {
+    "frage": "Was ist ein typischer Vorteil von Bundhosen?",
+    "optionen": [
+      "Keine Taschen",
+      "Große Bewegungsfreiheit und Stauraum",
+      "Nur optischer Nutzen",
+      "Reine Schutzfunktion"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Was beschreibt Strauss mit dem Begriff \"Workwear als Werkzeug\"?",
+    "optionen": [
+      "Marketingidee",
+      "Modephilosophie",
+      "Kleidung erfüllt eine konkrete Funktion",
+      "Designtrend"
+    ],
+    "antwort": 2
+  },
+  {
+    "frage": "Warum fühlen sich viele in Strauss-Kleidung \"angezogen\" statt \"verkleidet\"?",
+    "optionen": [
+      "Wegen des Logos",
+      "Weil Kleidung einen klaren Zweck erfüllt",
+      "Wegen hoher Preise",
+      "Wegen Trendfarben"
+    ],
+    "antwort": 1
+  }
 ]
+

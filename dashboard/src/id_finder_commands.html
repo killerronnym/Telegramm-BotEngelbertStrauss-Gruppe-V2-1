@@ -1,666 +1,702 @@
 {% extends "base.html" %}
 
-{% block title %}Befehlsübersicht - NexusMod Bot{% endblock %}
+{% block title %}Befehlsübersicht – ID-Finder Bot{% endblock %}
 
 {% block content %}
+<style>
+  /* --- Command UI --- */
+  .cmd-card .card-header { display:flex; align-items:center; justify-content:space-between; }
+  .cmd-line { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .cmd-name { font-weight: 700; }
+  .cmd-hint { color: #9aa0a6; font-weight: 400; }
+
+  /* Info Button (Icon) */
+  .info-btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    color: #e9ecef;
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+  .info-btn:hover { background: rgba(255,255,255,0.10); }
+  .info-btn:active { transform: translateY(1px); }
+  .info-btn .fallback-i {
+    width: 18px; height: 18px;
+    border-radius: 999px;
+    border: 2px solid currentColor;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  /* Dark "Steckbrief" panel */
+  .info-panel {
+    margin-top: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: #212529;           /* dunkel */
+    color: #f8f9fa;
+    padding: 12px 14px;
+    display: none;
+  }
+  .info-panel .label { color: #adb5bd; font-weight: 700; margin-right: 6px; }
+  .info-panel code {
+    color: #ffd54f;
+    background: rgba(255,255,255,0.06);
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+  .info-panel .rowline { margin-top: 6px; }
+  .info-panel .titleline {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom: 8px;
+  }
+  .info-panel .titleline .title {
+    font-weight: 800;
+    letter-spacing: 0.2px;
+  }
+  .info-panel .close-mini {
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    color: #f8f9fa;
+    border-radius: 10px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .info-panel .close-mini:hover { background: rgba(255,255,255,0.10); }
+
+  /* Search card spacing */
+  .search-row { margin-bottom: 16px; }
+
+  /* Make list items look good on dark UIs too */
+  .list-group-item.cmd-item { background: rgba(255,255,255,0.02); }
+</style>
+
 <div class="container mt-4">
-    <a href="{{ url_for('id_finder_dashboard') }}" class="btn btn-secondary mb-3">← Zurück zum ID-Finder Dashboard</a>
-
-    <h1 class="display-5 mb-2 text-center">🧩 NexusMod Bot – Befehlsübersicht</h1>
-    <p class="text-center text-muted mb-4">
-        Diese Übersicht kombiniert deine neuen Board-Commands mit bestehenden/älteren Einträgen.
-        <br>
-        <span class="badge bg-success">Neu / Board</span>
-        <span class="badge bg-secondary">Legacy / evtl. geplant</span>
-    </p>
-
-    <div class="row row-cols-1 row-cols-md-2 g-4">
-
-        <!-- Kategorie: Grundlagen & ID -->
-        <div class="col">
-            <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Grundlagen & ID</div>
-                <ul class="list-group list-group-flush">
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/chatid</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Chat-ID anzeigen"
-                           data-bs-content="Gibt die Chat-ID der Gruppe aus. Wenn in einem Forum-Topic ausgeführt, zeigt der Befehl zusätzlich die Topic-ID."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/userid</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="User-ID anzeigen"
-                           data-bs-content="Zeigt deine eigene User-ID. Wenn du auf eine Nachricht antwortest, wird zusätzlich die ID des Ziel-Users angezeigt."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/topicid</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Topic-ID anzeigen"
-                           data-bs-content="Gibt die Topic-/Thread-ID aus, sofern Forum-Topics aktiv sind."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/id</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Kombi-ID-Ausgabe"
-                           data-bs-content="Kombiniert User-, Chat- und Topic-ID in einer Ausgabe. Nützlich für Setup & Debugging."></i>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Kategorie: Basis-Moderation -->
-        <div class="col">
-            <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Basis-Moderation</div>
-                <ul class="list-group list-group-flush">
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/warn @user [Grund]</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Benutzer verwarnen"
-                           data-bs-content="Gibt eine Verwarnung. Nutzbar per Reply oder User-ID."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/warnings @user</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Verwarnungen anzeigen"
-                           data-bs-content="Zeigt aktuelle Verwarnungen und (optional) die jüngste Historie."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/unwarn @user</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Verwarnung entfernen"
-                           data-bs-content="Entfernt eine Verwarnung."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/clearwarnings @user</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Warnungen zurücksetzen"
-                           data-bs-content="Setzt den Verwarnungszähler komplett zurück."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/mute @user 10m [Grund]</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Benutzer stummschalten"
-                           data-bs-content="Stummschalten für Dauer (z.B. 10m, 2h, 1d)."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/unmute @user</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Mute aufheben"
-                           data-bs-content="Hebt eine Stummschaltung auf."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/ban @user [Grund]</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Benutzer bannen"
-                           data-bs-content="Bannt einen Nutzer aus der Gruppe."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/unban @user</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Ban aufheben"
-                           data-bs-content="Hebt den Bann auf. Häufig per User-ID genutzt."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/kick @user [Grund]</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Benutzer kicken"
-                           data-bs-content="Entfernt Nutzer aus der Gruppe (kann wieder beitreten)."></i>
-                    </li>
-
-                    <!-- Legacy / zusätzliche Einträge aus deiner älteren Übersicht -->
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/softban @user</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Softban (Konzept-Eintrag)"
-                           data-bs-content="Aus älterer Übersicht: Ban + sofortiges Unban zum 'Aufräumen'. Nur nutzen, wenn im Bot wirklich implementiert."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/mutelist</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Mute-Liste (Konzept-Eintrag)"
-                           data-bs-content="Aus älterer Übersicht. Nur sichtbar lassen, wenn der Bot dafür eine Liste führt."></i>
-                    </li>
-
-                </ul>
-            </div>
-        </div>
-
-        <!-- Kategorie: Nachrichten- und Chat-Management -->
-        <div class="col">
-            <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Nachrichten- & Chat-Management</div>
-                <ul class="list-group list-group-flush">
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/del</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Nachricht löschen"
-                           data-bs-content="Löscht die Nachricht, auf die geantwortet wurde."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/purge</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Nachrichten löschen (Purge)"
-                           data-bs-content="Löscht mehrere Nachrichten ab der beantworteten Nachricht bis zur aktuellen. (Nur falls im Bot aktiviert.)"></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/pin</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Nachricht anpinnen"
-                           data-bs-content="Pinnt die beantwortete Nachricht."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/unpin</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Pin entfernen"
-                           data-bs-content="Entfernt einen Pin."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/lock links|media|stickers</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Feature sperren"
-                           data-bs-content="Sperrt z.B. Links oder Medien (je nach Konfiguration)."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/unlock links|media|stickers</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Feature entsperren"
-                           data-bs-content="Hebt die Sperre wieder auf."></i>
-                    </li>
-
-                </ul>
-            </div>
-        </div>
-
-        <!-- Kategorie: Anti-Spam / Auto-Moderation -->
-        <div class="col">
-            <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Anti-Spam / Auto-Moderation</div>
-                <ul class="list-group list-group-flush">
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/antispam on|off</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Spam-Schutz an/aus"
-                           data-bs-content="Aktiviert/Deaktiviert Spam-Schutz."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/setflood 5</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Flood-Limit setzen"
-                           data-bs-content="Setzt die max. Nachrichten in kurzem Zeitfenster."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/setlinkmode allow|warn|mute|ban</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Linkbehandlung"
-                           data-bs-content="Definiert, wie Links behandelt werden."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/blacklist add [wort]</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Blacklist verwalten"
-                           data-bs-content="Fügt Begriffe/Patterns zur Blacklist hinzu."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/blacklist remove [wort]</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Blacklist verwalten"
-                           data-bs-content="Entfernt Begriffe/Patterns aus der Blacklist."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/blacklist list</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Blacklist anzeigen"
-                           data-bs-content="Listet alle Blacklist-Einträge auf."></i>
-                    </li>
-
-                    <!-- Legacy aus alter Datei -->
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/setcaps [prozent]</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="CAPS-Limit (Alt-Konzept)"
-                           data-bs-content="War in älterer Übersicht enthalten. Nur nutzen, wenn im Bot implementiert."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/setlinks [allow|block|whitelist]</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Link-Richtlinie (Alt-Konzept)"
-                           data-bs-content="Älterer Ansatz. Du nutzt jetzt /setlinkmode als Board-Standard."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/whitelist add|remove [user_id]</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Whitelist (Alt-Konzept)"
-                           data-bs-content="Optionales Legacy-Feature."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/filter add|remove|list \"wort\"</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Wortfilter (Alt-Konzept)"
-                           data-bs-content="Du nutzt jetzt /blacklist als Board-Standard."></i>
-                    </li>
-
-                </ul>
-            </div>
-        </div>
-
-        <!-- Kategorie: Rollen & Rechte -->
-        <div class="col">
-            <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Rollen & Rechte</div>
-                <ul class="list-group list-group-flush">
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/adminlist</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Admin-Liste"
-                           data-bs-content="Zeigt Bot-Admins/Permissions (je nach Implementierung)."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/mod add @user</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Bot-Moderatoren"
-                           data-bs-content="Fügt Bot-interne Moderatoren hinzu."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/mod remove @user</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Bot-Moderatoren"
-                           data-bs-content="Entfernt Bot-interne Moderatoren."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/permissions</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Bot-Rechte/Module"
-                           data-bs-content="Zeigt Bot-Rechte, Feature-Flags und Module an."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/setrole @user admin|mod|trusted|user</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Rollensystem"
-                           data-bs-content="Setzt eine Bot-interne Rolle für einen Nutzer."></i>
-                    </li>
-
-                    <!-- Legacy Rollen-Kommandos aus alter Datei -->
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/role add [user_id] [rolle]</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Alt-Rollen-System"
-                           data-bs-content="Ältere Rollen-Syntax. Board-Standard ist /setrole."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/role remove [user_id]</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Alt-Rollen-System"
-                           data-bs-content="Ältere Rollen-Syntax."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/roles</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Alt-Rollen-Liste"
-                           data-bs-content="Älterer Sammelbefehl."></i>
-                    </li>
-
-                </ul>
-            </div>
-        </div>
-
-        <!-- Kategorie: Onboarding & Community -->
-        <div class="col">
-            <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Onboarding & Community</div>
-                <ul class="list-group list-group-flush">
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/welcome on|off</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Welcome an/aus"
-                           data-bs-content="Aktiviert/Deaktiviert Begrüßungsnachrichten."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/setwelcome [Text]</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Welcome-Text setzen"
-                           data-bs-content="Setzt den Welcome-Text. Platzhalter: {user}, {group}."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/rules</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Regeln anzeigen"
-                           data-bs-content="Zeigt die gespeicherten Gruppenregeln."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/setrules [Text]</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Regeln setzen"
-                           data-bs-content="Speichert/aktualisiert die Gruppenregeln."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/verify on|off</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Verifikation an/aus"
-                           data-bs-content="Aktiviert/Deaktiviert eine einfache Verifikationslogik."></i>
-                    </li>
-
-                </ul>
-            </div>
-        </div>
-
-        <!-- Kategorie: Konfiguration / System -->
-        <div class="col">
-            <div class="card h-100 command-card">
-                <div class="card-header fw-bold">Konfiguration / System</div>
-                <ul class="list-group list-group-flush">
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/settings</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Settings (kurz)"
-                           data-bs-content="Kurze Übersicht über wichtige Settings."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/config</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Config (detailliert)"
-                           data-bs-content="Detaillierte Ausgabe der Bot-Konfiguration."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/status</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Status"
-                           data-bs-content="Bot-Status + aktivierte Module/Locks."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/reload</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Config neu laden"
-                           data-bs-content="Lädt die Konfiguration neu (praktisch fürs Web-Panel)."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/debug on|off</span>
-                            <span class="badge bg-success ms-2">Neu / Board</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Debug-Modus"
-                           data-bs-content="Schaltet Debug-Ausgaben/Verhalten ein oder aus."></i>
-                    </li>
-
-                    <!-- Legacy / alte Admin-Setup-Kommandos aus deiner bisherigen Seite -->
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/setadmingroup</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Admin-Gruppe setzen (Alt-Konzept)"
-                           data-bs-content="War in älterer Übersicht enthalten. Nur nutzen, wenn der Bot diese Logik tatsächlich implementiert."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/setmaingroup [gruppen_id]</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Hauptgruppe setzen (Alt-Konzept)"
-                           data-bs-content="Älterer Setup-Ansatz. In deinem neuen Board-Ansatz steuerst du das primär über die Config/ das Dashboard."></i>
-                    </li>
-
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>
-                            <span class="command-name fw-bold">/raidmode on|off</span>
-                            <span class="badge bg-secondary ms-2">Legacy / evtl. geplant</span>
-                        </span>
-                        <i class="bi bi-info-circle-fill text-info"
-                           data-bs-toggle="popover"
-                           title="Raid-Mode (Alt-Konzept)"
-                           data-bs-content="Optionales Notfall-Feature aus älterer Übersicht."></i>
-                    </li>
-
-                </ul>
-            </div>
-        </div>
-
+  <a href="{{ url_for('id_finder_dashboard') }}" class="btn btn-secondary mb-3">← Zurück zum ID-Finder Dashboard</a>
+
+  <h1 class="display-5 mb-2 text-center">🧩 ID-Finder Bot – Befehlsübersicht</h1>
+  <p class="text-center text-muted mb-4">
+    Klick auf das <strong>Info-Icon</strong> neben einem Befehl → du bekommst direkt den Steckbrief (dunkel, passend zur UI).
+  </p>
+
+  <!-- Mini-Suche -->
+  <div class="row g-2 align-items-end search-row">
+    <div class="col-md-9">
+      <label for="cmdSearch" class="form-label">Suche nach Command</label>
+      <input type="text" class="form-control" id="cmdSearch" placeholder="z.B. /ban, /warn, /lock ...">
     </div>
+    <div class="col-md-3 d-grid">
+      <button class="btn btn-outline-secondary" type="button" id="clearCmdSearch">Suche löschen</button>
+    </div>
+  </div>
+
+  <div class="row row-cols-1 row-cols-md-2 g-4" id="cmdGrid">
+
+    <!-- Grundlagen & IDs -->
+    <div class="col cmd-card">
+      <div class="card h-100">
+        <div class="card-header fw-bold">🆔 Grundlagen & IDs</div>
+        <ul class="list-group list-group-flush">
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/chatid</div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-chatid" aria-expanded="false" aria-controls="info-chatid" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-chatid" role="region" aria-label="Info /chatid">
+              <div class="titleline">
+                <div class="title">/chatid</div>
+                <button type="button" class="close-mini" data-close="info-chatid">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Zeigt die Chat-ID der Gruppe.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/chatid</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/chatid</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/userid</div>
+                <div class="cmd-hint">Optional als Reply</div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-userid" aria-expanded="false" aria-controls="info-userid" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-userid" role="region" aria-label="Info /userid">
+              <div class="titleline">
+                <div class="title">/userid</div>
+                <button type="button" class="close-mini" data-close="info-userid">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Zeigt deine User-ID. Als Reply zusätzlich die ID vom Ziel-User.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/userid</code> oder als Reply</div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/userid</code> • <code>(Reply) /userid</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/topicid</div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-topicid" aria-expanded="false" aria-controls="info-topicid" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-topicid" role="region" aria-label="Info /topicid">
+              <div class="titleline">
+                <div class="title">/topicid</div>
+                <button type="button" class="close-mini" data-close="info-topicid">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Zeigt die Topic-/Thread-ID (nur in Forum-Topics).</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/topicid</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/topicid</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/id</div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-id" aria-expanded="false" aria-controls="info-id" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-id" role="region" aria-label="Info /id">
+              <div class="titleline">
+                <div class="title">/id</div>
+                <button type="button" class="close-mini" data-close="info-id">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Gibt User-ID + Chat-ID + (optional) Topic-ID in einer Ausgabe aus.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/id</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/id</code></div>
+            </div>
+          </li>
+
+        </ul>
+      </div>
+    </div>
+
+    <!-- Verwarnungen -->
+    <div class="col cmd-card">
+      <div class="card h-100">
+        <div class="card-header fw-bold">⚠️ Verwarnungen</div>
+        <ul class="list-group list-group-flush">
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/warn <span class="cmd-hint">USER_ID Grund</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-warn" aria-expanded="false" aria-controls="info-warn" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-warn" role="region" aria-label="Info /warn">
+              <div class="titleline">
+                <div class="title">/warn</div>
+                <button type="button" class="close-mini" data-close="info-warn">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Verwarnt den User (Warnzähler +1). Optional mit Grund.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/warn USER_ID Grund</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/warn 123456 Spammen</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/warnings <span class="cmd-hint">USER_ID</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-warnings" aria-expanded="false" aria-controls="info-warnings" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-warnings" role="region" aria-label="Info /warnings">
+              <div class="titleline">
+                <div class="title">/warnings</div>
+                <button type="button" class="close-mini" data-close="info-warnings">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Zeigt die aktuellen Verwarnungen des Users.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/warnings USER_ID</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/warnings 123456</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/unwarn <span class="cmd-hint">USER_ID</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-unwarn" aria-expanded="false" aria-controls="info-unwarn" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-unwarn" role="region" aria-label="Info /unwarn">
+              <div class="titleline">
+                <div class="title">/unwarn</div>
+                <button type="button" class="close-mini" data-close="info-unwarn">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Entfernt eine Verwarnung (Warnzähler -1).</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/unwarn USER_ID</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/unwarn 123456</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/clearwarnings <span class="cmd-hint">USER_ID</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-clearwarnings" aria-expanded="false" aria-controls="info-clearwarnings" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-clearwarnings" role="region" aria-label="Info /clearwarnings">
+              <div class="titleline">
+                <div class="title">/clearwarnings</div>
+                <button type="button" class="close-mini" data-close="info-clearwarnings">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Setzt alle Verwarnungen des Users zurück (Warnzähler = 0).</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/clearwarnings USER_ID</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/clearwarnings 123456</code></div>
+            </div>
+          </li>
+
+        </ul>
+      </div>
+    </div>
+
+    <!-- Mute -->
+    <div class="col cmd-card">
+      <div class="card h-100">
+        <div class="card-header fw-bold">🔇 Stummschalten</div>
+        <ul class="list-group list-group-flush">
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/mute <span class="cmd-hint">USER_ID 10m Grund</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-mute" aria-expanded="false" aria-controls="info-mute" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-mute" role="region" aria-label="Info /mute">
+              <div class="titleline">
+                <div class="title">/mute</div>
+                <button type="button" class="close-mini" data-close="info-mute">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Stummschaltet den User für eine Dauer. Optional mit Grund.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/mute USER_ID DAUER Grund</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/mute 123456 10m Spam</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/unmute <span class="cmd-hint">USER_ID</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-unmute" aria-expanded="false" aria-controls="info-unmute" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-unmute" role="region" aria-label="Info /unmute">
+              <div class="titleline">
+                <div class="title">/unmute</div>
+                <button type="button" class="close-mini" data-close="info-unmute">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Hebt die Stummschaltung auf (User darf wieder schreiben).</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/unmute USER_ID</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/unmute 123456</code></div>
+            </div>
+          </li>
+
+        </ul>
+      </div>
+    </div>
+
+    <!-- Kick/Ban -->
+    <div class="col cmd-card">
+      <div class="card h-100">
+        <div class="card-header fw-bold">🚫 Kick & Ban</div>
+        <ul class="list-group list-group-flush">
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/kick <span class="cmd-hint">USER_ID Grund</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-kick" aria-expanded="false" aria-controls="info-kick" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-kick" role="region" aria-label="Info /kick">
+              <div class="titleline">
+                <div class="title">/kick</div>
+                <button type="button" class="close-mini" data-close="info-kick">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Entfernt den User aus der Gruppe (kann meist wieder beitreten). Optional mit Grund.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/kick USER_ID Grund</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/kick 123456 Stören</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/ban <span class="cmd-hint">USER_ID Grund</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-ban" aria-expanded="false" aria-controls="info-ban" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-ban" role="region" aria-label="Info /ban">
+              <div class="titleline">
+                <div class="title">/ban</div>
+                <button type="button" class="close-mini" data-close="info-ban">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Bannt den User aus der Gruppe (Beitritt gesperrt). Optional mit Grund.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/ban USER_ID Grund</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/ban 123456 Hardcore Spam</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/unban <span class="cmd-hint">USER_ID</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-unban" aria-expanded="false" aria-controls="info-unban" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-unban" role="region" aria-label="Info /unban">
+              <div class="titleline">
+                <div class="title">/unban</div>
+                <button type="button" class="close-mini" data-close="info-unban">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Hebt den Bann auf (User darf wieder beitreten).</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/unban USER_ID</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/unban 123456</code></div>
+            </div>
+          </li>
+
+        </ul>
+      </div>
+    </div>
+
+    <!-- Nachrichten-Tools -->
+    <div class="col cmd-card">
+      <div class="card h-100">
+        <div class="card-header fw-bold">🧹 Nachrichten-Tools</div>
+        <ul class="list-group list-group-flush">
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/del <span class="cmd-hint">(Reply)</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-del" aria-expanded="false" aria-controls="info-del" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-del" role="region" aria-label="Info /del">
+              <div class="titleline">
+                <div class="title">/del</div>
+                <button type="button" class="close-mini" data-close="info-del">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Löscht die Nachricht, auf die du geantwortet hast.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> Als Reply <code>/del</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>(Reply) /del</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/purge <span class="cmd-hint">(Reply)</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-purge" aria-expanded="false" aria-controls="info-purge" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-purge" role="region" aria-label="Info /purge">
+              <div class="titleline">
+                <div class="title">/purge</div>
+                <button type="button" class="close-mini" data-close="info-purge">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Löscht mehrere Nachrichten ab einer Start-Nachricht (je nach Implementierung).</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> Auf Start-Nachricht replyen → <code>/purge</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>(Reply auf Start) /purge</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/pin <span class="cmd-hint">(Reply)</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-pin" aria-expanded="false" aria-controls="info-pin" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-pin" role="region" aria-label="Info /pin">
+              <div class="titleline">
+                <div class="title">/pin</div>
+                <button type="button" class="close-mini" data-close="info-pin">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Pinnt die Nachricht, auf die du geantwortet hast.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> Als Reply <code>/pin</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>(Reply) /pin</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/unpin</div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-unpin" aria-expanded="false" aria-controls="info-unpin" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-unpin" role="region" aria-label="Info /unpin">
+              <div class="titleline">
+                <div class="title">/unpin</div>
+                <button type="button" class="close-mini" data-close="info-unpin">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Entfernt den aktuellen Pin in der Gruppe.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/unpin</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/unpin</code></div>
+            </div>
+          </li>
+
+        </ul>
+      </div>
+    </div>
+
+    <!-- Locks / Konfiguration -->
+    <div class="col cmd-card">
+      <div class="card h-100">
+        <div class="card-header fw-bold">🔒 Locks & Konfiguration</div>
+        <ul class="list-group list-group-flush">
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/lock <span class="cmd-hint">links|media|stickers</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-lock" aria-expanded="false" aria-controls="info-lock" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-lock" role="region" aria-label="Info /lock">
+              <div class="titleline">
+                <div class="title">/lock</div>
+                <button type="button" class="close-mini" data-close="info-lock">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Sperrt ein Feature (z.B. Links / Medien / Sticker) – je nach Bot-Logik.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/lock links</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/lock media</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/unlock <span class="cmd-hint">links|media|stickers</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-unlock" aria-expanded="false" aria-controls="info-unlock" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-unlock" role="region" aria-label="Info /unlock">
+              <div class="titleline">
+                <div class="title">/unlock</div>
+                <button type="button" class="close-mini" data-close="info-unlock">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Hebt die Sperre wieder auf.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/unlock links</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/unlock stickers</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/locks</div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-locks" aria-expanded="false" aria-controls="info-locks" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-locks" role="region" aria-label="Info /locks">
+              <div class="titleline">
+                <div class="title">/locks</div>
+                <button type="button" class="close-mini" data-close="info-locks">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Zeigt an, welche Locks aktiv sind.</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/locks</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/locks</code></div>
+            </div>
+          </li>
+
+          <li class="list-group-item cmd-item">
+            <div class="cmd-line">
+              <div>
+                <div class="cmd-name">/setadmingroup <span class="cmd-hint">CHAT_ID</span></div>
+              </div>
+
+              <button type="button" class="info-btn" data-target="info-setadmingroup" aria-expanded="false" aria-controls="info-setadmingroup" title="Info">
+                <span class="fallback-i">i</span>
+              </button>
+            </div>
+
+            <div class="info-panel" id="info-setadmingroup" role="region" aria-label="Info /setadmingroup">
+              <div class="titleline">
+                <div class="title">/setadmingroup</div>
+                <button type="button" class="close-mini" data-close="info-setadmingroup">Schließen</button>
+              </div>
+              <div class="rowline"><span class="label">Kann:</span> Setzt/ändert die Admin-Gruppe für Bot-Logs/Administration (sofern im Bot aktiv genutzt).</div>
+              <div class="rowline"><span class="label">So nutzt du’s:</span> <code>/setadmingroup -100123456789</code></div>
+              <div class="rowline"><span class="label">Beispiel:</span> <code>/setadmingroup -100987654321</code></div>
+            </div>
+          </li>
+
+        </ul>
+      </div>
+    </div>
+
+  </div>
 </div>
+
+<script>
+(function() {
+  const input = document.getElementById("cmdSearch");
+  const clearBtn = document.getElementById("clearCmdSearch");
+
+  function closeAllPanels(exceptId) {
+    document.querySelectorAll(".info-panel").forEach(p => {
+      if (exceptId && p.id === exceptId) return;
+      p.style.display = "none";
+    });
+    document.querySelectorAll(".info-btn").forEach(b => {
+      if (exceptId && b.getAttribute("data-target") === exceptId) return;
+      b.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  // Toggle panel on info button click
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".info-btn");
+    if (btn) {
+      const id = btn.getAttribute("data-target");
+      const panel = document.getElementById(id);
+      if (!panel) return;
+
+      const isOpen = panel.style.display === "block";
+      closeAllPanels(id);
+
+      panel.style.display = isOpen ? "none" : "block";
+      btn.setAttribute("aria-expanded", isOpen ? "false" : "true");
+      return;
+    }
+
+    // Close buttons inside panels
+    const closeBtn = e.target.closest("[data-close]");
+    if (closeBtn) {
+      const id = closeBtn.getAttribute("data-close");
+      const panel = document.getElementById(id);
+      const opener = document.querySelector(`.info-btn[data-target="${id}"]`);
+      if (panel) panel.style.display = "none";
+      if (opener) opener.setAttribute("aria-expanded", "false");
+      return;
+    }
+
+    // Click outside -> close all (optional, fühlt sich sauber an)
+    const clickedInsidePanel = e.target.closest(".info-panel");
+    if (!clickedInsidePanel) closeAllPanels();
+  });
+
+  // Search filters cards
+  function filterCommands() {
+    const q = (input.value || "").toLowerCase().trim();
+    const cards = document.querySelectorAll("#cmdGrid .cmd-card");
+    cards.forEach(card => {
+      const text = card.innerText.toLowerCase();
+      card.style.display = text.includes(q) ? "" : "none";
+    });
+    closeAllPanels();
+  }
+
+  if (input) input.addEventListener("input", filterCommands);
+  if (clearBtn) clearBtn.addEventListener("click", () => {
+    input.value = "";
+    filterCommands();
+    input.focus();
+  });
+})();
+</script>
 {% endblock %}

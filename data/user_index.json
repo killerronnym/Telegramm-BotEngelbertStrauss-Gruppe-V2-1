@@ -1,0 +1,54 @@
+{
+    "by_username": {
+        "pup_rinno_cgn": {
+            "id": 5544098336,
+            "name": "Rinno 🐶💙🏳️‍🌈",
+            "username": "pup_Rinno_cgn",
+            "updated": "2025-12-15T20:37:42.555699"
+        },
+        "kronym": {
+            "id": 1032410054,
+            "name": "Ronny",
+            "username": "Kronym",
+            "updated": "2025-12-15T20:23:54.758126"
+        },
+        "rdtestbot_bot": {
+            "id": 8508220461,
+            "name": "Testbot",
+            "username": "RdTestbot_bot",
+            "updated": "2025-12-15T20:23:39.521704"
+        },
+        "groupanonymousbot": {
+            "id": 1087968824,
+            "name": "Group",
+            "username": "GroupAnonymousBot",
+            "updated": "2025-12-15T20:37:32.389739"
+        }
+    },
+    "by_id": {
+        "5544098336": {
+            "id": 5544098336,
+            "name": "Rinno 🐶💙🏳️‍🌈",
+            "username": "pup_Rinno_cgn",
+            "updated": "2025-12-15T20:37:42.555699"
+        },
+        "1032410054": {
+            "id": 1032410054,
+            "name": "Ronny",
+            "username": "Kronym",
+            "updated": "2025-12-15T20:23:54.758126"
+        },
+        "8508220461": {
+            "id": 8508220461,
+            "name": "Testbot",
+            "username": "RdTestbot_bot",
+            "updated": "2025-12-15T20:23:39.521704"
+        },
+        "1087968824": {
+            "id": 1087968824,
+            "name": "Group",
+            "username": "GroupAnonymousBot",
+            "updated": "2025-12-15T20:37:32.389739"
+        }
+    }
+}

@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}User Detail – {{ user.full_name or user.username or user.id }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <a href="{{ url_for('id_finder_dashboard') }}" class="btn btn-secondary mb-3">← Zurück zum ID-Finder Dashboard</a>
+
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+      <h1 class="display-6 mb-1">👤 User Detail</h1>
+      <div class="text-muted">
+        <span class="me-2">🆔 <code>{{ user.id }}</code></span>
+        {% if user.username %}<span class="me-2">👾 @{{ user.username }}</span>{% endif %}
+        {% if user.is_bot %}<span class="badge bg-warning text-dark">BOT</span>{% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('id_finder_analytics') }}"
+         class="btn text-white"
+         style="background-color:#7a1f1f; border-color:#7a1f1f;">
+        📊 Analytics
+      </a>
+      <a href="{{ url_for('id_finder_admin_panel') }}" class="btn btn-warning text-dark">👮 Admin Panel</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- User-Info -->
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <h3 class="mb-0">🧾 Profil / Registry</h3>
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-sm btn-outline-primary" type="button" id="copyUserIdBtn">Copy ID</button>
+
+        <!-- ⚠️ Hierarchie löschen -->
+        <form method="POST" action="{{ url_for('id_finder_user_delete_hierarchy') }}" class="m-0 p-0" id="deleteHierarchyForm">
+          <input type="hidden" name="user_id" value="{{ user.id }}">
+          <input type="hidden" name="delete_registry" value="1">
+          <input type="hidden" name="delete_messages" value="1">
+          <input type="hidden" name="delete_moderation" value="1">
+          <input type="hidden" name="delete_cache" value="1">
+          <button type="submit" class="btn btn-sm btn-danger">🧨 Hierarchie löschen</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100">
+            <div class="mb-2"><strong>👤 Name:</strong> {{ user.full_name or '—' }}</div>
+            <div class="mb-2"><strong>👾 Username:</strong> {% if user.username %}@{{ user.username }}{% else %}—{% endif %}</div>
+            <div class="mb-2"><strong>🆔 User-ID:</strong> <code id="userIdCode">{{ user.id }}</code></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="border rounded p-3 h-100">
+            <div class="mb-2"><strong>⏱️ First Seen:</strong> <code>{{ user.first_seen or '—' }}</code></div>
+            <div class="mb-2"><strong>⏱️ Last Seen:</strong> <code>{{ user.last_seen or '—' }}</code></div>
+            <div class="mb-2"><strong>💬 Chats:</strong>
+              {% if user.chat_ids %}
+                <code style="white-space: normal;">{{ user.chat_ids }}</code>
+              {% else %}
+                —
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <small class="text-muted d-block mt-3">
+        Hinweis: Verlauf kann nur angezeigt werden, wenn dein Bot die Nachrichten **mitloggt** (Telegram liefert keine alte Historie nach).
+      </small>
+    </div>
+  </div>
+
+  <!-- Verlauf / Suche / Filter -->
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <h3 class="mb-0">🧾 Chatverlauf (Bot-Log)</h3>
+      <span class="badge bg-dark">
+        {{ stats.total_messages if stats and stats.total_messages is defined else (messages|length if messages is defined else 0) }} Einträge
+      </span>
+    </div>
+
+    <div class="card-body">
+      <form method="GET" action="{{ url_for('id_finder_user_detail', user_id=user.id) }}" class="row g-2 align-items-end mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Suche (Text / Caption / Dateiname)</label>
+          <input type="text" class="form-control" name="q" value="{{ q or '' }}" placeholder="z.B. ‚Strauss‘, ‚pdf‘, ‚👍‘">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Filter</label>
+          <select class="form-select" name="type">
+            <option value="all" {% if (filter_type or 'all') == 'all' %}selected{% endif %}>Alle</option>
+            <option value="text" {% if filter_type == 'text' %}selected{% endif %}>Nur Text</option>
+            <option value="media" {% if filter_type == 'media' %}selected{% endif %}>Nur Media</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-grid">
+          <button class="btn btn-outline-secondary" type="submit">🔎 Anwenden</button>
+        </div>
+      </form>
+
+      {% if messages is not defined or messages|length == 0 %}
+        <div class="alert alert-info mb-0">
+          ℹ️ Keine Einträge gefunden. Entweder hat der Bot noch nichts geloggt oder deine Suche/Filter ist zu streng.
+        </div>
+      {% else %}
+        <div class="table-responsive"
+             style="max-height: 520px; overflow-y: auto; border: 1px solid rgba(255,255,255,.08); border-radius: .5rem;">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
+              <tr>
+                <th style="width: 190px;">Zeit</th>
+                <th style="width: 140px;">Typ</th>
+                <th>Inhalt</th>
+                <th style="width: 180px;">Meta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m in messages %}
+              <tr>
+                <td><code>{{ m.ts or '' }}</code></td>
+                <td>
+                  {% set t = (m.type or 'unknown') %}
+                  {% if t in ['photo','video','document','animation','audio','voice','sticker'] %}
+                    <span class="badge bg-info text-dark">{{ t }}</span>
+                  {% elif t == 'text' %}
+                    <span class="badge bg-secondary">text</span>
+                  {% else %}
+                    <span class="badge bg-dark">{{ t }}</span>
+                  {% endif %}
+                </td>
+
+                <td style="white-space: pre-wrap;">
+                  {% if m.text %}{{ m.text }}{% endif %}
+                  {% if m.caption %}
+                    {% if m.text %}<hr class="my-2">{% endif %}
+                    <span class="text-muted">📎 Caption:</span> {{ m.caption }}
+                  {% endif %}
+                  {% if not m.text and not m.caption %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                  
+                  {# REACTION DISPLAY PER MESSAGE #}
+                  {% if m.likes_total and m.likes_total > 0 %}
+                    <div class="mt-2">
+                      <span class="badge bg-light text-dark border">
+                        ❤️ {{ m.likes_total }} Reaktionen
+                      </span>
+                    </div>
+                  {% endif %}
+                </td>
+
+                <td>
+                  <div class="small text-muted">
+                    {% if m.chat_id %}Chat: <code>{{ m.chat_id }}</code><br>{% endif %}
+                    {% if m.message_id %}Msg: <code>{{ m.message_id }}</code><br>{% endif %}
+                    {% if m.file_name %}Datei: <code>{{ m.file_name }}</code><br>{% endif %}
+                    {% if m.mime_type %}MIME: <code>{{ m.mime_type }}</code><br>{% endif %}
+                    {% if m.file_id %}
+                      file_id: <code style="white-space: normal;">{{ m.file_id }}</code>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+
+              {% if m.raw %}
+              <tr class="table-active">
+                <td colspan="4">
+                  <details>
+                    <summary class="small">🔎 Raw JSON anzeigen</summary>
+                    <pre class="mb-0" style="white-space: pre-wrap;">{{ m.raw }}</pre>
+                  </details>
+                </td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Paging -->
+        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+          <div class="text-muted small">
+            Seite {{ page or 1 }}{% if page_size %} • {{ page_size }} pro Seite{% endif %}
+          </div>
+          <div class="d-flex gap-2">
+            {% if has_prev %}
+              <a class="btn btn-outline-secondary btn-sm"
+                 href="{{ url_for('id_finder_user_detail', user_id=user.id, q=q or '', type=filter_type or 'all', page=(page-1)) }}">
+                ← Vorherige
+              </a>
+            {% endif %}
+            {% if has_next %}
+              <a class="btn btn-outline-secondary btn-sm"
+                 href="{{ url_for('id_finder_user_detail', user_id=user.id, q=q or '', type=filter_type or 'all', page=(page+1)) }}">
+                Nächste →
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Mini-Stats -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3 class="mb-0">📈 Mini-Statistik</h3>
+    </div>
+    <div class="card-body">
+      {% if stats is not defined %}
+        <div class="alert alert-secondary mb-0">ℹ️ Noch keine Stats vorhanden.</div>
+      {% else %}
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Nachrichten gesamt</div>
+              <div class="fs-4">{{ stats.total_messages or 0 }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Letzte 24h</div>
+              <div class="fs-4">{{ stats.last_24h or 0 }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small">Letzte 7 Tage</div>
+              <div class="fs-4">{{ stats.last_7d or 0 }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small text-primary">❤️ Reaktionen erhalten</div>
+              <div class="fs-4">{{ stats.likes_received or 0 }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="border rounded p-3 h-100">
+              <div class="text-muted small text-success">⚡ Reaktionen gegeben</div>
+              <div class="fs-4 text-success">{{ stats.likes_given or 0 }}</div>
+            </div>
+          </div>
+        </div>
+
+        {% if stats.hourly %}
+          <hr class="my-4">
+          <div class="mb-2"><strong>🕒 Aktivität nach Stunde</strong> <span class="text-muted small">(0–23)</span></div>
+          <div class="d-flex flex-wrap gap-2">
+            {% for h in range(0,24) %}
+              {% set v = stats.hourly[h] if stats.hourly[h] is defined else 0 %}
+              <span class="badge bg-dark">{{ "%02d"|format(h) }}: {{ v }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // Copy user id
+  const btn = document.getElementById("copyUserIdBtn");
+  const code = document.getElementById("userIdCode");
+  if (btn && code) {
+    btn.addEventListener("click", async () => {
+      const id = (code.textContent || "").trim();
+      if (!id) return;
+      try {
+        await navigator.clipboard.writeText(id);
+        const old = btn.textContent;
+        btn.textContent = "✅ Copied";
+        setTimeout(()=>btn.textContent = old, 900);
+      } catch(e) {
+        alert("Copy fehlgeschlagen: " + id);
+      }
+    });
+  }
+
+  // Confirm hierarchy delete
+  const form = document.getElementById("deleteHierarchyForm");
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      const uid = form.querySelector('input[name="user_id"]')?.value || "";
+      const ok = confirm(
+        "⚠️ HIERARCHIE LÖSCHEN?\n\n" +
+        "User-ID: " + uid + "\n\n" +
+        "Das löscht:\n" +
+        "• Registry\n" +
+        "• Message-Logs (Chatverlauf)\n" +
+        "• Moderation-Daten\n" +
+        "• Username-Cache\n\n" +
+        "Wirklich machen?"
+      );
+      if (!ok) e.preventDefault();
+    });
+  }
+})();
+</script>
+{% endblock %}

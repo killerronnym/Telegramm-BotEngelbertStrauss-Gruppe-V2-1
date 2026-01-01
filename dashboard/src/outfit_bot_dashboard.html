@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}Outfit-Bot Dashboard{% endblock %}
@@ -157,7 +156,7 @@
 
                     <div class="mb-3">
                         <label for="admin_ids" class="form-label">Admin User IDs (kommagetrennt)</label>
-                        <textarea class="form-control" id="admin_ids" name="ADMIN_USER_IDS" rows="2">{{ config.ADMIN_USER_IDS|join(', ') }}</textarea>
+                        <textarea class="form-control" id="admin_ids" name="ADMIN_USER_IDS" rows="2">{{ (config.ADMIN_USER_IDS or [])|join(', ') }}</textarea>
                     </div>
 
                     <div class="mb-3">

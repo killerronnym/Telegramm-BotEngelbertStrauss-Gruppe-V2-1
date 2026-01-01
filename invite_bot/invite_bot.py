@@ -1,4 +1,3 @@
-
 import logging
 import os
 import json
@@ -219,7 +218,7 @@ async def get_sexuality(update: Update, context: ContextTypes.DEFAULT_TYPE):
     log_user_interaction(user_id, "Sexualität", text)
     if is_valid(text):
         user_data_temp[user_id]["sexuality"] = text
-    regeln = ( "📜 *Bevor du in die Gruppe kommst, lies bitte unsere Regeln:*\n\n" "✅ *DOS:*\n" "• Respektvoller Umgang\n" "• Überwiegend gute Laune 😄\n\n" "❌ *DON'TS:*\n" "✖️ Beleidigungen\n" "✖️ Diskriminierung\n" "✖️ Hardcore\-Inhalte\n" "✖️ Blut oder offene Wunden\n" "✖️ Inhalte mit Kindern\n" "✖️ Inhalte mit Tieren \\(sexuell\\)\\n" "✖️ Inhalte mit Bezug auf Tod\n" "✖️ Exkremente\n\n" "_Verstöße werden durch Admins geprüft und bei Wiederholung erfolgt Ausschluss\\._\n\n" "👉 *Wenn du einverstanden bist, bestätige mit OK\\.*" )
+    regeln = ( "📜 *Bevor du in die Gruppe kommst, lies bitte unsere Regeln:*\n\n" "✅ *DOS:*\n" "• Respektvoller Umgang\n" "• Überwiegend gute Laune 😄\n\n" "❌ *DON'TS:*\n" "✖️ Beleidigungen\n" "✖️ Diskriminierung\n" "✖️ Hardcore\-Inhalte\n" "✖️ Blut oder offene Wunden\n" "✖️ Inhalte mit Kindern\n" "✖️ Inhalte mit Tieren \\(sexuell\\)\n" "✖️ Inhalte mit Bezug auf Tod\n" "✖️ Exkremente\n\n" "_Verstöße werden durch Admins geprüft und bei Wiederholung erfolgt Ausschluss\\._\n\n" "👉 *Wenn du einverstanden bist, bestätige mit OK\\.*" )
     await update.message.reply_text(regeln, parse_mode="MarkdownV2")
     return ASK_RULES
 
@@ -273,7 +272,7 @@ async def get_rules_ok(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text.strip().lower() != "ok":
         await update.message.reply_text("Bitte antworte mit *OK*, um den Regeln zuzustimmen\\.", parse_mode="MarkdownV2")
         return ASK_RULES
-    
+
     # Save profile data
     user_data_temp[user_id]["created_at"] = datetime.utcnow().isoformat()
     save_profile(user_id, user_data_temp[user_id])
@@ -292,7 +291,7 @@ async def get_rules_ok(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Fehler: Die Gruppen-ID ist nicht konfiguriert\\.", parse_mode="MarkdownV2")
         user_data_temp.pop(user_id, None)
         return ConversationHandler.END
-    
+
     is_already_member = False
     try:
         member = await context.bot.get_chat_member(chat_id=GROUP_ID, user_id=user_id)
@@ -331,7 +330,7 @@ async def get_rules_ok(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"[get_rules_ok] Fehler beim Link-Erstellen für User {user_id}: {e}")
             await update.message.reply_text(f"⚠️ Fehler beim Erstellen des Links\\: {escape_markdown(str(e), version=2)}", parse_mode="MarkdownV2")
             remove_profile(user_id) # Bereinigung bei Fehler
-    
+
     user_data_temp.pop(user_id, None)
     return ConversationHandler.END
 
@@ -382,9 +381,8 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
             logger.error(f"[handle_join_request] Profil konnte nicht in Gruppe gepostet werden für User {user.id}")
     else:
         logger.info(f"[handle_join_request] Profil für User {user.id} nicht gepostet (should_post_profile ist False).")
-    
-    remove_profile(user.id)
 
+    remove_profile(user.id)
 
 async def handle_new_chat_members(update: Update, context: ContextTypes.DEFAULT_TYPE):
     config = load_bot_settings_config()
@@ -412,7 +410,6 @@ async def handle_new_chat_members(update: Update, context: ContextTypes.DEFAULT_
         else:
             logger.info(f"[handle_new_chat_members] Neues Mitglied {user_id} erkannt, aber kein Profil gefunden.")
 
-
 async def handle_member_left(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.left_chat_member: return
     user = update.message.left_chat_member
@@ -435,7 +432,8 @@ if __name__ == "__main__":
                 ASK_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
                 ASK_AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_age)],
                 ASK_STATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_state)],
-                ASK_PHOTO: [MessageHandler(filters.PHOTO, get_photo)],
+                # FIX: nicht nur PHOTO annehmen, sonst "hängt" der Bot wenn User Text/Dokument sendet
+                ASK_PHOTO: [MessageHandler(filters.ALL & ~filters.COMMAND, get_photo)],
                 # ASK_SECURITY removed here as well
                 ASK_HOBBIES: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_hobbies)],
                 ASK_INSTAGRAM: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_instagram)],

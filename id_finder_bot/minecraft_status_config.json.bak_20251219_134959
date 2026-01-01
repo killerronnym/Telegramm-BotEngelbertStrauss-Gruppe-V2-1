@@ -1,0 +1,20 @@
+{
+  "name": "Minecraft Server",
+  "host": "10.0.0.141",
+  "port": 25565,
+  "timeout_seconds": 2,
+
+  "display_host": "es-workwear-mc.duckdns.org",
+  "display_port": 25565,
+
+  "chat_id": -1002206300882,
+  "topic_id": 14332,
+
+  "update_seconds": 30,
+  "delete_player_seconds": 8,
+
+  "status_message_id": 14367,
+
+  "mc_host": "10.0.0.141",
+  "mc_port": 25565
+}

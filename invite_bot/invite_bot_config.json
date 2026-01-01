@@ -1,8 +1,8 @@
 {
-    "bot_token": "8508220461:AAFLKm2ffyaXs5rmlR2yIGs0FgFq4ASUN-s",
-    "main_chat_id": "-1003405727637",
-    "topic_id": "4",
+    "bot_token": "7520803994:AAGPynp1vlWVjTLRK7s2EPVaMzHyROTetgc",
+    "main_chat_id": "-1002206300882",
+    "topic_id": null,
     "is_enabled": true,
     "repost_profile_for_existing_members": true,
-    "link_ttl_minutes": 50
+    "link_ttl_minutes": 15
 }

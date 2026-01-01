@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+  .status-line {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 600;
+  }
+  .status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    display: inline-block;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.06);
+  }
+</style>
+
 <div class="container mt-4">
     <a href="/" class="btn btn-secondary mb-3">← Zurück zum Haupt-Dashboard</a>
     <h1 class="display-5 mb-4">Umfrage Einstellungen</h1>
@@ -16,44 +32,206 @@
       {% endif %}
     {% endwith %}
 
+    {# ------------------------------------------------------------
+       Status aus bot_status
+       ------------------------------------------------------------ #}
+    {% set umfrage_state = (bot_status.get('umfrage') if bot_status is defined and bot_status else None) %}
+    {% set umfrage_running = (umfrage_state.get('running') if umfrage_state else False) %}
+    {% set umfrage_pid = (umfrage_state.get('pid') if umfrage_state and umfrage_state.get('pid') is not none else None) %}
+
+    <!-- Prozess-Steuerung -->
     <div class="card mb-4">
-        <div class="card-header">
-            <h3>Konfiguration</h3>
+        <div class="card-header"><h3 class="m-0">Prozess-Steuerung</h3></div>
+        <div class="card-body">
+            {% if umfrage_running %}
+              <div class="status-line mb-3 text-success">
+                Status:
+                <span class="status-dot" style="background: #28a745;"></span>
+                AKTIV (Läuft)
+                {% if umfrage_pid %}<span class="text-muted ms-2">PID: {{ umfrage_pid }}</span>{% endif %}
+              </div>
+            {% else %}
+              <div class="status-line mb-3 text-danger">
+                Status:
+                <span class="status-dot" style="background: #dc3545;"></span>
+                INAKTIV (Gestoppt)
+              </div>
+            {% endif %}
+
+            <form action="/umfrage-settings" method="POST" class="m-0">
+                <input type="hidden" name="config_type" value="umfrage">
+                <input type="hidden" name="action" value="{{ 'stop_umfrage_bot' if umfrage_running else 'start_umfrage_bot' }}">
+                <button type="submit" class="btn btn-{{ 'danger' if umfrage_running else 'success' }} w-100 py-3">
+                    {{ '⏹️ Bot stoppen' if umfrage_running else '▶️ Bot starten' }}
+                </button>
+            </form>
+
+            <div class="small text-muted mt-2">
+                Tipp: Wenn du die Anzeige aktualisieren willst, lade die Seite neu.
+            </div>
         </div>
+    </div>
+
+    <!-- Konfiguration (nur Token / Channel / Topic) -->
+    <div class="card mb-4">
+        <div class="card-header"><h3 class="m-0">Konfiguration</h3></div>
         <div class="card-body">
             <form action="/umfrage-settings" method="POST">
                 <input type="hidden" name="config_type" value="umfrage">
                 <input type="hidden" name="action" value="save_settings">
-                
+
                 <div class="mb-3">
                     <label for="token" class="form-label">Telegram Bot Token</label>
-                    <input type="text" id="token" name="token" class="form-control" value="{{ config.umfrage.token or '' }}" placeholder="123456:ABC-DEF...">
+                    <input
+                        type="text"
+                        id="token"
+                        name="token"
+                        class="form-control"
+                        value="{{ config.umfrage.token or '' }}"
+                        placeholder="123456:ABC-DEF..."
+                    >
                 </div>
                 <div class="mb-3">
                     <label for="channel_id" class="form-label">Channel ID</label>
-                    <input type="text" id="channel_id" name="channel_id" class="form-control" value="{{ config.umfrage.channel_id or '' }}" placeholder="-100...">
+                    <input
+                        type="text"
+                        id="channel_id"
+                        name="channel_id"
+                        class="form-control"
+                        value="{{ config.umfrage.channel_id or '' }}"
+                        placeholder="-100..."
+                    >
                 </div>
                 <div class="mb-3">
                     <label for="topic_id" class="form-label">Topic ID (Optional)</label>
-                    <input type="text" id="topic_id" name="topic_id" class="form-control" value="{{ config.umfrage.topic_id or '' }}" placeholder="123">
+                    <input
+                        type="text"
+                        id="topic_id"
+                        name="topic_id"
+                        class="form-control"
+                        value="{{ config.umfrage.topic_id or '' }}"
+                        placeholder="123"
+                    >
                 </div>
-                
-                <button type="submit" class="btn btn-primary">Einstellungen Speichern</button>
+
+                <button type="submit" class="btn btn-primary">Einstellungen speichern</button>
             </form>
         </div>
     </div>
+
+    {# ------------------------------------------------------------
+       Automatisierung – DESIGN WIE AUF DEINEM BILD
+       (HH : MM, Checkbox-Liste, Switch)
+       Intern schreiben wir aber schedule_time / schedule_days / schedule_enabled,
+       damit app.py alles korrekt speichert.
+       ------------------------------------------------------------ #}
+    {% set current_time = schedule.time or '19:00' %}
+    {% set hour = current_time.split(':')[0] %}
+    {% set minute = current_time.split(':')[1] %}
 
     <div class="card mb-4">
-        <div class="card-header">
-            <h3>Aktionen</h3>
-        </div>
+        <div class="card-header"><h3 class="m-0">Automatisierung</h3></div>
         <div class="card-body">
-            <form action="/send_umfrage" method="POST">
-                <button type="submit" class="btn btn-success">Jetzt zufällige Umfrage senden</button>
+            <form
+                action="/umfrage-settings"
+                method="POST"
+                onsubmit="(function(){
+                    var h = document.getElementById('schedule_hour').value || '00';
+                    var m = document.getElementById('schedule_minute').value || '00';
+                    h = h.toString().padStart(2,'0');
+                    m = m.toString().padStart(2,'0');
+                    document.getElementById('schedule_time').value = h + ':' + m;
+                })();"
+            >
+                <input type="hidden" name="config_type" value="umfrage">
+                <input type="hidden" name="action" value="save_schedule">
+                <!-- Feld, das app.py wirklich ausliest -->
+                <input type="hidden" id="schedule_time" name="schedule_time" value="{{ current_time }}">
+
+                <div class="mb-3">
+                    <label class="form-label">⏰ Uhrzeit für Umfrage</label>
+                    <div class="d-flex align-items-center" style="gap: 5px; max-width: 180px;">
+                        <input
+                            type="number"
+                            id="schedule_hour"
+                            class="form-control"
+                            min="0"
+                            max="23"
+                            placeholder="HH"
+                            value="{{ hour }}"
+                        >
+                        <span>:</span>
+                        <input
+                            type="number"
+                            id="schedule_minute"
+                            class="form-control"
+                            min="0"
+                            max="59"
+                            placeholder="MM"
+                            value="{{ minute }}"
+                        >
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">📅 Wochentage für automatische Auslösung</label>
+                    <div class="form-check">
+                      {% set tage = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}
+                      {% set selected_days = schedule.days or [] %}
+                      {% for tag in tage %}
+                        <div class="form-check form-check-inline">
+                          <input
+                            class="form-check-input"
+                            type="checkbox"
+                            name="schedule_days"
+                            id="tag_{{ tag }}"
+                            value="{{ loop.index0 }}"
+                            {% if loop.index0 in selected_days %}checked{% endif %}
+                          >
+                          <label class="form-check-label" for="tag_{{ tag }}">{{ tag }}</label>
+                        </div>
+                      {% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-check form-switch mb-3">
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="schedule_enabled"
+                        name="schedule_enabled"
+                        value="true"
+                        {% if schedule.enabled %}checked{% endif %}
+                    >
+                    <label class="form-check-label" for="schedule_enabled">
+                        Automatische Auslösung aktivieren
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Einstellungen speichern</button>
             </form>
         </div>
     </div>
 
+    <!-- Aktionen -->
+    <div class="card mb-4">
+        <div class="card-header"><h3 class="m-0">Aktionen</h3></div>
+        <div class="card-body">
+            <form action="/umfrage/send-random" method="POST">
+                <button type="submit" class="btn btn-success" {% if not umfrage_running %}disabled{% endif %}>
+                    Jetzt zufällige Umfrage senden
+                </button>
+            </form>
+
+            {% if not umfrage_running %}
+              <div class="small text-muted mt-2">
+                Starte zuerst den Umfrage-Bot (läuft als „Watcher“), dann kannst du hier triggern.
+              </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Logs -->
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h3>📜 Fehler & Aktivitäts-Log</h3>
@@ -63,7 +241,10 @@
             </form>
         </div>
         <div class="card-body">
-            <pre class="log-display bg-dark text-white p-3 rounded" style="height: 300px; overflow-y: scroll; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;">{% for line in logs %}{{ line }}{% endfor %}</pre>
+            <pre
+                class="log-display bg-dark text-white p-3 rounded"
+                style="height: 300px; overflow-y: scroll; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;"
+            >{% for line in logs %}{{ line }}{% endfor %}</pre>
         </div>
     </div>
 </div>

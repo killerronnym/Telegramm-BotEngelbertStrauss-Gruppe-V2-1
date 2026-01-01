@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+  .status-line {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 600;
+  }
+  .status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    display: inline-block;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.06);
+  }
+</style>
+
 <div class="container mt-4">
     <a href="/" class="btn btn-secondary mb-4">← Zurück zum Haupt-Dashboard</a>
     <h1 class="display-5 mb-4">Quiz Einstellungen</h1>
@@ -16,15 +32,61 @@
       {% endif %}
     {% endwith %}
 
+    {% set quiz_state = (bot_status.get('quiz') if bot_status is defined and bot_status else None) %}
+    {% set quiz_running = (quiz_state.get('running') if quiz_state else False) %}
+    {% set quiz_pid = (quiz_state.get('pid') if quiz_state and quiz_state.get('pid') is not none else None) %}
+
     <div class="card mb-4">
         <div class="card-header">
-            <h3>Konfiguration</h3>
+            <h3 class="m-0">Prozess-Steuerung</h3>
+        </div>
+        <div class="card-body">
+            {% if quiz_running %}
+              <div class="status-line mb-3 text-success">
+                Status:
+                <span class="status-dot" style="background: #28a745;"></span>
+                AKTIV (Läuft)
+                {% if quiz_pid %}<span class="text-muted fw-normal ms-2">PID: {{ quiz_pid }}</span>{% endif %}
+              </div>
+            {% else %}
+              <div class="status-line mb-3 text-danger">
+                Status:
+                <span class="status-dot" style="background: #dc3545;"></span>
+                INAKTIV (Gestoppt)
+              </div>
+            {% endif %}
+
+            <form action="/quiz-settings" method="POST" class="m-0">
+                <input type="hidden" name="config_type" value="quiz">
+
+                {% if quiz_running %}
+                    <input type="hidden" name="action" value="stop_quiz_bot">
+                    <button type="submit" class="btn btn-danger w-100 py-3">
+                        ⏹️ Bot stoppen
+                    </button>
+                {% else %}
+                    <input type="hidden" name="action" value="start_quiz_bot">
+                    <button type="submit" class="btn btn-success w-100 py-3">
+                        ▶️ Bot starten
+                    </button>
+                {% endif %}
+            </form>
+
+            <div class="small text-muted mt-2">
+                Tipp: Wenn du die Anzeige aktualisieren willst, lade die Seite neu.
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3 class="m-0">Konfiguration</h3>
         </div>
         <div class="card-body">
             <form action="/quiz-settings" method="POST">
                 <input type="hidden" name="config_type" value="quiz">
                 <input type="hidden" name="action" value="save_settings">
-                
+
                 <div class="mb-3">
                     <label for="token" class="form-label">Telegram Bot Token</label>
                     <input type="text" id="token" name="token" class="form-control" value="{{ config.quiz.token or '' }}" placeholder="123456:ABC-DEF...">
@@ -37,7 +99,35 @@
                     <label for="topic_id" class="form-label">Topic ID (Optional)</label>
                     <input type="text" id="topic_id" name="topic_id" class="form-control" value="{{ config.quiz.topic_id or '' }}" placeholder="123">
                 </div>
-                
+
+                <div class="mb-3">
+                    <label for="quiz_time" class="form-label">⏰ Uhrzeit für Quizfrage (z.B. 18:00)</label>
+                    <input type="time" id="quiz_time" name="quiz_time" class="form-control" value="{{ config.quiz.quiz_time or '' }}">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">📅 Wochentage für automatische Auslösung</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% set tage = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}
+                        {% for tag in tage %}
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       name="quiz_days"
+                                       id="tag_{{ loop.index }}"
+                                       value="{{ tag }}"
+                                       {% if tag in (config.quiz.quiz_days or []) %}checked{% endif %}>
+                                <label class="form-check-label" for="tag_{{ loop.index }}">{{ tag }}</label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="auto_enabled" name="auto_enabled" value="true" {% if config.quiz.auto_enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="auto_enabled">Automatische Auslösung aktivieren</label>
+                </div>
+
                 <button type="submit" class="btn btn-primary">Einstellungen Speichern</button>
             </form>
         </div>
@@ -45,7 +135,7 @@
 
     <div class="card mb-4">
         <div class="card-header">
-            <h3>Aktionen</h3>
+            <h3 class="m-0">Aktionen</h3>
         </div>
         <div class="card-body">
             <form action="/send_quizfrage" method="POST">
@@ -56,14 +146,15 @@
 
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h3>📜 Fehler & Aktivitäts-Log</h3>
+            <h3 class="m-0">📜 Fehler & Aktivitäts-Log</h3>
             <form action="/quiz-settings" method="POST" class="m-0">
                  <input type="hidden" name="action" value="clear_log">
                  <button type="submit" class="btn btn-danger btn-sm">Log löschen</button>
             </form>
         </div>
         <div class="card-body">
-            <pre class="log-display bg-dark text-white p-3 rounded" style="height: 300px; overflow-y: scroll; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;">{% for line in logs %}{{ line }}{% endfor %}</pre>
+            <pre class="log-display bg-dark text-white p-3 rounded"
+                 style="height: 300px; overflow-y: scroll; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;">{% for line in logs %}{{ line }}{% endfor %}</pre>
         </div>
     </div>
 </div>

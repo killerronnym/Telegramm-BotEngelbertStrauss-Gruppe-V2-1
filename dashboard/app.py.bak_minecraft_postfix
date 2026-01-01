@@ -1,0 +1,3205 @@
+import os
+import json
+import logging
+from logging.handlers import RotatingFileHandler
+import atexit
+import subprocess
+import sys
+import shutil
+import signal
+import re
+import threading
+import time
+import socket  # ✅ für Minecraft Port-Check
+from datetime import datetime, timedelta
+from collections import defaultdict
+
+# ✅ Telegram Proxy Cache
+import hashlib
+import mimetypes
+import urllib.parse
+import urllib.request
+import urllib.error
+
+try:
+    from zoneinfo import ZoneInfo  # Python 3.9+
+except Exception:
+    ZoneInfo = None
+
+from flask import (
+    Flask,
+    render_template,
+    request,
+    flash,
+    redirect,
+    url_for,
+    jsonify,
+    render_template_string,
+    send_file,
+    abort,
+)
+from jinja2 import TemplateNotFound
+
+# --- Logging (Global & App) ---
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]",
+    handlers=[
+        RotatingFileHandler("app.log", maxBytes=10240, backupCount=5),
+        logging.StreamHandler(sys.stdout),
+    ],
+    force=True,
+)
+log = logging.getLogger(__name__)
+
+# --- Flask App Initialisierung ---
+app = Flask(__name__, template_folder="src")
+app.secret_key = "b13f172933b9a1274adb024d47fc7552d2e85864693cb9a2"
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+
+# --- Globale Variablen & Dateipfade ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+
+# Bot Directories
+OUTFIT_BOT_DIR = os.path.join(PROJECT_ROOT, "outfit_bot")
+ID_FINDER_BOT_DIR = os.path.join(PROJECT_ROOT, "id_finder_bot")
+INVITE_BOT_DIR = os.path.join(PROJECT_ROOT, "invite_bot")
+QUIZ_BOT_DIR = os.path.join(PROJECT_ROOT, "quiz_bot")
+UMFRAGE_BOT_DIR = os.path.join(PROJECT_ROOT, "umfrage_bot")
+
+# Data Dir
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# Global logs dir (projektweit)
+LOGS_DIR = os.path.join(PROJECT_ROOT, "logs")
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+# Config Files
+OUTFIT_BOT_CONFIG_FILE = os.path.join(OUTFIT_BOT_DIR, "outfit_bot_config.json")
+ID_FINDER_CONFIG_FILE = os.path.join(ID_FINDER_BOT_DIR, "id_finder_config.json")
+INVITE_BOT_CONFIG_FILE = os.path.join(INVITE_BOT_DIR, "invite_bot_config.json")
+QUIZ_BOT_CONFIG_FILE = os.path.join(QUIZ_BOT_DIR, "quiz_bot_config.json")
+UMFRAGE_BOT_CONFIG_FILE = os.path.join(UMFRAGE_BOT_DIR, "umfrage_bot_config.json")
+ADMINS_FILE = os.path.join(BASE_DIR, "admins.json")
+
+# ✅ Minecraft Status (Dashboard) Config
+MINECRAFT_STATUS_CONFIG_FILE = os.path.join(DATA_DIR, "minecraft_status_config.json")
+
+DEFAULT_MINECRAFT_STATUS_CFG = {
+    # interne Abfrage (LAN)
+    "mc_host": "10.0.0.141",
+    "mc_port": 25565,
+
+    # Anzeige im Telegram Post
+    "display_host": "",
+    "display_port": 25565,
+
+    # Telegram Ziel
+    "chat_id": "",
+    "topic_id": "",
+
+    # Intervalle/Verhalten
+    "update_seconds": 30,
+    "delete_player_seconds": 8,
+
+    # Status Message Verwaltung
+    "status_message_id": "",
+
+    # optional: eigener Token für Worker (wenn Worker sowas nutzt)
+    "bot_token": "",
+
+    # Raspberry Pi (für Systemdaten später via SSH/Exporter)
+    "pi_host": "",
+    "pi_ssh_port": 22,
+    "pi_ssh_user": "",
+}
+
+# Log Files
+OUTFIT_BOT_LOG = os.path.join(OUTFIT_BOT_DIR, "outfit_bot.log")
+ID_FINDER_BOT_LOG = os.path.join(ID_FINDER_BOT_DIR, "id_finder_bot.log")
+ID_FINDER_COMMAND_LOG = os.path.join(ID_FINDER_BOT_DIR, "id_finder_command.log")
+INVITE_BOT_LOG = os.path.join(INVITE_BOT_DIR, "invite_bot.log")
+INVITE_BOT_USER_LOG = os.path.join(INVITE_BOT_DIR, "user_interactions.log")
+QUIZ_BOT_LOG = os.path.join(QUIZ_BOT_DIR, "quiz_bot.log")
+UMFRAGE_BOT_LOG = os.path.join(UMFRAGE_BOT_DIR, "umfrage_bot.log")
+
+# ✅ Minecraft Bridge/Worker Logs (projektweit unter /logs)
+MINECRAFT_BRIDGE_LOG = os.path.join(LOGS_DIR, "minecraft_bridge.log")
+MINECRAFT_WORKER_LOG = os.path.join(LOGS_DIR, "minecraft_worker.log")
+
+# Script Files
+OUTFIT_BOT_SCRIPT = os.path.join(OUTFIT_BOT_DIR, "outfit_bot.py")
+ID_FINDER_BOT_SCRIPT = os.path.join(ID_FINDER_BOT_DIR, "id_finder_bot.py")
+INVITE_BOT_SCRIPT = os.path.join(INVITE_BOT_DIR, "invite_bot.py")
+QUIZ_BOT_SCRIPT = os.path.join(QUIZ_BOT_DIR, "quiz_bot.py")
+UMFRAGE_BOT_SCRIPT = os.path.join(UMFRAGE_BOT_DIR, "umfrage_bot.py")
+
+# ✅ Minecraft Scripts (liegen im id_finder_bot Ordner)
+MINECRAFT_BRIDGE_SCRIPT = os.path.join(ID_FINDER_BOT_DIR, "minecraft_bridge.py")
+MINECRAFT_WORKER_SCRIPT = os.path.join(ID_FINDER_BOT_DIR, "minecraft_worker.py")
+
+# Data Files (nur fürs UI)
+OUTFIT_BOT_DATA_FILE = os.path.join(OUTFIT_BOT_DIR, "outfit_bot_data.json")
+
+# ✅ User Registry (ID Finder)
+USER_REGISTRY_FILE = os.path.join(DATA_DIR, "user_registry.json")
+
+# ✅ Ergänzend: Message-Logs / Cache / Moderation (vom id_finder_bot)
+USER_MESSAGE_DIR = os.path.join(DATA_DIR, "user_messages")
+os.makedirs(USER_MESSAGE_DIR, exist_ok=True)
+USERNAME_CACHE_FILE = os.path.join(DATA_DIR, "username_cache.json")
+MODERATION_DATA_FILE = os.path.join(DATA_DIR, "moderation_data.json")
+
+# --- Prozess-Variablen ---
+outfit_bot_process = None
+id_finder_process = None
+invite_bot_process = None
+quiz_bot_process = None
+umfrage_bot_process = None
+
+# ✅ Minecraft Prozesse
+minecraft_bridge_process = None
+minecraft_worker_process = None
+
+# --- Patterns (Status stimmt auch bei extern gestarteten Bots) ---
+OUTFIT_MATCH_PATTERNS = ["outfit_bot/outfit_bot.py", "outfit_bot.py"]
+ID_FINDER_MATCH_PATTERNS = ["id_finder_bot/id_finder_bot.py", "id_finder_bot.py"]
+INVITE_MATCH_PATTERNS = ["invite_bot/invite_bot.py", "invite_bot.py"]
+QUIZ_MATCH_PATTERNS = ["quiz_bot/quiz_bot.py", "quiz_bot.py"]
+UMFRAGE_MATCH_PATTERNS = ["umfrage_bot/umfrage_bot.py", "umfrage_bot.py"]
+
+# ✅ Minecraft Patterns
+MINECRAFT_BRIDGE_MATCH_PATTERNS = ["id_finder_bot/minecraft_bridge.py", "minecraft_bridge.py"]
+MINECRAFT_WORKER_MATCH_PATTERNS = ["id_finder_bot/minecraft_worker.py", "minecraft_worker.py"]
+
+# --- Permissions ---
+AVAILABLE_PERMISSION_GROUPS = {
+    "Basis-Moderation": {
+        "can_warn": "Verwarnen (/warn, /unwarn, /warnings, /clearwarnings)",
+        "can_kick": "Kicken (/kick)",
+        "can_ban": "Bannen/Entbannen (/ban, /unban)",
+        "can_mute": "Stummschalten (/mute, /unmute)",
+    },
+    "Nachrichten-Tools": {
+        "can_delete_messages": "Nachrichten löschen (/del, /purge)",
+        "can_pin_messages": "Nachrichten pinnen (/pin, /unpin)",
+    },
+    "Konfiguration": {
+        "can_configure": "Konfiguration/Locks (/lock, /unlock, /setadmingroup, /locks)",
+    },
+    "Tools": {
+        "can_see_ids": "IDs anzeigen (/id, /chatid, /userid, /topicid)",
+        "can_see_logs": "Logs einsehen (nur Dashboard/UI)",
+        "can_manage_admins": "Admins verwalten (nur Dashboard/UI)",
+    },
+}
+AVAILABLE_PERMISSIONS = {k: v for group in AVAILABLE_PERMISSION_GROUPS.values() for k, v in group.items()}
+
+# --- JSON Helpers ---
+def load_json(file_path, default_data=None):
+    if default_data is None:
+        default_data = {}
+    if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
+        return default_data
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        log.warning("JSON konnte nicht geladen werden: %s (%s)", file_path, e)
+        return default_data
+
+
+def save_json(file_path, data):
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+
+def _safe_int(v, default=None):
+    try:
+        return int(str(v).strip())
+    except Exception:
+        return default
+
+
+def _safe_int_or_none(v):
+    """
+    Erlaubt auch negative IDs (Telegram Chats), sonst None.
+    """
+    if v is None:
+        return None
+    s = str(v).strip()
+    if not s:
+        return None
+    if re.match(r"^-?\d+$", s):
+        try:
+            return int(s)
+        except Exception:
+            return None
+    return None
+
+
+def _safe_str(v, default=""):
+    if v is None:
+        return default
+    return str(v)
+
+
+def _form_bool(form, key: str, default: bool = False) -> bool:
+    """
+    Robust für Checkboxen:
+    - unterstützt Hidden-Input (0) + Checkbox (1) mit gleichem Namen
+    - nutzt getlist() und wertet den "letzten sinnvollen" Wert aus
+    """
+    try:
+        if key not in form:
+            return default
+
+        vals = []
+        try:
+            vals = form.getlist(key)
+        except Exception:
+            vals = [form.get(key)]
+
+        truthy = {"1", "true", "on", "yes", "y", "ja"}
+        falsy = {"0", "false", "off", "no", "n", "nein"}
+
+        for v in reversed(vals):
+            if v is None:
+                continue
+            s = str(v).strip().lower()
+            if s in truthy:
+                return True
+            if s in falsy:
+                return False
+
+        return True
+    except Exception:
+        return default
+
+
+def _checkbox(form, key: str) -> bool:
+    return _form_bool(form, key, default=False)
+
+
+def _apply_checkbox_tristate(config: dict, form, key: str, *, default_if_missing: bool):
+    """
+    Fix für Checkbox-Felder, die evtl. im Template (noch) nicht existieren.
+    """
+    present_flag = "message_logging_form_present"
+    form_supports = (present_flag in form) or any(
+        k in form
+        for k in [
+            "message_logging_enabled",
+            "message_logging_groups_only",
+            "message_logging_ignore_commands",
+            "message_logging_ignore_bots",
+        ]
+    )
+
+    if form_supports and (key in form or present_flag in form):
+        config[key] = _form_bool(form, key, default=bool(config.get(key, default_if_missing)))
+    elif form_supports and any(
+        k in form
+        for k in [
+            "message_logging_enabled",
+            "message_logging_groups_only",
+            "message_logging_ignore_commands",
+            "message_logging_ignore_bots",
+        ]
+    ):
+        config[key] = _form_bool(form, key, default=bool(config.get(key, default_if_missing)))
+    else:
+        config[key] = bool(config.get(key, default_if_missing))
+
+
+# ✅ NEU: Robust Time Parser (HH:MM oder separate Felder *_hour + *_minute)
+def _normalize_hhmm(t: str, fallback: str = "19:00") -> str:
+    t = (t or "").strip()
+    if not re.match(r"^\d{2}:\d{2}$", t):
+        return fallback
+    hh, mm = t.split(":")
+    if not (hh.isdigit() and mm.isdigit()):
+        return fallback
+    hhi, mmi = int(hh), int(mm)
+    if not (0 <= hhi <= 23 and 0 <= mmi <= 59):
+        return fallback
+    return f"{hhi:02d}:{mmi:02d}"
+
+
+def _time_from_form(form, base_key: str, fallback: str = "19:00") -> str:
+    direct = (form.get(base_key) or "").strip()
+    if direct:
+        return _normalize_hhmm(direct, fallback=fallback)
+
+    h = form.get(f"{base_key}_hour")
+    m = form.get(f"{base_key}_minute") or form.get(f"{base_key}_min")
+
+    if h is None and m is None:
+        alt_prefix = base_key.replace("_time", "")
+        h = form.get(f"{alt_prefix}_hour") or form.get("hour")
+        m = form.get(f"{alt_prefix}_minute") or form.get(f"{alt_prefix}_min") or form.get("minute")
+
+    hi = _safe_int(h, None)
+    mi = _safe_int(m, None)
+    if hi is None or mi is None:
+        return _normalize_hhmm("", fallback=fallback)
+
+    if not (0 <= hi <= 23 and 0 <= mi <= 59):
+        return _normalize_hhmm("", fallback=fallback)
+
+    return f"{hi:02d}:{mi:02d}"
+
+
+# ✅ Admin-Permissions Migration
+def migrate_admins_permissions():
+    try:
+        admins = load_json(ADMINS_FILE, {})
+        if not isinstance(admins, dict):
+            return
+
+        changed = False
+
+        legacy_map = {
+            "can_manage_messages": ["can_delete_messages", "can_pin_messages", "can_configure"],
+            "can_config": ["can_configure"],
+            "can_clear_warns": ["can_warn"],
+        }
+
+        for admin_id, entry in admins.items():
+            if not isinstance(entry, dict):
+                continue
+            perms = entry.get("permissions", {})
+            if not isinstance(perms, dict):
+                perms = {}
+                entry["permissions"] = perms
+                changed = True
+
+            for old_key, new_keys in legacy_map.items():
+                if perms.get(old_key) is True:
+                    for nk in new_keys:
+                        if perms.get(nk) is not True:
+                            perms[nk] = True
+                            changed = True
+
+            for key in AVAILABLE_PERMISSIONS.keys():
+                if key not in perms:
+                    perms[key] = False
+                    changed = True
+
+        if changed:
+            save_json(ADMINS_FILE, admins)
+            log.info("admins.json Permissions migriert/ergänzt.")
+    except Exception as e:
+        log.warning("Admins-Permissions Migration fehlgeschlagen: %s", e)
+
+
+# ✅ Helper: last_seen robust parsen (für Analytics)
+def _parse_dt(s):
+    if not s:
+        return None
+    try:
+        ss = str(s).strip()
+        if ss.endswith("Z"):
+            ss = ss.replace("Z", "+00:00")
+        return datetime.fromisoformat(ss)
+    except Exception:
+        return None
+
+
+# --- Scheduler (Quiz/Umfrage Trigger) ---
+TZ = None
+if ZoneInfo:
+    try:
+        TZ = ZoneInfo("Europe/Berlin")
+    except Exception:
+        TZ = None
+
+DEFAULT_SCHEDULE = {"enabled": False, "time": "19:00", "days": [0, 1, 2, 3, 4]}
+_last_fired = {}
+
+
+def _now():
+    return datetime.now(TZ) if TZ else datetime.now()
+
+
+def _to_local(dt: datetime):
+    if not dt:
+        return None
+    try:
+        if TZ and dt.tzinfo is not None:
+            return dt.astimezone(TZ)
+        return dt
+    except Exception:
+        return dt
+
+
+def _format_dt_de(dt, *, time_first: bool = True):
+    if not dt:
+        return None
+    dt = _to_local(dt)
+    wd = {0: "Mo", 1: "Di", 2: "Mi", 3: "Do", 4: "Fr", 5: "Sa", 6: "So"}
+    try:
+        if time_first:
+            return f"{wd.get(dt.weekday(), '')}, {dt.strftime('%H:%M')} Uhr · {dt.strftime('%d.%m.%Y')}"
+        return f"{wd.get(dt.weekday(), '')}, {dt.strftime('%d.%m.%Y %H:%M')} Uhr"
+    except Exception:
+        return str(dt)
+
+
+def _load_schedule_from_cfg(cfg: dict) -> dict:
+    sched = cfg.get("schedule") if isinstance(cfg, dict) else None
+    if not isinstance(sched, dict):
+        return DEFAULT_SCHEDULE.copy()
+
+    enabled = bool(sched.get("enabled", False))
+    t = _normalize_hhmm(str(sched.get("time", DEFAULT_SCHEDULE["time"])).strip(), fallback=DEFAULT_SCHEDULE["time"])
+
+    days = sched.get("days", DEFAULT_SCHEDULE["days"])
+    if isinstance(days, list):
+        norm_days = []
+        for d in days:
+            try:
+                di = int(d)
+                if 0 <= di <= 6:
+                    norm_days.append(di)
+            except Exception:
+                pass
+        days = sorted(set(norm_days))
+    else:
+        days = DEFAULT_SCHEDULE["days"]
+
+    if not days:
+        days = DEFAULT_SCHEDULE["days"]
+
+    return {"enabled": enabled, "time": t, "days": days}
+
+
+def _parse_schedule_from_form(form, fallback_sched: dict) -> dict:
+    enabled = "schedule_enabled" in form
+    t = _time_from_form(form, "schedule_time", fallback=fallback_sched.get("time") or DEFAULT_SCHEDULE["time"])
+
+    raw_days = form.getlist("schedule_days")
+    days = []
+    for x in raw_days:
+        try:
+            xi = int(x)
+            if 0 <= xi <= 6:
+                days.append(xi)
+        except Exception:
+            pass
+
+    if not days:
+        days = fallback_sched.get("days") or DEFAULT_SCHEDULE["days"]
+
+    return {"enabled": enabled, "time": t, "days": sorted(set(days))}
+
+
+def _compute_next_run(sched: dict):
+    if not sched.get("enabled"):
+        return None
+    days = sched.get("days") or []
+    if not days:
+        return None
+
+    hh, mm = sched.get("time", "19:00").split(":")
+    target_h, target_m = int(hh), int(mm)
+
+    now = _now()
+
+    for i in range(0, 8):
+        day = now.date() + timedelta(days=i)
+        cand = (
+            datetime(day.year, day.month, day.day, target_h, target_m, tzinfo=TZ)
+            if TZ
+            else datetime(day.year, day.month, day.day, target_h, target_m)
+        )
+        if cand.weekday() in days and cand > now + timedelta(seconds=15):
+            return cand
+    return None
+
+
+def write_trigger(trigger_path, content="trigger"):
+    os.makedirs(os.path.dirname(trigger_path), exist_ok=True)
+    with open(trigger_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
+def _maybe_fire(bot_name: str, cfg_file: str, trigger_path: str, is_running_fn):
+    cfg = load_json(cfg_file, {})
+    sched = _load_schedule_from_cfg(cfg)
+
+    if not sched.get("enabled"):
+        return
+
+    now = _now()
+
+    if now.weekday() not in (sched.get("days") or []):
+        return
+    if now.strftime("%H:%M") != sched.get("time"):
+        return
+
+    key = now.strftime("%Y-%m-%d %H:%M")
+    if _last_fired.get(bot_name) == key:
+        return
+
+    if not is_running_fn():
+        log.warning("Scheduler: %s wäre fällig (%s), aber Bot läuft nicht.", bot_name, key)
+        _last_fired[bot_name] = key
+        return
+
+    try:
+        write_trigger(trigger_path)
+        log.info("Scheduler: Trigger für %s geschrieben (%s).", bot_name, key)
+    except Exception as e:
+        log.error("Scheduler: Fehler beim Trigger für %s: %s", bot_name, e)
+
+    _last_fired[bot_name] = key
+
+
+def scheduler_loop():
+    log.info("Scheduler-Thread gestartet (TZ=%s).", "Europe/Berlin" if TZ else "LOCAL/NAIV")
+    while True:
+        try:
+            _maybe_fire(
+                "quiz",
+                QUIZ_BOT_CONFIG_FILE,
+                os.path.join(QUIZ_BOT_DIR, "command_send_random.tmp"),
+                is_quiz_bot_running,
+            )
+            _maybe_fire(
+                "umfrage",
+                UMFRAGE_BOT_CONFIG_FILE,
+                os.path.join(UMFRAGE_BOT_DIR, "command_send_random.tmp"),
+                is_umfrage_bot_running,
+            )
+        except Exception as e:
+            log.error("Scheduler-Loop Fehler: %s", e)
+        time.sleep(10)
+
+
+def start_scheduler_thread():
+    t = threading.Thread(target=scheduler_loop, daemon=True)
+    t.start()
+    return t
+
+
+# --- Prozess/Status Helpers ---
+def is_bot_running(process):
+    return process is not None and process.poll() is None
+
+
+def _normalize_patterns(patterns):
+    if patterns is None:
+        return []
+    if isinstance(patterns, (list, tuple, set)):
+        return [str(p) for p in patterns if p]
+    return [str(patterns)]
+
+
+def find_pids(patterns):
+    pats = _normalize_patterns(patterns)
+    if not pats:
+        return []
+    try:
+        if shutil.which("pgrep"):
+            pids = []
+            for p in pats:
+                r = subprocess.run(["pgrep", "-f", p], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+                pids.extend([int(x) for x in r.stdout.split() if x.strip().isdigit()])
+            return sorted(set(pids))
+
+        r = subprocess.run(["ps", "auxww"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        pids = []
+        for line in r.stdout.splitlines():
+            if "grep" in line:
+                continue
+            if any(p in line for p in pats):
+                parts = line.split()
+                if len(parts) > 1 and parts[1].isdigit():
+                    pids.append(int(parts[1]))
+        return sorted(set(pids))
+    except Exception:
+        return []
+
+
+def is_script_running(patterns) -> bool:
+    return len(find_pids(patterns)) > 0
+
+
+def stop_script(patterns):
+    pats = _normalize_patterns(patterns)
+    if not pats:
+        return True, "Bot erfolgreich gestoppt."
+    try:
+        if shutil.which("pkill"):
+            for p in pats:
+                subprocess.run(["pkill", "-f", p], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True, "Bot erfolgreich gestoppt."
+        for pid in find_pids(pats):
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except Exception:
+                pass
+        return True, "Bot erfolgreich gestoppt."
+    except Exception as e:
+        return False, f"Fehler beim Stoppen: {e}"
+
+
+def get_bot_logs(log_file, lines=100):
+    if not os.path.exists(log_file):
+        return [f"Keine Log-Datei vorhanden unter: {log_file}"]
+    try:
+        with open(log_file, "r", encoding="utf-8") as f:
+            return list(reversed(f.readlines()[-lines:]))
+    except Exception as e:
+        return [f"Fehler beim Lesen der Logs ({log_file}): {e}"]
+
+
+def start_bot_process(script_path, log_path):
+    try:
+        if not os.path.exists(script_path):
+            return None, f"Script nicht gefunden: {script_path}"
+        cwd = os.path.dirname(script_path)
+        py_exec = sys.executable
+        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        with open(log_path, "a", encoding="utf-8") as log_f:
+            process = subprocess.Popen(
+                [py_exec, script_path],
+                cwd=cwd,
+                stdout=log_f,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            )
+        return process, f"{os.path.basename(script_path)} erfolgreich gestartet."
+    except Exception as e:
+        return None, str(e)
+
+
+def stop_bot_process(process):
+    if not process or process.poll() is not None:
+        return None, "Bot läuft nicht."
+    try:
+        process.terminate()
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+    return None, "Bot erfolgreich gestoppt."
+
+
+def _safe_pid_from_process(proc):
+    try:
+        if proc and proc.poll() is None:
+            return proc.pid
+    except Exception:
+        pass
+    return None
+
+
+def build_bot_status():
+    global outfit_bot_process, id_finder_process, invite_bot_process, quiz_bot_process, umfrage_bot_process
+    global minecraft_bridge_process, minecraft_worker_process
+
+    proc_map = {
+        "outfit": outfit_bot_process,
+        "id_finder": id_finder_process,
+        "invite": invite_bot_process,
+        "quiz": quiz_bot_process,
+        "umfrage": umfrage_bot_process,
+
+        # ✅ Minecraft
+        "minecraft_bridge": minecraft_bridge_process,
+        "minecraft_worker": minecraft_worker_process,
+    }
+    pattern_map = {
+        "outfit": OUTFIT_MATCH_PATTERNS,
+        "id_finder": ID_FINDER_MATCH_PATTERNS,
+        "invite": INVITE_MATCH_PATTERNS,
+        "quiz": QUIZ_MATCH_PATTERNS,
+        "umfrage": UMFRAGE_MATCH_PATTERNS,
+
+        # ✅ Minecraft
+        "minecraft_bridge": MINECRAFT_BRIDGE_MATCH_PATTERNS,
+        "minecraft_worker": MINECRAFT_WORKER_MATCH_PATTERNS,
+    }
+
+    status = {}
+    for name, proc in proc_map.items():
+        proc_pid = _safe_pid_from_process(proc)
+        pids = find_pids(pattern_map.get(name)) if pattern_map.get(name) else []
+        running = (proc_pid is not None) or (len(pids) > 0)
+        pid = proc_pid if proc_pid is not None else (pids[0] if pids else None)
+        status[name] = {"running": running, "pid": pid}
+    return status
+
+
+# --- Bot Wrappers ---
+def is_outfit_bot_running():
+    return is_bot_running(outfit_bot_process) or is_script_running(OUTFIT_MATCH_PATTERNS)
+
+
+def start_outfit_bot():
+    global outfit_bot_process
+    if is_outfit_bot_running():
+        return True, "Outfit Bot läuft bereits."
+    outfit_bot_process, msg = start_bot_process(OUTFIT_BOT_SCRIPT, OUTFIT_BOT_LOG)
+    return bool(outfit_bot_process), msg
+
+
+def stop_outfit_bot():
+    global outfit_bot_process
+    if outfit_bot_process and outfit_bot_process.poll() is None:
+        outfit_bot_process, msg = stop_bot_process(outfit_bot_process)
+        return True, msg
+    outfit_bot_process = None
+    return stop_script(OUTFIT_MATCH_PATTERNS)
+
+
+def is_id_finder_running():
+    return is_bot_running(id_finder_process) or is_script_running(ID_FINDER_MATCH_PATTERNS)
+
+
+def start_id_finder_bot():
+    global id_finder_process
+    if is_id_finder_running():
+        return True, "ID Finder Bot läuft bereits."
+    id_finder_process, msg = start_bot_process(ID_FINDER_BOT_SCRIPT, ID_FINDER_BOT_LOG)
+    return bool(id_finder_process), msg
+
+
+def stop_id_finder_bot():
+    global id_finder_process
+    if id_finder_process and id_finder_process.poll() is None:
+        id_finder_process, msg = stop_bot_process(id_finder_process)
+        return True, msg
+    id_finder_process = None
+    return stop_script(ID_FINDER_MATCH_PATTERNS)
+
+
+def is_invite_bot_running():
+    return is_bot_running(invite_bot_process) or is_script_running(INVITE_MATCH_PATTERNS)
+
+
+def start_invite_bot():
+    global invite_bot_process
+    if is_invite_bot_running():
+        return True, "Invite Bot läuft bereits."
+    invite_bot_process, msg = start_bot_process(INVITE_BOT_SCRIPT, INVITE_BOT_LOG)
+    return bool(invite_bot_process), msg
+
+
+def stop_invite_bot():
+    global invite_bot_process
+    if invite_bot_process and invite_bot_process.poll() is None:
+        invite_bot_process, msg = stop_bot_process(invite_bot_process)
+        return True, msg
+    invite_bot_process = None
+    return stop_script(INVITE_MATCH_PATTERNS)
+
+
+def is_quiz_bot_running():
+    return is_bot_running(quiz_bot_process) or is_script_running(QUIZ_MATCH_PATTERNS)
+
+
+def start_quiz_bot():
+    global quiz_bot_process
+    if is_quiz_bot_running():
+        return True, "Quiz Bot läuft bereits."
+    quiz_bot_process, msg = start_bot_process(QUIZ_BOT_SCRIPT, QUIZ_BOT_LOG)
+    return bool(quiz_bot_process), msg
+
+
+def stop_quiz_bot():
+    global quiz_bot_process
+    if quiz_bot_process and quiz_bot_process.poll() is None:
+        quiz_bot_process, msg = stop_bot_process(quiz_bot_process)
+        return True, msg
+    quiz_bot_process = None
+    return stop_script(QUIZ_MATCH_PATTERNS)
+
+
+def is_umfrage_bot_running():
+    return is_bot_running(umfrage_bot_process) or is_script_running(UMFRAGE_MATCH_PATTERNS)
+
+
+def start_umfrage_bot():
+    global umfrage_bot_process
+    if is_umfrage_bot_running():
+        return True, "Umfrage Bot läuft bereits."
+    umfrage_bot_process, msg = start_bot_process(UMFRAGE_BOT_SCRIPT, UMFRAGE_BOT_LOG)
+    return bool(umfrage_bot_process), msg
+
+
+def stop_umfrage_bot():
+    global umfrage_bot_process
+    if umfrage_bot_process and umfrage_bot_process.poll() is None:
+        umfrage_bot_process, msg = stop_bot_process(umfrage_bot_process)
+        return True, msg
+    umfrage_bot_process = None
+    return stop_script(UMFRAGE_MATCH_PATTERNS)
+
+
+# -------------------------------------------------------------------
+# ✅ Minecraft Bridge/Worker Wrappers
+# -------------------------------------------------------------------
+def is_minecraft_bridge_running():
+    return is_bot_running(minecraft_bridge_process) or is_script_running(MINECRAFT_BRIDGE_MATCH_PATTERNS)
+
+
+def is_minecraft_worker_running():
+    return is_bot_running(minecraft_worker_process) or is_script_running(MINECRAFT_WORKER_MATCH_PATTERNS)
+
+
+def is_minecraft_status_bot_running():
+    # "Bot läuft" = bridge oder worker läuft
+    return is_minecraft_bridge_running() or is_minecraft_worker_running()
+
+
+def start_minecraft_status_bot():
+    """
+    Startet Bridge + Worker (wie "ein Bot" fürs Dashboard).
+    """
+    global minecraft_bridge_process, minecraft_worker_process
+
+    msgs = []
+    ok = True
+
+    if not is_minecraft_bridge_running():
+        minecraft_bridge_process, msg = start_bot_process(MINECRAFT_BRIDGE_SCRIPT, MINECRAFT_BRIDGE_LOG)
+        msgs.append(msg)
+        ok = ok and bool(minecraft_bridge_process)
+    else:
+        msgs.append("Minecraft Bridge läuft bereits.")
+
+    if not is_minecraft_worker_running():
+        minecraft_worker_process, msg = start_bot_process(MINECRAFT_WORKER_SCRIPT, MINECRAFT_WORKER_LOG)
+        msgs.append(msg)
+        ok = ok and bool(minecraft_worker_process)
+    else:
+        msgs.append("Minecraft Worker läuft bereits.")
+
+    return ok, " | ".join(msgs)
+
+
+def stop_minecraft_status_bot():
+    """
+    Stoppt Bridge + Worker.
+    """
+    global minecraft_bridge_process, minecraft_worker_process
+
+    msgs = []
+    ok = True
+
+    # zuerst Worker stoppen (postet evtl. noch)
+    if minecraft_worker_process and minecraft_worker_process.poll() is None:
+        minecraft_worker_process, msg = stop_bot_process(minecraft_worker_process)
+        msgs.append(msg)
+    else:
+        success, msg = stop_script(MINECRAFT_WORKER_MATCH_PATTERNS)
+        msgs.append(msg)
+        ok = ok and bool(success)
+        minecraft_worker_process = None
+
+    # dann Bridge stoppen
+    if minecraft_bridge_process and minecraft_bridge_process.poll() is None:
+        minecraft_bridge_process, msg = stop_bot_process(minecraft_bridge_process)
+        msgs.append(msg)
+    else:
+        success, msg = stop_script(MINECRAFT_BRIDGE_MATCH_PATTERNS)
+        msgs.append(msg)
+        ok = ok and bool(success)
+        minecraft_bridge_process = None
+
+    return ok, " | ".join(msgs)
+
+
+# -------------------------------------------------------------------
+# ✅ Telegram Proxy + Cache (Profilbilder + Media)
+# -------------------------------------------------------------------
+TG_CACHE_DIR = os.path.join(DATA_DIR, "tg_cache")
+TG_FILES_DIR = os.path.join(TG_CACHE_DIR, "files")
+TG_AVATARS_DIR = os.path.join(TG_CACHE_DIR, "avatars")
+os.makedirs(TG_FILES_DIR, exist_ok=True)
+os.makedirs(TG_AVATARS_DIR, exist_ok=True)
+_TG_TIMEOUT = 20
+
+
+def _hash_id(s: str) -> str:
+    return hashlib.sha1((s or "").encode("utf-8")).hexdigest()
+
+
+def _mime_for_path(path: str) -> str:
+    mt, _ = mimetypes.guess_type(path)
+    return mt or "application/octet-stream"
+
+
+def _get_token_candidates():
+    tokens = []
+
+    try:
+        cfg = load_json(ID_FINDER_CONFIG_FILE, {})
+        t = (cfg.get("bot_token") or "").strip()
+        if t:
+            tokens.append(t)
+    except Exception:
+        pass
+
+    try:
+        cfg = load_json(OUTFIT_BOT_CONFIG_FILE, {})
+        t = (cfg.get("BOT_TOKEN") or "").strip()
+        if t:
+            tokens.append(t)
+    except Exception:
+        pass
+
+    try:
+        cfg = load_json(INVITE_BOT_CONFIG_FILE, {})
+        t = (cfg.get("bot_token") or "").strip()
+        if t:
+            tokens.append(t)
+    except Exception:
+        pass
+
+    for fp in (QUIZ_BOT_CONFIG_FILE, UMFRAGE_BOT_CONFIG_FILE):
+        try:
+            cfg = load_json(fp, {})
+            t = (cfg.get("token") or cfg.get("BOT_TOKEN") or cfg.get("bot_token") or "").strip()
+            if t:
+                tokens.append(t)
+        except Exception:
+            pass
+
+    out = []
+    for t in tokens:
+        if t and t not in out:
+            out.append(t)
+    return out
+
+
+def _get_primary_bot_token():
+    cands = _get_token_candidates()
+    return cands[0] if cands else ""
+
+
+def _tg_api_call(method: str, params: dict = None, token: str = None):
+    token = token or _get_primary_bot_token()
+    if not token:
+        return None
+    try:
+        base = f"https://api.telegram.org/bot{token}/{method}"
+        data = urllib.parse.urlencode(params or {}).encode("utf-8")
+        req = urllib.request.Request(base, data=data, method="POST")
+        with urllib.request.urlopen(req, timeout=_TG_TIMEOUT) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+        obj = json.loads(raw)
+        if isinstance(obj, dict) and obj.get("ok") is True:
+            return obj.get("result")
+        return None
+    except Exception as e:
+        log.warning("Telegram API call failed: %s (%s)", method, e)
+        return None
+
+
+def _tg_get_file_path(file_id: str, token: str = None) -> str:
+    res = _tg_api_call("getFile", {"file_id": file_id}, token=token)
+    if isinstance(res, dict):
+        return (res.get("file_path") or "").strip()
+    return ""
+
+
+def _tg_download_file(file_path: str, dst_path: str, token: str = None) -> bool:
+    token = token or _get_primary_bot_token()
+    if not token or not file_path:
+        return False
+    try:
+        url = f"https://api.telegram.org/file/bot{token}/{file_path}"
+        req = urllib.request.Request(url, method="GET")
+        with urllib.request.urlopen(req, timeout=_TG_TIMEOUT) as resp:
+            data = resp.read()
+        os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+        with open(dst_path, "wb") as f:
+            f.write(data)
+        return True
+    except Exception as e:
+        log.warning("Telegram file download failed: %s (%s)", file_path, e)
+        return False
+
+
+def _guess_ext_from_path(file_path: str) -> str:
+    try:
+        ext = os.path.splitext(file_path or "")[1].strip()
+        if ext and len(ext) <= 8:
+            return ext
+    except Exception:
+        pass
+    return ".bin"
+
+
+def _file_meta_path(hash_key: str) -> str:
+    return os.path.join(TG_FILES_DIR, f"{hash_key}.json")
+
+
+def _file_data_path(hash_key: str, ext: str) -> str:
+    return os.path.join(TG_FILES_DIR, f"{hash_key}{ext}")
+
+
+def _avatar_meta_path(user_id: str) -> str:
+    return os.path.join(TG_AVATARS_DIR, f"{user_id}.json")
+
+
+def _avatar_data_path(user_id: str, ext: str) -> str:
+    return os.path.join(TG_AVATARS_DIR, f"{user_id}{ext}")
+
+
+def _ensure_cached_telegram_file(file_id: str) -> str:
+    file_id = (file_id or "").strip()
+    if not file_id:
+        return ""
+
+    h = _hash_id(file_id)
+    meta_fp = _file_meta_path(h)
+    meta = load_json(meta_fp, {}) if os.path.exists(meta_fp) else {}
+
+    ext = meta.get("ext") if isinstance(meta, dict) else None
+    file_path = meta.get("file_path") if isinstance(meta, dict) else None
+
+    if not ext or not file_path:
+        token = _get_primary_bot_token()
+        if not token:
+            return ""
+        file_path = _tg_get_file_path(file_id, token=token)
+        if not file_path:
+            return ""
+        ext = _guess_ext_from_path(file_path)
+        meta = {
+            "file_id": file_id,
+            "file_path": file_path,
+            "ext": ext,
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }
+        save_json(meta_fp, meta)
+
+    data_fp = _file_data_path(h, ext)
+    if not os.path.exists(data_fp) or os.path.getsize(data_fp) == 0:
+        ok = _tg_download_file(file_path, data_fp)
+        if not ok:
+            return ""
+
+    return data_fp
+
+
+def _ensure_cached_avatar(user_id: str) -> str:
+    uid = _safe_int(user_id, None)
+    if uid is None:
+        return ""
+
+    meta_fp = _avatar_meta_path(str(uid))
+    meta = load_json(meta_fp, {}) if os.path.exists(meta_fp) else {}
+
+    ext = meta.get("ext") if isinstance(meta, dict) else None
+    file_path = meta.get("file_path") if isinstance(meta, dict) else None
+
+    if not ext or not file_path:
+        token = _get_primary_bot_token()
+        if not token:
+            return ""
+
+        res = _tg_api_call("getUserProfilePhotos", {"user_id": uid, "limit": 1}, token=token)
+        if not isinstance(res, dict):
+            return ""
+
+        photos = res.get("photos") or []
+        if not photos or not isinstance(photos, list):
+            return ""
+
+        sizes = photos[0]
+        if not sizes or not isinstance(sizes, list):
+            return ""
+
+        best = sizes[-1] if sizes else None
+        file_id = (best or {}).get("file_id") if isinstance(best, dict) else ""
+        file_id = (file_id or "").strip()
+        if not file_id:
+            return ""
+
+        file_path = _tg_get_file_path(file_id, token=token)
+        if not file_path:
+            return ""
+
+        ext = _guess_ext_from_path(file_path)
+        meta = {
+            "user_id": str(uid),
+            "file_id": file_id,
+            "file_path": file_path,
+            "ext": ext,
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }
+        save_json(meta_fp, meta)
+
+    data_fp = _avatar_data_path(str(uid), ext)
+    if not os.path.exists(data_fp) or os.path.getsize(data_fp) == 0:
+        ok = _tg_download_file(file_path, data_fp)
+        if not ok:
+            return ""
+
+    return data_fp
+
+
+# --- Telegram Proxy Routes ---
+@app.route("/tg/file/<file_id>")
+def tg_file_proxy(file_id):
+    file_id = (file_id or "").strip()
+    if not file_id:
+        return abort(404)
+
+    local_fp = _ensure_cached_telegram_file(file_id)
+    if not local_fp:
+        return abort(404)
+
+    return send_file(local_fp, mimetype=_mime_for_path(local_fp), conditional=True)
+
+
+@app.route("/tg/avatar/<user_id>")
+def tg_avatar_proxy(user_id):
+    user_id = (user_id or "").strip()
+    if not user_id:
+        return abort(404)
+
+    local_fp = _ensure_cached_avatar(user_id)
+    if not local_fp:
+        return abort(404)
+
+    return send_file(local_fp, mimetype=_mime_for_path(local_fp), conditional=True)
+
+
+# -------------------------------------------------------------------
+# ✅ Minecraft: Config + Live Status (für src/minecraft_status.html)
+# -------------------------------------------------------------------
+
+# ✅ Cache-Datei, die minecraft_bridge.py regelmäßig schreibt
+MINECRAFT_STATUS_CACHE_FILE = os.path.join(DATA_DIR, "minecraft_status_cache.json")
+
+
+def load_minecraft_status_cfg():
+    """
+    Lädt minecraft_status_config.json und migriert ältere Keys automatisch.
+    """
+    raw = load_json(MINECRAFT_STATUS_CONFIG_FILE, DEFAULT_MINECRAFT_STATUS_CFG.copy())
+    if not isinstance(raw, dict):
+        raw = {}
+
+    # -------------------------
+    # Migration alt -> neu
+    # -------------------------
+    if "host" in raw and "mc_host" not in raw:
+        raw["mc_host"] = raw.get("host")
+
+    if "port" in raw and "mc_port" not in raw:
+        raw["mc_port"] = raw.get("port")
+
+    # -------------------------
+    # Merge mit Defaults
+    # -------------------------
+    cfg = DEFAULT_MINECRAFT_STATUS_CFG.copy()
+    cfg.update(raw)
+
+    # -------------------------
+    # Normalisierung / Typen
+    # -------------------------
+    cfg["mc_host"] = str(cfg.get("mc_host") or "").strip() or DEFAULT_MINECRAFT_STATUS_CFG["mc_host"]
+
+    cfg["mc_port"] = (
+        _safe_int(cfg.get("mc_port"), DEFAULT_MINECRAFT_STATUS_CFG["mc_port"])
+        or DEFAULT_MINECRAFT_STATUS_CFG["mc_port"]
+    )
+
+    cfg["display_host"] = str(cfg.get("display_host") or "").strip()
+    cfg["display_port"] = (
+        _safe_int(cfg.get("display_port"), cfg["mc_port"])
+        or cfg["mc_port"]
+    )
+
+    cfg["chat_id"] = str(cfg.get("chat_id") or "").strip()
+    cfg["topic_id"] = str(cfg.get("topic_id") or "").strip()
+
+    cfg["update_seconds"] = (
+        _safe_int(cfg.get("update_seconds"), DEFAULT_MINECRAFT_STATUS_CFG["update_seconds"])
+        or DEFAULT_MINECRAFT_STATUS_CFG["update_seconds"]
+    )
+    cfg["update_seconds"] = max(5, min(cfg["update_seconds"], 3600))
+
+    cfg["delete_player_seconds"] = (
+        _safe_int(cfg.get("delete_player_seconds"), DEFAULT_MINECRAFT_STATUS_CFG["delete_player_seconds"])
+        or DEFAULT_MINECRAFT_STATUS_CFG["delete_player_seconds"]
+    )
+    cfg["delete_player_seconds"] = max(0, min(cfg["delete_player_seconds"], 600))
+
+    cfg["status_message_id"] = str(cfg.get("status_message_id") or "").strip()
+    cfg["bot_token"] = str(cfg.get("bot_token") or "").strip()
+
+    cfg["pi_host"] = str(cfg.get("pi_host") or "").strip()
+    cfg["pi_ssh_port"] = (
+        _safe_int(cfg.get("pi_ssh_port"), DEFAULT_MINECRAFT_STATUS_CFG["pi_ssh_port"])
+        or DEFAULT_MINECRAFT_STATUS_CFG["pi_ssh_port"]
+    )
+    cfg["pi_ssh_user"] = str(cfg.get("pi_ssh_user") or "").strip()
+
+    return cfg
+
+
+def _mc_port_check(host: str, port: int, timeout: float = 2.0):
+    """
+    Minimaler Check: TCP-Port erreichbar = "online".
+    (Fallback, falls Cache noch nicht vorhanden ist.)
+    """
+    t0 = time.time()
+    try:
+        with socket.create_connection((host, int(port)), timeout=float(timeout)):
+            ms = int((time.time() - t0) * 1000)
+            return True, ms, None
+    except Exception as e:
+        return False, None, str(e)
+
+
+def _tail_text_file(path: str, max_lines: int = 400) -> list:
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            block = 4096
+            data = b""
+            lines = []
+            while size > 0 and len(lines) <= (max_lines + 50):
+                step = block if size >= block else size
+                size -= step
+                f.seek(size)
+                data = f.read(step) + data
+                lines = data.splitlines()
+                if len(lines) >= (max_lines + 5):
+                    break
+            tail = lines[-max_lines:] if max_lines > 0 else lines
+            return [x.decode("utf-8", errors="replace") for x in tail]
+    except Exception:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return f.readlines()[-max_lines:]
+        except Exception:
+            return []
+
+
+def load_minecraft_status_cache() -> dict:
+    """
+    Liest den Status aus data/minecraft_status_cache.json (wird von minecraft_bridge.py geschrieben).
+    """
+    raw = load_json(MINECRAFT_STATUS_CACHE_FILE, {})
+    return raw if isinstance(raw, dict) else {}
+
+
+def _build_minecraft_template_payload():
+    """
+    Baut alle Werte zusammen, damit minecraft_status.html NICHT crasht.
+    Priorität: Cache (vom Bridge) -> Fallback Port-Check.
+    """
+    cfg = load_minecraft_status_cfg()
+
+    cache = load_minecraft_status_cache()
+
+    # --- Server Online/Offline + Details bevorzugt aus Cache ---
+    if cache:
+        server_online = bool(cache.get("server_online", False))
+        ping_ms = cache.get("ping_ms")
+        error = cache.get("error")
+        last_update = cache.get("last_update") or _format_dt_de(_now(), time_first=True)
+
+        status = {
+            "last_update": last_update,
+            "players": cache.get("players"),
+            "player_count": cache.get("player_count"),
+            "max_players": cache.get("max_players"),
+            "online_names": cache.get("online_names") or [],
+            "version": cache.get("version"),
+            "software": cache.get("software"),
+            "motd": cache.get("motd"),
+            "ping_ms": ping_ms,
+            "error": error,
+        }
+    else:
+        # Fallback: Port check, falls Bridge noch nie gelaufen ist
+        server_online, ping_ms, error = _mc_port_check(cfg["mc_host"], cfg["mc_port"], timeout=2.0)
+        status = {
+            "last_update": _format_dt_de(_now(), time_first=True),
+            "players": None,
+            "player_count": None,
+            "max_players": None,
+            "online_names": [],
+            "version": None,
+            "software": None,
+            "motd": None,
+            "ping_ms": ping_ms,
+            "error": error if (error and not server_online) else None,
+        }
+
+    # Raspberry Pi Metrics (Platzhalter – später via SSH/Exporter)
+    pi = {
+        "host": cfg.get("pi_host") or "",
+        "cpu_percent": None,
+        "ram_used_mb": None,
+        "ram_total_mb": None,
+        "ram_percent": None,
+        "temp_c": None,
+        "uptime": None,
+        "disk_used_gb": None,
+        "disk_total_gb": None,
+        "disk_percent": None,
+        "load1": None,
+        "load5": None,
+        "load15": None,
+    }
+
+    # Logs (Bridge + Worker kombiniert)
+    bridge_tail = _tail_text_file(MINECRAFT_BRIDGE_LOG, max_lines=180)
+    worker_tail = _tail_text_file(MINECRAFT_WORKER_LOG, max_lines=180)
+
+    parts = []
+    if bridge_tail:
+        parts.append("===== minecraft_bridge.log =====")
+        parts.extend(bridge_tail)
+    if worker_tail:
+        parts.append("\n===== minecraft_worker.log =====")
+        parts.extend(worker_tail)
+
+    log_tail = "\n".join(parts).strip() or "—"
+    log_path = f"{MINECRAFT_BRIDGE_LOG} | {MINECRAFT_WORKER_LOG}"
+
+    is_running = is_minecraft_status_bot_running()
+
+    # Für später: Minecraft-Server Start/Stop (nicht aktiv, solange keine Routes existieren)
+    enable_server_control = False
+
+    return {
+        "cfg": cfg,
+        "status": status,
+        "server_online": server_online,
+        "is_running": is_running,
+        "pi": pi,
+        "log_path": log_path,
+        "log_tail": log_tail,
+        "enable_server_control": enable_server_control,
+    }
+
+
+# -------------------------------------------------------------------
+# ✅ Minecraft Routes: Endpoints müssen GENAU so heißen wie im Template!
+# -------------------------------------------------------------------
+@app.route("/minecraft", methods=["GET"], endpoint="minecraft_status_page")
+def minecraft_status_page():
+    payload = _build_minecraft_template_payload()
+    return render_template(
+        "minecraft_status.html",
+        cfg=payload["cfg"],
+        status=payload["status"],
+        server_online=payload["server_online"],
+        is_running=payload["is_running"],
+        pi=payload["pi"],
+        log_path=payload["log_path"],
+        log_tail=payload["log_tail"],
+        enable_server_control=payload["enable_server_control"],
+        bot_status=build_bot_status(),
+    )
+
+
+@app.route("/minecraft/start", methods=["POST"], endpoint="minecraft_status_start")
+def minecraft_status_start():
+    ok, msg = start_minecraft_status_bot()
+    flash(msg, "success" if ok else "danger")
+    return redirect(url_for("minecraft_status_page"))
+
+
+@app.route("/minecraft/stop", methods=["POST"], endpoint="minecraft_status_stop")
+def minecraft_status_stop():
+    ok, msg = stop_minecraft_status_bot()
+    flash(msg, "success" if ok else "danger")
+    return redirect(url_for("minecraft_status_page"))
+
+
+@app.route("/minecraft/save", methods=["POST"], endpoint="minecraft_status_save")
+def minecraft_status_save():
+    was_running = is_minecraft_status_bot_running()
+    if was_running:
+        stop_minecraft_status_bot()
+
+    cfg = load_minecraft_status_cfg()
+    form = request.form
+
+    # Interne Abfrage
+    cfg["mc_host"] = (form.get("mc_host") or cfg.get("mc_host") or "").strip()
+    cfg["mc_port"] = _safe_int(form.get("mc_port"), cfg.get("mc_port") or 25565) or (cfg.get("mc_port") or 25565)
+
+    # Anzeige
+    cfg["display_host"] = (form.get("display_host") or cfg.get("display_host") or "").strip()
+    cfg["display_port"] = _safe_int(form.get("display_port"), cfg.get("display_port") or cfg["mc_port"]) or (cfg.get("display_port") or cfg["mc_port"])
+
+    # Telegram
+    cfg["chat_id"] = (form.get("chat_id") or cfg.get("chat_id") or "").strip()
+    cfg["topic_id"] = (form.get("topic_id") or cfg.get("topic_id") or "").strip()
+
+    # Intervalle
+    cfg["update_seconds"] = _safe_int(form.get("update_seconds"), cfg.get("update_seconds") or 30) or (cfg.get("update_seconds") or 30)
+    if cfg["update_seconds"] < 5:
+        cfg["update_seconds"] = 5
+    if cfg["update_seconds"] > 3600:
+        cfg["update_seconds"] = 3600
+
+    cfg["delete_player_seconds"] = _safe_int(form.get("delete_player_seconds"), cfg.get("delete_player_seconds") or 8)
+    if cfg["delete_player_seconds"] is None:
+        cfg["delete_player_seconds"] = cfg.get("delete_player_seconds") or 8
+    if cfg["delete_player_seconds"] < 0:
+        cfg["delete_player_seconds"] = 0
+    if cfg["delete_player_seconds"] > 600:
+        cfg["delete_player_seconds"] = 600
+
+    # Status Message ID (readonly im UI – aber speichern wir trotzdem den aktuellen Wert)
+    cfg["status_message_id"] = (form.get("status_message_id") or cfg.get("status_message_id") or "").strip()
+
+    # optional Bot Token
+    token_in = (form.get("bot_token") or "").strip()
+    if token_in:
+        cfg["bot_token"] = token_in  # nur überschreiben, wenn gesetzt
+
+    # Raspberry Pi SSH (optional)
+    cfg["pi_host"] = (form.get("pi_host") or cfg.get("pi_host") or "").strip()
+    cfg["pi_ssh_port"] = _safe_int(form.get("pi_ssh_port"), cfg.get("pi_ssh_port") or 22) or (cfg.get("pi_ssh_port") or 22)
+    cfg["pi_ssh_user"] = (form.get("pi_ssh_user") or cfg.get("pi_ssh_user") or "").strip()
+
+    save_json(MINECRAFT_STATUS_CONFIG_FILE, cfg)
+    flash("Minecraft Status Einstellungen gespeichert ✅", "success")
+
+    if was_running:
+        start_minecraft_status_bot()
+        flash("Minecraft Status Bot wurde neu gestartet 🔄", "info")
+
+    return redirect(url_for("minecraft_status_page"))
+
+
+@app.route("/minecraft/reset-message", methods=["POST"], endpoint="minecraft_status_reset_message")
+def minecraft_status_reset_message():
+    was_running = is_minecraft_status_bot_running()
+    if was_running:
+        stop_minecraft_status_bot()
+
+    cfg = load_minecraft_status_cfg()
+    cfg["status_message_id"] = ""
+    save_json(MINECRAFT_STATUS_CONFIG_FILE, cfg)
+    flash("Status-Message wurde zurückgesetzt 🧽", "success")
+
+    if was_running:
+        start_minecraft_status_bot()
+        flash("Minecraft Status Bot wurde neu gestartet 🔄", "info")
+
+    return redirect(url_for("minecraft_status_page"))
+
+
+# -------------------------------------------------------------------
+# ✅ Minecraft Routes: Endpoints müssen GENAU so heißen wie im Template!
+# -------------------------------------------------------------------
+def minecraft_status_reset_message():
+    was_running = is_minecraft_status_bot_running()
+    if was_running:
+        stop_minecraft_status_bot()
+
+    cfg = load_minecraft_status_cfg()
+    cfg["status_message_id"] = ""
+    save_json(MINECRAFT_STATUS_CONFIG_FILE, cfg)
+    flash("Status-Message wurde zurückgesetzt 🧽", "success")
+
+    if was_running:
+        start_minecraft_status_bot()
+        flash("Minecraft Status Bot wurde neu gestartet 🔄", "info")
+
+    return redirect(url_for("minecraft_status_page"))
+
+
+# ✅ User Registry Loader fürs Dashboard/Admin Panel
+def load_user_registry_list():
+    """
+    Returns list of users for dashboard.
+    Accepts formats:
+      A) {"users": {"123": {...}, ...}}
+      B) {"users": [ {...}, {...} ]}
+      C) [ {...}, {...} ]
+      D) {"123": {...}, "456": {...}}  (fallback)
+    """
+    try:
+        if not os.path.exists(USER_REGISTRY_FILE):
+            log.info("User Registry Datei existiert nicht: %s", USER_REGISTRY_FILE)
+            return []
+
+        raw = load_json(USER_REGISTRY_FILE, default_data={})
+        users = None
+
+        if isinstance(raw, list):
+            users = raw
+        elif isinstance(raw, dict):
+            users = raw.get("users")
+            if users is None:
+                users = raw
+
+        out = []
+
+        if isinstance(users, dict):
+            for uid_str, entry in users.items():
+                if not isinstance(entry, dict):
+                    entry = {}
+                chat_ids_raw = entry.get("chat_ids", []) or []
+                if not isinstance(chat_ids_raw, list):
+                    chat_ids_raw = [chat_ids_raw] if chat_ids_raw else []
+
+                last_seen_raw = entry.get("last_seen", "") or ""
+                first_seen_raw = entry.get("first_seen", "") or ""
+                last_dt = _parse_dt(last_seen_raw)
+                first_dt = _parse_dt(first_seen_raw)
+
+                out.append(
+                    {
+                        "id": str(uid_str),
+                        "username": entry.get("username", "") or "",
+                        "full_name": entry.get("full_name", "") or "",
+                        "last_seen_raw": last_seen_raw,
+                        "first_seen_raw": first_seen_raw,
+                        "last_seen": _format_dt_de(last_dt, time_first=True) if last_dt else last_seen_raw,
+                        "first_seen": _format_dt_de(first_dt, time_first=True) if first_dt else first_seen_raw,
+                        "is_bot": bool(entry.get("is_bot", False)),
+                        "chat_ids_raw": chat_ids_raw,
+                        "chat_ids": chat_ids_raw,
+                        "avatar_url": f"/tg/avatar/{str(uid_str)}",
+                        "_sort_dt": last_dt,
+                    }
+                )
+
+        elif isinstance(users, list):
+            for entry in users:
+                if not isinstance(entry, dict):
+                    continue
+                chat_ids_raw = entry.get("chat_ids", []) or []
+                if not isinstance(chat_ids_raw, list):
+                    chat_ids_raw = [chat_ids_raw] if chat_ids_raw else []
+
+                last_seen_raw = entry.get("last_seen", "") or ""
+                first_seen_raw = entry.get("first_seen", "") or ""
+                last_dt = _parse_dt(last_seen_raw)
+                first_dt = _parse_dt(first_seen_raw)
+
+                uid = str(entry.get("id", "") or entry.get("user_id", "") or "")
+                out.append(
+                    {
+                        "id": uid,
+                        "username": entry.get("username", "") or "",
+                        "full_name": entry.get("full_name", "") or entry.get("name", "") or "",
+                        "last_seen_raw": last_seen_raw,
+                        "first_seen_raw": first_seen_raw,
+                        "last_seen": _format_dt_de(last_dt, time_first=True) if last_dt else last_seen_raw,
+                        "first_seen": _format_dt_de(first_dt, time_first=True) if first_dt else first_seen_raw,
+                        "is_bot": bool(entry.get("is_bot", False)),
+                        "chat_ids_raw": chat_ids_raw,
+                        "chat_ids": chat_ids_raw,
+                        "avatar_url": f"/tg/avatar/{uid}",
+                        "_sort_dt": last_dt,
+                    }
+                )
+
+        for u in out:
+            c = u.get("chat_ids", [])
+            if isinstance(c, (list, tuple, set)):
+                u["chat_ids"] = ", ".join([str(x) for x in c])
+            else:
+                u["chat_ids"] = str(c) if c else ""
+
+        def _sort_key(x):
+            dt = x.get("_sort_dt")
+            if isinstance(dt, datetime):
+                try:
+                    return dt.timestamp()
+                except Exception:
+                    return 0
+            return 0
+
+        out.sort(key=_sort_key, reverse=True)
+
+        for u in out:
+            if "_sort_dt" in u:
+                del u["_sort_dt"]
+
+        log.info("User Registry geladen: %s | users=%s", USER_REGISTRY_FILE, len(out))
+        return out
+
+    except Exception as e:
+        log.warning("User Registry konnte nicht geladen werden: %s", e)
+        return []
+
+
+def filter_users(users, q: str):
+    if not q:
+        return users
+    qq = str(q).strip().lower()
+    if not qq:
+        return users
+
+    out = []
+    for u in users:
+        uid = str(u.get("id", "")).lower()
+        un = str(u.get("username", "")).lower()
+        fn = str(u.get("full_name", "")).lower()
+        if (qq in uid) or (qq in un) or (qq in fn):
+            out.append(u)
+    return out
+
+
+def _user_message_files(uid: str):
+    base = os.path.join(USER_MESSAGE_DIR, f"{uid}.jsonl")
+    files = []
+    if os.path.exists(base):
+        files.append(base)
+    for i in range(1, 10):
+        p = f"{base}.{i}"
+        if os.path.exists(p):
+            files.append(p)
+    return files  # newest-first
+
+
+def load_user_messages(uid: str, limit: int = 200, q: str = "", media_only: bool = False):
+    uid = str(uid).strip()
+    if not uid:
+        return []
+
+    limit = int(limit) if str(limit).isdigit() else 200
+    if limit <= 0:
+        limit = 200
+    if limit > 2000:
+        limit = 2000
+
+    qq = (q or "").strip().lower()
+    out = []
+
+    for fp in _user_message_files(uid):
+        lines = _tail_text_file(fp, max_lines=3000)
+        for line in reversed(lines):
+            line = (line or "").strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+
+            has_media = bool(obj.get("has_media")) or bool(obj.get("media"))
+            if media_only and not has_media:
+                continue
+
+            if qq:
+                t = str(obj.get("text", "")).lower()
+                mk = str((obj.get("media") or {}).get("kind", "")).lower()
+                ct = str(obj.get("chat_title", "")).lower()
+                if (qq not in t) and (qq not in mk) and (qq not in ct):
+                    continue
+
+            out.append(obj)
+            if len(out) >= limit:
+                return out
+
+    return out
+
+
+def _extract_reactions_total(m: dict) -> int:
+    if not isinstance(m, dict):
+        return 0
+
+    for k in ("reactions_total", "reaction_total", "likes", "like_count", "reaction_count"):
+        v = m.get(k)
+        if isinstance(v, (int, float)):
+            return int(v)
+
+    r = m.get("reactions")
+    if isinstance(r, dict):
+        for k in ("total", "total_count", "count"):
+            v = r.get(k)
+            if isinstance(v, (int, float)):
+                return int(v)
+    if isinstance(r, list):
+        total = 0
+        for x in r:
+            if isinstance(x, dict) and isinstance(x.get("count"), (int, float)):
+                total += int(x["count"])
+        return total
+
+    return 0
+
+
+def _extract_reactions_breakdown(m: dict, reg_map: dict = None) -> list:
+    reg_map = reg_map or {}
+    out = []
+
+    if not isinstance(m, dict):
+        return out
+
+    detail = m.get("reactions_detail") or m.get("reaction_details") or m.get("reaction_updates") or m.get("reactions_updates") or m.get("reactions_updates")
+    if isinstance(detail, list) and detail:
+        bucket = {}
+        for x in detail:
+            if not isinstance(x, dict):
+                continue
+            emoji = (x.get("emoji") or x.get("reaction") or x.get("type") or "").strip()
+            if not emoji:
+                continue
+            uid = x.get("user_id") or x.get("from_user_id") or x.get("from_id") or x.get("sender_id")
+            uid = str(uid).strip() if uid is not None else ""
+            if emoji not in bucket:
+                bucket[emoji] = {"emoji": emoji, "count": 0, "users": []}
+            bucket[emoji]["count"] += 1
+            if uid:
+                u = reg_map.get(uid) or {}
+                name = (u.get("full_name") or u.get("name") or "").strip()
+                username = (u.get("username") or "").strip()
+                label = name or (f"@{username}" if username else uid)
+                if label not in bucket[emoji]["users"]:
+                    bucket[emoji]["users"].append(label)
+        out = list(bucket.values())
+        out.sort(key=lambda x: x.get("count", 0), reverse=True)
+        return out
+
+    r = m.get("reactions")
+    if isinstance(r, list) and r:
+        for x in r:
+            if not isinstance(x, dict):
+                continue
+            emoji = (x.get("emoji") or x.get("reaction") or x.get("type") or "").strip()
+            cnt = x.get("count")
+            if emoji and isinstance(cnt, (int, float)):
+                out.append({"emoji": emoji, "count": int(cnt), "users": []})
+        out.sort(key=lambda x: x.get("count", 0), reverse=True)
+        return out
+
+    if isinstance(r, dict):
+        items = r.get("items") or r.get("list") or r.get("reactions") or []
+        if isinstance(items, list):
+            for x in items:
+                if not isinstance(x, dict):
+                    continue
+                emoji = (x.get("emoji") or x.get("reaction") or x.get("type") or "").strip()
+                cnt = x.get("count") or x.get("total_count") or x.get("votes")
+                if emoji and isinstance(cnt, (int, float)):
+                    out.append({"emoji": emoji, "count": int(cnt), "users": []})
+            out.sort(key=lambda x: x.get("count", 0), reverse=True)
+            return out
+
+    return out
+
+
+def _extract_likes_given_in_message(m: dict) -> list:
+    if not isinstance(m, dict):
+        return []
+    detail = m.get("reactions_detail") or m.get("reaction_details") or m.get("reaction_updates") or m.get("reactions_updates")
+    if not isinstance(detail, list) or not detail:
+        return []
+    out = []
+    for x in detail:
+        if not isinstance(x, dict):
+            continue
+        uid = x.get("user_id") or x.get("from_user_id") or x.get("from_id") or x.get("sender_id")
+        if uid is None:
+            continue
+        s = str(uid).strip()
+        if s:
+            out.append(s)
+    return out
+
+
+def _msg_to_template(obj: dict, reg_map: dict = None) -> dict:
+    if not isinstance(obj, dict):
+        return {}
+
+    reg_map = reg_map or {}
+
+    media = obj.get("media") or {}
+    has_media = bool(obj.get("has_media")) or bool(media)
+
+    msg_type = "text"
+    if has_media:
+        msg_type = str(media.get("kind") or obj.get("type") or "media")
+
+    file_id = (media.get("file_id") or obj.get("file_id") or "").strip()
+    likes_total = _extract_reactions_total(obj)
+    reactions_breakdown = _extract_reactions_breakdown(obj, reg_map=reg_map)
+
+    out = {
+        "ts": obj.get("ts") or "",
+        "type": msg_type,
+        "text": obj.get("text") or "",
+        "caption": obj.get("caption") or media.get("caption") or "",
+        "chat_id": obj.get("chat_id") or "",
+        "message_id": obj.get("message_id") or "",
+        "file_name": media.get("file_name") or obj.get("file_name") or "",
+        "mime_type": media.get("mime_type") or obj.get("mime_type") or "",
+        "file_id": file_id,
+        "media_url": (f"/tg/file/{file_id}" if file_id else ""),
+        "likes_total": int(likes_total or 0),
+        "reactions": reactions_breakdown,
+        "raw": None,
+    }
+
+    try:
+        out["raw"] = json.dumps(obj, ensure_ascii=False, indent=2)
+    except Exception:
+        out["raw"] = None
+
+    return out
+
+
+def _build_user_stats(messages: list) -> dict:
+    now = datetime.now()
+    last_24h = 0
+    last_7d = 0
+    hourly = {h: 0 for h in range(24)}
+    likes_received = 0
+
+    for m in messages or []:
+        dt = _parse_dt((m or {}).get("ts"))
+        if not dt:
+            continue
+        try:
+            dt_naive = dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
+        except Exception:
+            dt_naive = dt
+
+        if dt_naive >= now - timedelta(hours=24):
+            last_24h += 1
+        if dt_naive >= now - timedelta(days=7):
+            last_7d += 1
+        try:
+            hourly[int(dt_naive.hour)] += 1
+        except Exception:
+            pass
+
+        likes_received += _extract_reactions_total(m)
+
+    return {
+        "total_messages": len(messages or []),
+        "last_24h": last_24h,
+        "last_7d": last_7d,
+        "hourly": hourly,
+        "likes_received": int(likes_received),
+    }
+
+
+def delete_user_hierarchy(
+    uid: str,
+    *,
+    delete_registry=True,
+    delete_messages=True,
+    delete_moderation=True,
+    delete_username_cache=True,
+):
+    uid = str(uid).strip()
+    if not uid:
+        return False, "Keine User-ID."
+
+    changed_any = False
+
+    if delete_registry:
+        data = load_json(USER_REGISTRY_FILE, {})
+        changed = False
+
+        if isinstance(data, list):
+            before = len(data)
+            data = [x for x in data if str((x or {}).get("id") or (x or {}).get("user_id") or "") != uid]
+            changed = (len(data) != before)
+
+        elif isinstance(data, dict):
+            users = data.get("users")
+
+            if isinstance(users, dict):
+                if uid in users:
+                    del users[uid]
+                    changed = True
+
+            elif isinstance(users, list):
+                before = len(users)
+                data["users"] = [x for x in users if str((x or {}).get("id") or (x or {}).get("user_id") or "") != uid]
+                changed = (len(data["users"]) != before)
+
+            else:
+                if uid in data:
+                    del data[uid]
+                    changed = True
+
+        if changed:
+            save_json(USER_REGISTRY_FILE, data)
+            changed_any = True
+
+    if delete_messages:
+        base = os.path.join(USER_MESSAGE_DIR, f"{uid}.jsonl")
+        removed = False
+        for p in [base] + [f"{base}.{i}" for i in range(1, 11)]:
+            if os.path.exists(p):
+                try:
+                    os.remove(p)
+                    removed = True
+                except Exception:
+                    pass
+        changed_any = changed_any or removed
+
+    if delete_moderation:
+        mod = load_json(MODERATION_DATA_FILE, {})
+        if isinstance(mod, dict) and uid in mod:
+            del mod[uid]
+            save_json(MODERATION_DATA_FILE, mod)
+            changed_any = True
+
+    if delete_username_cache:
+        cache = load_json(USERNAME_CACHE_FILE, {})
+        if isinstance(cache, dict):
+            changed = False
+            for k in list(cache.keys()):
+                try:
+                    if str(cache.get(k)) == uid:
+                        del cache[k]
+                        changed = True
+                except Exception:
+                    pass
+            if changed:
+                save_json(USERNAME_CACHE_FILE, cache)
+                changed_any = True
+
+    return changed_any, ("✅ User-Hierarchie gelöscht." if changed_any else "ℹ️ Nichts zu löschen gefunden.")
+
+
+# -------------------------------------------------------------------
+# ✅ REWORK: Group Activity (schnell + kompatibel)
+# -------------------------------------------------------------------
+def _iter_message_files():
+    if not os.path.isdir(USER_MESSAGE_DIR):
+        return []
+    files = []
+    for fn in os.listdir(USER_MESSAGE_DIR):
+        if not (fn.endswith(".jsonl") or ".jsonl." in fn):
+            continue
+        files.append(os.path.join(USER_MESSAGE_DIR, fn))
+    return files
+
+
+def _extract_user_id_from_msg(m: dict):
+    for k in ("from_user_id", "user_id", "from_id", "sender_id", "uid"):
+        v = m.get(k)
+        if v is not None and str(v).strip():
+            return str(v).strip()
+    return ""
+
+
+def build_group_activity(days: int = 30, chat_id=None) -> dict:
+    days = int(days) if str(days).isdigit() else 30
+    if days < 1:
+        days = 1
+    if days > 365:
+        days = 365
+
+    chat_id_raw = (str(chat_id).strip() if chat_id is not None else "")
+    chat_id_filter = None
+    if chat_id_raw != "":
+        chat_id_filter = chat_id_raw
+
+    now = _now()
+    cutoff = now - timedelta(days=days)
+    cutoff_naive = cutoff.replace(tzinfo=None) if cutoff.tzinfo is not None else cutoff
+
+    start_date = (now - timedelta(days=days - 1)).date()
+    labels = [(start_date + timedelta(days=i)).isoformat() for i in range(days)]
+
+    per_hour = [0] * 24
+    per_weekday = [0] * 7
+    timeline_map = defaultdict(int)
+
+    per_user = defaultdict(lambda: {
+        "user_id": "",
+        "username": "",
+        "full_name": "",
+        "messages": 0,
+        "media": 0,
+        "likes_received": 0,
+        "likes_given": 0,
+        "last_seen": None,
+        "daily": defaultdict(int),
+    })
+
+    per_chat = defaultdict(int)
+
+    total = 0
+    media_shared = 0
+    total_reactions_received = 0
+    total_reactions_given = 0
+
+    reg_list = load_user_registry_list()
+    reg_map = {str(u.get("id")): u for u in reg_list if u.get("id")}
+
+    MAX_LINES_PER_FILE = 12000
+
+    for fp in _iter_message_files():
+        lines = _tail_text_file(fp, max_lines=MAX_LINES_PER_FILE)
+        for line in lines:
+            line = (line or "").strip()
+            if not line:
+                continue
+            try:
+                m = json.loads(line)
+            except Exception:
+                continue
+
+            dt = _parse_dt(m.get("ts"))
+            if not dt:
+                continue
+            try:
+                dt_naive = dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
+            except Exception:
+                dt_naive = dt
+
+            if dt_naive < cutoff_naive:
+                continue
+
+            cid = m.get("chat_id")
+            if chat_id_filter is not None:
+                if cid is None:
+                    continue
+                if str(cid) != chat_id_filter:
+                    continue
+
+            author_uid = _extract_user_id_from_msg(m)
+            if not author_uid:
+                continue
+
+            total += 1
+
+            try:
+                per_hour[int(dt_naive.hour)] += 1
+            except Exception:
+                pass
+            try:
+                per_weekday[int(dt_naive.weekday())] += 1
+            except Exception:
+                pass
+
+            dkey = dt_naive.date().isoformat()
+            if dkey in labels:
+                timeline_map[dkey] += 1
+
+            if cid is not None:
+                per_chat[str(cid)] += 1
+
+            has_media = bool(m.get("has_media")) or bool(m.get("media"))
+            if has_media:
+                media_shared += 1
+
+            likes_received = _extract_reactions_total(m)
+            total_reactions_received += likes_received
+
+            reactors = _extract_likes_given_in_message(m)
+            if reactors:
+                for rid in reactors:
+                    per_user[rid]["user_id"] = rid
+                    per_user[rid]["likes_given"] += 1
+                    total_reactions_given += 1
+
+            u = per_user[author_uid]
+            u["user_id"] = author_uid
+            u["messages"] += 1
+            u["media"] += 1 if has_media else 0
+            u["likes_received"] += likes_received
+
+            username = m.get("username") or ""
+            full_name = m.get("full_name") or m.get("name") or ""
+
+            if author_uid in reg_map:
+                if not username:
+                    username = reg_map[author_uid].get("username", "") or ""
+                if not full_name:
+                    full_name = reg_map[author_uid].get("full_name", "") or ""
+
+            u["username"] = username
+            u["full_name"] = full_name
+
+            prev = u["last_seen"]
+            if prev is None or dt_naive > prev:
+                u["last_seen"] = dt_naive
+
+            if dkey in labels:
+                u["daily"][dkey] += 1
+
+    total_arr = [int(timeline_map.get(d, 0)) for d in labels]
+
+    busiest_day = None
+    if timeline_map:
+        busiest_day = max(timeline_map.items(), key=lambda x: x[1])[0]
+
+    leaderboard_list = sorted(per_user.values(), key=lambda x: x.get("messages", 0), reverse=True)
+    leaderboard = []
+    user_series = {}
+
+    for idx, u in enumerate(leaderboard_list[:20], start=1):
+        uid = u["user_id"]
+        avatar_url = reg_map.get(uid, {}).get("avatar_url") or f"/tg/avatar/{uid}"
+        leaderboard.append({
+            "rank": idx,
+            "user_id": uid,
+            "username": u.get("username", ""),
+            "name": u.get("full_name", ""),
+            "messages": int(u.get("messages", 0)),
+            "media": int(u.get("media", 0)),
+            "likes_received": int(u.get("likes_received", 0)),
+            "likes_given": int(u.get("likes_given", 0)),
+            "avatar_url": avatar_url,
+        })
+        user_series[uid] = [int(u["daily"].get(d, 0)) for d in labels]
+
+    top_contributor = None
+    most_liked_user = None
+    if leaderboard:
+        top_contributor = leaderboard[0].get("name") or (f"@{leaderboard[0].get('username')}" if leaderboard[0].get("username") else leaderboard[0].get("user_id"))
+        most = max(leaderboard, key=lambda x: x.get("likes_received", 0))
+        most_liked_user = most.get("name") or (f"@{most.get('username')}" if most.get("username") else most.get("user_id"))
+
+    top_chat = None
+    if per_chat:
+        cid, cnt = max(per_chat.items(), key=lambda x: x[1])
+        top_chat = {"chat_id": str(cid), "messages": int(cnt)}
+
+    peak_hour = max(range(24), key=lambda h: per_hour[h]) if total > 0 else None
+    peak_weekday = max(range(7), key=lambda d: per_weekday[d]) if total > 0 else None
+
+    recently_active = []
+    recent_sorted = sorted(per_user.values(), key=lambda x: x["last_seen"] or datetime.min, reverse=True)[:10]
+    for u in recent_sorted:
+        dt_last = u["last_seen"]
+        uid = u["user_id"]
+        recently_active.append({
+            "user_id": uid,
+            "username": u.get("username", ""),
+            "name": u.get("full_name", ""),
+            "last_seen": dt_last.isoformat() if isinstance(dt_last, datetime) else None,
+            "avatar_url": reg_map.get(uid, {}).get("avatar_url") or f"/tg/avatar/{uid}",
+        })
+
+    meta = {
+        "days": days,
+        "chat_id": chat_id_filter,
+        "total_messages": int(total),
+        "active_users": int(len(per_user)),
+        "media_shared": int(media_shared),
+        "total_reactions_received": int(total_reactions_received),
+        "total_reactions_given": int(total_reactions_given),
+        "peak_hour": peak_hour,
+        "peak_weekday": peak_weekday,
+        "busiest_day": busiest_day,
+        "top_contributor": top_contributor,
+        "most_liked_user": most_liked_user,
+        "top_chat": top_chat,
+    }
+
+    meta_compat = {
+        "days": meta["days"],
+        "chat_id": meta["chat_id"],
+        "totalMessages": meta["total_messages"],
+        "activeUsers": meta["active_users"],
+        "mediaShared": meta["media_shared"],
+        "totalReactions": meta["total_reactions_received"],
+        "busiestDay": meta["busiest_day"],
+        "topContributor": meta["top_contributor"],
+        "mostLikedUser": meta["most_liked_user"],
+        "topChat": meta["top_chat"],
+    }
+
+    timeline_list = [{"date": d, "count": int(timeline_map.get(d, 0))} for d in labels]
+
+    kpis = {
+        "total_messages": int(total),
+        "active_users": int(len(per_user)),
+        "busiest_day": busiest_day,
+        "media_shared": int(media_shared),
+        "total_reactions_received": int(total_reactions_received),
+        "total_reactions_given": int(total_reactions_given),
+        "top_contributor": top_contributor or "—",
+        "most_liked_user": most_liked_user or "—",
+        "top_chat": top_chat or "—",
+    }
+
+    return {
+        "ok": True,
+        "meta": meta_compat,
+        "per_hour": per_hour,
+        "per_weekday": per_weekday,
+        "timeline": timeline_list,
+        "leaderboard": leaderboard,
+        "kpis": kpis,
+        "timeline2": {"labels": labels, "total": total_arr},
+        "timeline_series": {"labels": labels, "total": total_arr},
+        "busiest_hours": per_hour,
+        "busiest_days": per_weekday,
+        "user_series": user_series,
+        "recently_active": recently_active,
+    }
+
+
+@app.route("/api/id-finder/group-activity")
+def api_id_finder_group_activity():
+    days = request.args.get("days") or "30"
+    chat_id = request.args.get("chat_id")
+    return jsonify(build_group_activity(days=days, chat_id=chat_id))
+
+
+@app.route("/api/id-finder/activity-stats")
+def api_id_finder_activity_stats():
+    days = request.args.get("days") or "30"
+    chat_id = request.args.get("chat_id")
+    return jsonify(build_group_activity(days=days, chat_id=chat_id))
+
+
+# --- ROUTEN ---
+@app.route("/")
+def index():
+    # ✅ minecraft_route_exists: damit Templates optional anzeigen können
+    return render_template("index.html", bot_status=build_bot_status(), minecraft_route_exists=True)
+
+
+# --- OUTFIT BOT ROUTES ---
+@app.route("/outfit-bot/dashboard")
+def outfit_bot_dashboard():
+    config = load_json(OUTFIT_BOT_CONFIG_FILE, {})
+    duel_status = {"active": False}
+    bot_data = load_json(OUTFIT_BOT_DATA_FILE, {})
+
+    current_duel = bot_data.get("current_duel")
+    contest_active = bot_data.get("contest_active", False)
+
+    if current_duel and contest_active:
+        contestants = current_duel.get("contestants", {})
+        names = [f"@{d.get('username', 'Unbekannt')}" for d in contestants.values()]
+        duel_status["active"] = True
+        duel_status["contestants"] = " vs ".join(names)
+
+    return render_template(
+        "outfit_bot_dashboard.html",
+        config=config,
+        is_running=is_outfit_bot_running(),
+        logs=get_bot_logs(OUTFIT_BOT_LOG, 30),
+        duel_status=duel_status,
+        bot_status=build_bot_status(),
+    )
+
+
+@app.route("/outfit-bot/start", methods=["POST"])
+def outfit_bot_start_route():
+    success, msg = start_outfit_bot()
+    flash(msg, "success" if success else "danger")
+    return redirect(url_for("outfit_bot_dashboard"))
+
+
+@app.route("/outfit-bot/stop", methods=["POST"])
+def outfit_bot_stop_route():
+    success, msg = stop_outfit_bot()
+    flash(msg, "success" if success else "danger")
+    return redirect(url_for("outfit_bot_dashboard"))
+
+
+@app.route("/outfit-bot/clear-logs", methods=["POST"])
+def outfit_bot_clear_logs():
+    try:
+        with open(OUTFIT_BOT_LOG, "w", encoding="utf-8") as f:
+            f.write("")
+        flash("Logs erfolgreich geleert.", "success")
+    except Exception as e:
+        flash(f"Fehler beim Leeren der Logs: {e}", "danger")
+    return redirect(url_for("outfit_bot_dashboard"))
+
+
+@app.route("/outfit-bot/save-config", methods=["POST"])
+def outfit_bot_save_config():
+    was_running = is_outfit_bot_running()
+    if was_running:
+        stop_outfit_bot()
+
+    config = load_json(OUTFIT_BOT_CONFIG_FILE, {})
+    form = request.form
+
+    post_time = _time_from_form(form, "POST_TIME", fallback=(config.get("POST_TIME") or "18:00"))
+    winner_time = _time_from_form(form, "WINNER_TIME", fallback=(config.get("WINNER_TIME") or "22:00"))
+
+    config.update(
+        {
+            "BOT_TOKEN": (form.get("BOT_TOKEN") or "").strip(),
+            "CHAT_ID": (form.get("CHAT_ID") or "").strip(),
+            "TOPIC_ID": (form.get("TOPIC_ID") or "").strip() or None,
+            "POST_TIME": post_time,
+            "WINNER_TIME": winner_time,
+            "DUEL_TYPE": (form.get("DUEL_TYPE") or "tie_breaker").strip(),
+            "DUEL_DURATION_MINUTES": _safe_int(form.get("DUEL_DURATION_MINUTES"), 60) or 60,
+            "TEMPORARY_MESSAGE_DURATION_SECONDS": _safe_int(form.get("TEMPORARY_MESSAGE_DURATION_SECONDS"), 30) or 30,
+        }
+    )
+
+    config["AUTO_POST_ENABLED"] = "AUTO_POST_ENABLED" in form
+    config["DUEL_MODE"] = "DUEL_MODE" in form
+
+    admin_ids_str = form.get("ADMIN_USER_IDS", "") or ""
+    config["ADMIN_USER_IDS"] = [int(x.strip()) for x in admin_ids_str.split(",") if x.strip().isdigit()]
+
+    save_json(OUTFIT_BOT_CONFIG_FILE, config)
+    flash("Konfiguration gespeichert!", "success")
+
+    if was_running:
+        start_outfit_bot()
+        flash("Bot wird mit neuer Konfiguration neu gestartet.", "info")
+
+    return redirect(url_for("outfit_bot_dashboard"))
+
+
+@app.route("/outfit-bot/start-contest", methods=["POST"])
+def outfit_bot_start_contest():
+    if is_outfit_bot_running():
+        write_trigger(os.path.join(OUTFIT_BOT_DIR, "command_start_contest.tmp"))
+        flash("Befehl 'Wettbewerb starten' gesendet.", "info")
+    else:
+        flash("Bot läuft nicht!", "danger")
+    return redirect(url_for("outfit_bot_dashboard"))
+
+
+@app.route("/outfit-bot/announce-winner", methods=["POST"])
+def outfit_bot_announce_winner():
+    if is_outfit_bot_running():
+        write_trigger(os.path.join(OUTFIT_BOT_DIR, "command_announce_winner.tmp"))
+        flash("Befehl 'Gewinner auslosen' gesendet.", "info")
+    else:
+        flash("Bot läuft nicht!", "danger")
+    return redirect(url_for("outfit_bot_dashboard"))
+
+
+@app.route("/outfit-bot/end-duel", methods=["POST"])
+def outfit_bot_end_duel():
+    if is_outfit_bot_running():
+        try:
+            trigger_path = os.path.join(OUTFIT_BOT_DIR, "command_end_duel.tmp")
+            write_trigger(trigger_path)
+            flash("Befehl 'Duell beenden' wurde gesendet.", "success")
+            log.info("Trigger-Datei erstellt: %s", trigger_path)
+        except Exception as e:
+            flash(f"Fehler beim Senden des Befehls: {e}", "danger")
+            log.error("Fehler beim Schreiben der Trigger-Datei: %s", e)
+    else:
+        flash("⚠️ Der Outfit-Bot läuft nicht!", "warning")
+    return redirect(url_for("outfit_bot_dashboard"))
+
+
+# --- INVITE BOT ROUTES ---
+@app.route("/bot-settings", methods=["GET", "POST"])
+def bot_settings():
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "start_invite_bot":
+            success, msg = start_invite_bot()
+            flash(msg, "success" if success else "danger")
+            return redirect(url_for("bot_settings"))
+
+        if action == "stop_invite_bot":
+            success, msg = stop_invite_bot()
+            flash(msg, "success" if success else "danger")
+            return redirect(url_for("bot_settings"))
+
+        if action == "clear_user_interactions_log":
+            try:
+                with open(INVITE_BOT_USER_LOG, "w", encoding="utf-8") as f:
+                    f.write("")
+                flash("Benutzer-Interaktions-Log geleert.", "success")
+            except Exception as e:
+                flash(f"Fehler beim Leeren des Logs: {e}", "danger")
+            return redirect(url_for("bot_settings"))
+
+        if action == "clear_invite_bot_log":
+            try:
+                with open(INVITE_BOT_LOG, "w", encoding="utf-8") as f:
+                    f.write("")
+                flash("Bot Log erfolgreich geleert.", "success")
+            except Exception as e:
+                flash(f"Fehler beim Leeren des Bot Logs: {e}", "danger")
+            return redirect(url_for("bot_settings"))
+
+        was_running = is_invite_bot_running()
+        if was_running:
+            stop_invite_bot()
+
+        config = load_json(INVITE_BOT_CONFIG_FILE, {})
+        config["bot_token"] = (request.form.get("bot_token") or "").strip()
+        config["main_chat_id"] = (request.form.get("main_chat_id") or "").strip()
+        config["topic_id"] = (request.form.get("topic_id") or "").strip() or None
+        config["is_enabled"] = "is_enabled" in request.form
+        config["repost_profile_for_existing_members"] = ("repost_profile_for_existing_members" in request.form)
+        config["link_ttl_minutes"] = _safe_int(request.form.get("link_ttl_minutes"), 15) or 15
+
+        save_json(INVITE_BOT_CONFIG_FILE, config)
+        flash("Invite Bot Einstellungen gespeichert.", "success")
+
+        if was_running:
+            start_invite_bot()
+            flash("Invite Bot neu gestartet.", "info")
+
+        return redirect(url_for("bot_settings"))
+
+    config = load_json(INVITE_BOT_CONFIG_FILE, {})
+    invite_pids = find_pids(INVITE_MATCH_PATTERNS)
+    invite_pid = invite_pids[0] if invite_pids else None
+
+    return render_template(
+        "bot_settings.html",
+        config=config,
+        is_invite_running=is_invite_bot_running(),
+        invite_bot_logs=get_bot_logs(INVITE_BOT_LOG),
+        user_interaction_logs=get_bot_logs(INVITE_BOT_USER_LOG),
+        invite_pid=invite_pid,
+        bot_status=build_bot_status(),
+    )
+
+
+# --- ID FINDER BOT ROUTES ---
+@app.route("/id-finder", methods=["GET", "POST"])
+def id_finder_dashboard():
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "start_bot":
+            success, msg = start_id_finder_bot()
+            flash(msg, "success" if success else "danger")
+            return redirect(url_for("id_finder_dashboard"))
+
+        if action == "stop_bot":
+            success, msg = stop_id_finder_bot()
+            flash(msg, "success" if success else "danger")
+            return redirect(url_for("id_finder_dashboard"))
+
+        if action == "clear_system_log":
+            try:
+                with open(ID_FINDER_BOT_LOG, "w", encoding="utf-8") as f:
+                    f.write("")
+                flash("System- & Fehler-Log erfolgreich geleert.", "success")
+            except Exception as e:
+                flash(f"Fehler beim Leeren des Logs: {e}", "danger")
+            return redirect(url_for("id_finder_dashboard"))
+
+        if action == "clear_command_log":
+            try:
+                with open(ID_FINDER_COMMAND_LOG, "w", encoding="utf-8") as f:
+                    f.write("")
+                flash("Befehls-Logbuch erfolgreich geleert.", "success")
+            except Exception as e:
+                flash(f"Fehler beim Leeren des Logs: {e}", "danger")
+            return redirect(url_for("id_finder_dashboard"))
+
+        if action == "save_config":
+            was_running = is_id_finder_running()
+            if was_running:
+                stop_id_finder_bot()
+
+            config = load_json(ID_FINDER_CONFIG_FILE, {})
+            config["bot_token"] = (request.form.get("bot_token") or "").strip()
+
+            mg_raw = (request.form.get("main_group_id") or "").strip()
+            mg_int = _safe_int_or_none(mg_raw)
+            config["main_group_id"] = mg_int if mg_int is not None else mg_raw
+
+            ag_raw = (request.form.get("admin_group_id") or "").strip()
+            ag_int = _safe_int_or_none(ag_raw)
+            config["admin_group_id"] = ag_int if ag_int is not None else None
+
+            topic_val = (request.form.get("admin_log_topic_id") or request.form.get("log_topic_id") or "").strip()
+            topic_int = _safe_int_or_none(topic_val)
+            config["admin_log_topic_id"] = topic_int if topic_int is not None else None
+            config["log_topic_id"] = config["admin_log_topic_id"]
+
+            config["delete_commands"] = _checkbox(request.form, "delete_commands")
+            config["bot_message_cleanup_seconds"] = _safe_int(request.form.get("bot_message_cleanup_seconds"), 0) or 0
+
+            _apply_checkbox_tristate(config, request.form, "message_logging_enabled", default_if_missing=True)
+            _apply_checkbox_tristate(config, request.form, "message_logging_groups_only", default_if_missing=True)
+            _apply_checkbox_tristate(config, request.form, "message_logging_ignore_commands", default_if_missing=True)
+            _apply_checkbox_tristate(config, request.form, "message_logging_ignore_bots", default_if_missing=True)
+
+            save_json(ID_FINDER_CONFIG_FILE, config)
+            flash("ID Finder Konfiguration gespeichert.", "success")
+
+            if was_running:
+                start_id_finder_bot()
+                flash("ID Finder Bot neu gestartet.", "info")
+
+            return redirect(url_for("id_finder_dashboard"))
+
+        return redirect(url_for("id_finder_dashboard"))
+
+    config = load_json(ID_FINDER_CONFIG_FILE, {})
+    system_logs = get_bot_logs(ID_FINDER_BOT_LOG)
+    command_logs = get_bot_logs(ID_FINDER_COMMAND_LOG)
+
+    user_registry = load_user_registry_list()
+
+    q = (request.args.get("q") or "").strip()
+    user_registry_filtered = filter_users(user_registry, q)
+
+    return render_template(
+        "id_finder_dashboard.html",
+        config=config,
+        is_running=is_id_finder_running(),
+        system_logs=system_logs,
+        command_logs=command_logs,
+        user_registry=user_registry_filtered,
+        user_registry_count=len(user_registry_filtered),
+        search_query=q,
+        bot_status=build_bot_status(),
+        user={},
+    )
+
+
+@app.route("/id-finder/commands")
+def id_finder_commands():
+    return render_template("id_finder_commands.html", bot_status=build_bot_status())
+
+
+@app.route("/id-finder/user/<user_id>")
+def id_finder_user_detail(user_id):
+    uid = str(user_id).strip()
+    if not uid:
+        flash("Ungültige User-ID.", "danger")
+        return redirect(url_for("id_finder_dashboard"))
+
+    users = load_user_registry_list()
+    user = next((u for u in users if str(u.get("id")) == uid), None)
+
+    if not user:
+        user = {
+            "id": uid,
+            "username": "",
+            "full_name": "",
+            "first_seen": "",
+            "last_seen": "",
+            "chat_ids": "",
+            "is_bot": False,
+            "avatar_url": f"/tg/avatar/{uid}",
+        }
+    else:
+        user["avatar_url"] = user.get("avatar_url") or f"/tg/avatar/{uid}"
+
+    q = (request.args.get("q") or "").strip()
+
+    old_media_only = str(request.args.get("media_only") or "0").strip().lower() in ("1", "true", "yes", "on")
+    filter_type = (request.args.get("type") or ("media" if old_media_only else "all")).strip().lower()
+    if filter_type not in ("all", "text", "media"):
+        filter_type = "all"
+
+    page = _safe_int(request.args.get("page"), 1) or 1
+    if page < 1:
+        page = 1
+
+    page_size = 50
+    need = min(2000, max(200, page * page_size))
+    raw_msgs = load_user_messages(uid, limit=need, q=q, media_only=(filter_type == "media"))
+
+    reg_map = {str(u.get("id")): u for u in (users or []) if isinstance(u, dict) and u.get("id")}
+    msgs = [_msg_to_template(x, reg_map=reg_map) for x in (raw_msgs or []) if isinstance(x, dict)]
+
+    if filter_type == "text":
+        msgs = [m for m in msgs if (m.get("type") == "text")]
+
+    total = len(msgs)
+    start = (page - 1) * page_size
+    end = start + page_size
+    msgs_page = msgs[start:end]
+    has_prev = page > 1
+    has_next = end < total
+
+    stats = _build_user_stats(raw_msgs)
+
+    try:
+        return render_template(
+            "id_finder_user_detail.html",
+            user=user,
+            messages=msgs_page,
+            stats=stats,
+            q=q,
+            filter_type=filter_type,
+            page=page,
+            page_size=page_size,
+            has_prev=has_prev,
+            has_next=has_next,
+            bot_status=build_bot_status(),
+        )
+    except TemplateNotFound:
+        html_page = """
+        <html><head><meta charset="utf-8"><title>User Verlauf</title></head>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>👤 User Detail</h2>
+          <div style="display:flex; gap:12px; align-items:center;">
+            <img src="{{user.get('avatar_url')}}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid #ddd;">
+            <div>
+              <p style="margin:0;"><b>User-ID:</b> {{user.get('id')}}</p>
+              <p style="margin:0;"><b>Username:</b> @{{user.get('username')}}</p>
+              <p style="margin:0;"><b>Name:</b> {{user.get('full_name')}}</p>
+              <p style="margin:0;"><b>Last Seen:</b> {{user.get('last_seen')}}</p>
+            </div>
+          </div>
+
+          <form method="get" style="margin: 10px 0;">
+            <input name="q" placeholder="Suche im Verlauf..." value="{{q}}" />
+            <select name="type">
+              <option value="all" {% if filter_type=='all' %}selected{% endif %}>Alle</option>
+              <option value="text" {% if filter_type=='text' %}selected{% endif %}>Nur Text</option>
+              <option value="media" {% if filter_type=='media' %}selected{% endif %}>Nur Media</option>
+            </select>
+            <button type="submit">Filtern</button>
+          </form>
+
+          <hr>
+          <h3>🧾 Letzte Nachrichten ({{messages|length}})</h3>
+          {% for m in messages %}
+            <div style="padding:10px; border:1px solid #ddd; border-radius:8px; margin:10px 0;">
+              <div style="color:#666;"><b>{{m.get('ts')}}</b> | chat_id={{m.get('chat_id')}} | msg_id={{m.get('message_id')}}</div>
+              {% if m.get('text') %}
+                <div style="margin-top:6px;">{{m.get('text')}}</div>
+              {% endif %}
+              {% if m.get('caption') %}
+                <div style="margin-top:6px;"><b>Caption:</b> {{m.get('caption')}}</div>
+              {% endif %}
+
+              {% if m.get('likes_total',0) %}
+                <div style="margin-top:6px;"><b>Likes:</b> {{m.get('likes_total')}}</div>
+              {% endif %}
+
+              {% if m.get('reactions') %}
+                <div style="margin-top:6px;">
+                  <b>Reactions:</b>
+                  <ul>
+                  {% for r in m.get('reactions') %}
+                    <li>{{r.get('emoji')}} × {{r.get('count')}}{% if r.get('users') %} — {{r.get('users')|join(', ')}}{% endif %}</li>
+                  {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+
+              {% if m.get('media_url') %}
+                <div style="margin-top:6px;">
+                  <b>Media:</b> {{m.get('type')}} —
+                  <a href="{{m.get('media_url')}}" target="_blank">öffnen</a>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+          <p><a href="/id-finder">← zurück</a></p>
+        </body></html>
+        """
+        return render_template_string(
+            html_page,
+            user=user,
+            messages=msgs_page,
+            q=q,
+            filter_type=filter_type,
+        )
+
+
+@app.route("/id-finder/api/users")
+def id_finder_api_users():
+    users = load_user_registry_list()
+    q = (request.args.get("q") or "").strip()
+    users = filter_users(users, q)
+    return jsonify({"ok": True, "count": len(users), "users": users})
+
+
+@app.route("/id-finder/api/users/<user_id>/messages")
+def id_finder_api_user_messages(user_id):
+    uid = str(user_id).strip()
+    limit = _safe_int(request.args.get("limit"), 200) or 200
+    q = (request.args.get("q") or "").strip()
+    media_only = str(request.args.get("media_only") or "0").strip().lower() in ("1", "true", "yes", "on")
+    msgs_raw = load_user_messages(uid, limit=limit, q=q, media_only=media_only)
+
+    reg = load_user_registry_list()
+    reg_map = {str(u.get("id")): u for u in (reg or []) if isinstance(u, dict) and u.get("id")}
+    msgs = [_msg_to_template(x, reg_map=reg_map) for x in (msgs_raw or []) if isinstance(x, dict)]
+
+    return jsonify({"ok": True, "user_id": uid, "count": len(msgs), "messages": msgs})
+
+
+# ✅ REWORK: Analytics liefert zusätzlich `stats` (für Template) + bleibt kompatibel
+@app.route("/id-finder/analytics", methods=["GET"])
+def id_finder_analytics():
+    users = load_user_registry_list()
+
+    now = datetime.now()
+    seen_24h = 0
+    seen_7d = 0
+
+    chat_counter = {}
+    unique_chats = set()
+
+    most_recent_user = None
+    most_recent_dt = None
+
+    for u in users:
+        dt = _parse_dt(u.get("last_seen_raw") or u.get("last_seen"))
+        if dt:
+            try:
+                dt_naive = dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
+            except Exception:
+                dt_naive = dt
+
+            if dt_naive >= now - timedelta(hours=24):
+                seen_24h += 1
+            if dt_naive >= now - timedelta(days=7):
+                seen_7d += 1
+
+            if most_recent_dt is None or dt_naive > most_recent_dt:
+                most_recent_dt = dt_naive
+                most_recent_user = u
+
+        for cid in (u.get("chat_ids_raw") or []):
+            try:
+                cidi = int(cid)
+            except Exception:
+                continue
+            unique_chats.add(cidi)
+            chat_counter[cidi] = chat_counter.get(cidi, 0) + 1
+
+    top_chats = sorted(
+        [{"chat_id": str(k), "users": int(v)} for k, v in chat_counter.items()],
+        key=lambda x: x["users"],
+        reverse=True,
+    )
+
+    top_chats_tuples = sorted(chat_counter.items(), key=lambda x: x[1], reverse=True)
+    top_chats_tuples = [(str(cid), int(cnt)) for cid, cnt in top_chats_tuples[:20]]
+
+    last_contact_de = _format_dt_de(most_recent_dt, time_first=True) if most_recent_dt else None
+    last_contact_str = (most_recent_user or {}).get("last_seen_raw") if most_recent_user else None
+
+    stats = {
+        "total_users": len(users),
+        "unique_chats": len(unique_chats),
+        "top_chats": top_chats_tuples,
+        "most_recent_user": most_recent_user,
+        "last_contact_de": last_contact_de,
+        "seen_24h": seen_24h,
+        "seen_7d": seen_7d,
+    }
+
+    return render_template(
+        "id_finder_analytics.html",
+        stats=stats,
+        total_users=len(users),
+        user_registry_count=len(users),
+        registry_count=len(users),
+        seen_24h=seen_24h,
+        seen_7d=seen_7d,
+        unique_chat_ids=len(unique_chats),
+        unique_chats=len(unique_chats),
+        last_contact=last_contact_str,
+        last_contact_de=last_contact_de,
+        last_seen=last_contact_str,
+        users=users,
+        user_registry=users,
+        registry_users=users,
+        top_chats=top_chats,
+        messages_by_hour=[],
+        top_message_users=[],
+        bot_status=build_bot_status(),
+    )
+
+
+@app.route("/id-finder/admin-panel")
+def id_finder_admin_panel():
+    admins = load_json(ADMINS_FILE, {})
+    user_registry = load_user_registry_list()
+
+    return render_template(
+        "id_finder_admin_panel.html",
+        admins=admins,
+        user_registry=user_registry,
+        user_registry_count=len(user_registry),
+        available_permissions=AVAILABLE_PERMISSIONS,
+        available_permission_groups=AVAILABLE_PERMISSION_GROUPS,
+        bot_status=build_bot_status(),
+    )
+
+
+@app.route("/id-finder/user-registry/delete", methods=["POST"])
+def id_finder_user_registry_delete():
+    uid = (request.form.get("user_id") or "").strip()
+    if not uid:
+        flash("Fehler: Keine User-ID angegeben.", "danger")
+        return redirect(url_for("id_finder_admin_panel"))
+
+    data = load_json(USER_REGISTRY_FILE, {})
+    changed = False
+
+    if isinstance(data, list):
+        before = len(data)
+        data = [x for x in data if str((x or {}).get("id") or (x or {}).get("user_id") or "") != uid]
+        changed = (len(data) != before)
+
+    elif isinstance(data, dict):
+        users = data.get("users")
+
+        if isinstance(users, dict):
+            if uid in users:
+                del users[uid]
+                changed = True
+
+        elif isinstance(users, list):
+            before = len(users)
+            data["users"] = [x for x in users if str((x or {}).get("id") or (x or {}).get("user_id") or "") != uid]
+            changed = (len(data["users"]) != before)
+
+        else:
+            if uid in data:
+                del data[uid]
+                changed = True
+
+    if changed:
+        save_json(USER_REGISTRY_FILE, data)
+        flash(f"✅ User {uid} aus der Registry gelöscht.", "success")
+    else:
+        flash("ℹ️ User nicht in der Registry gefunden.", "warning")
+
+    ref = request.referrer or ""
+    if "/id-finder" in ref:
+        return redirect(ref)
+    return redirect(url_for("id_finder_admin_panel"))
+
+
+@app.route("/id-finder/user/delete-hierarchy", methods=["POST"])
+def id_finder_user_delete_hierarchy():
+    uid = (request.form.get("user_id") or "").strip()
+    if not uid:
+        flash("Fehler: Keine User-ID angegeben.", "danger")
+        return redirect(url_for("id_finder_admin_panel"))
+
+    delete_registry = ("delete_registry" in request.form) or (request.form.get("delete_registry") == "1")
+    delete_messages = ("delete_messages" in request.form) or (request.form.get("delete_messages") == "1")
+    delete_moderation = ("delete_moderation" in request.form) or (request.form.get("delete_moderation") == "1")
+    delete_cache = ("delete_cache" in request.form) or (request.form.get("delete_cache") == "1")
+
+    if not any([delete_registry, delete_messages, delete_moderation, delete_cache]):
+        delete_registry = delete_messages = delete_moderation = delete_cache = True
+
+    ok, msg = delete_user_hierarchy(
+        uid,
+        delete_registry=delete_registry,
+        delete_messages=delete_messages,
+        delete_moderation=delete_moderation,
+        delete_username_cache=delete_cache,
+    )
+    flash(msg, "success" if ok else "warning")
+
+    ref = request.referrer or ""
+    if "/id-finder/user/" in ref:
+        return redirect(ref)
+    return redirect(url_for("id_finder_admin_panel"))
+
+
+@app.route("/id-finder/add-admin", methods=["POST"])
+def id_finder_add_admin():
+    admin_id = (request.form.get("admin_id") or "").strip()
+    admin_name = (request.form.get("admin_name") or "").strip()
+
+    if not admin_id or not admin_name:
+        flash("Bitte ID und Namen angeben.", "danger")
+        return redirect(url_for("id_finder_admin_panel"))
+
+    admins = load_json(ADMINS_FILE, {})
+    if admin_id in admins:
+        flash("Admin existiert bereits.", "warning")
+        return redirect(url_for("id_finder_admin_panel"))
+
+    default_permissions = {perm: False for perm in AVAILABLE_PERMISSIONS}
+    admins[admin_id] = {"name": admin_name, "permissions": default_permissions}
+
+    save_json(ADMINS_FILE, admins)
+    flash(f"Admin {admin_name} hinzugefügt.", "success")
+    return redirect(url_for("id_finder_admin_panel"))
+
+
+@app.route("/id-finder/delete-admin", methods=["POST"])
+def id_finder_delete_admin():
+    admin_id = request.form.get("admin_id")
+    admins = load_json(ADMINS_FILE, {})
+
+    if admin_id in admins:
+        del admins[admin_id]
+        save_json(ADMINS_FILE, admins)
+        flash("Admin gelöscht.", "success")
+    else:
+        flash("Admin nicht gefunden.", "danger")
+
+    return redirect(url_for("id_finder_admin_panel"))
+
+
+@app.route("/id-finder/update-admin-permissions", methods=["POST"])
+def id_finder_update_admin_permissions():
+    admin_id = request.form.get("admin_id")
+    admins = load_json(ADMINS_FILE, {})
+
+    if admin_id not in admins:
+        flash("Fehler: Admin nicht gefunden.", "danger")
+        return redirect(url_for("id_finder_admin_panel"))
+
+    new_permissions = {}
+    for perm_key in AVAILABLE_PERMISSIONS:
+        new_permissions[perm_key] = request.form.get(perm_key) == "on"
+
+    admins[admin_id]["permissions"] = new_permissions
+    save_json(ADMINS_FILE, admins)
+
+    flash(f"Rechte für {admins[admin_id]['name']} aktualisiert.", "success")
+    return redirect(url_for("id_finder_admin_panel"))
+
+
+# --- QUIZ ROUTES ---
+@app.route("/quiz-settings", methods=["GET", "POST"])
+def quiz_settings():
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "start_quiz_bot":
+            success, msg = start_quiz_bot()
+            flash(msg, "success" if success else "danger")
+            return redirect(url_for("quiz_settings"))
+
+        if action == "stop_quiz_bot":
+            success, msg = stop_quiz_bot()
+            flash(msg, "success" if success else "danger")
+            return redirect(url_for("quiz_settings"))
+
+        if action == "save_schedule":
+            cfg = load_json(QUIZ_BOT_CONFIG_FILE, {})
+            current_sched = _load_schedule_from_cfg(cfg)
+            cfg["schedule"] = _parse_schedule_from_form(request.form, current_sched)
+            save_json(QUIZ_BOT_CONFIG_FILE, cfg)
+            flash("Quiz Automatisierung gespeichert.", "success")
+            return redirect(url_for("quiz_settings"))
+
+        if action == "save_settings":
+            was_running = is_quiz_bot_running()
+            if was_running:
+                stop_quiz_bot()
+
+            cfg = load_json(QUIZ_BOT_CONFIG_FILE, {})
+            cfg["token"] = (request.form.get("token") or "").strip()
+            cfg["channel_id"] = (request.form.get("channel_id") or "").strip()
+            cfg["topic_id"] = (request.form.get("topic_id") or "").strip() or None
+
+            existing_sched = _load_schedule_from_cfg(cfg)
+            time_str = _time_from_form(
+                request.form,
+                "quiz_time",
+                fallback=existing_sched.get("time") or DEFAULT_SCHEDULE["time"],
+            )
+
+            raw_days = request.form.getlist("quiz_days")
+            name_to_num = {
+                "Montag": 0,
+                "Dienstag": 1,
+                "Mittwoch": 2,
+                "Donnerstag": 3,
+                "Freitag": 4,
+                "Samstag": 5,
+                "Sonntag": 6,
+            }
+            days = []
+            for name in raw_days:
+                num = name_to_num.get(name)
+                if num is not None:
+                    days.append(num)
+            if not days:
+                days = existing_sched.get("days", DEFAULT_SCHEDULE["days"])
+
+            enabled = "auto_enabled" in request.form
+            cfg["schedule"] = {"enabled": enabled, "time": time_str, "days": sorted(set(days))}
+            save_json(QUIZ_BOT_CONFIG_FILE, cfg)
+            flash("Quiz Einstellungen gespeichert.", "success")
+
+            if was_running:
+                start_quiz_bot()
+                flash("Quiz Bot neu gestartet.", "info")
+
+            return redirect(url_for("quiz_settings"))
+
+        if action == "clear_log":
+            try:
+                with open(QUIZ_BOT_LOG, "w", encoding="utf-8") as f:
+                    f.write("")
+                flash("Quiz Bot Log geleert.", "success")
+            except Exception as e:
+                flash(f"Fehler beim Leeren des Quiz Bot Logs: {e}", "danger")
+            return redirect(url_for("quiz_settings"))
+
+        return redirect(url_for("quiz_settings"))
+
+    cfg = load_json(QUIZ_BOT_CONFIG_FILE, {})
+    logs = get_bot_logs(QUIZ_BOT_LOG, lines=50)
+    sched = _load_schedule_from_cfg(cfg)
+    next_run = _compute_next_run(sched)
+
+    day_names = {0: "Montag", 1: "Dienstag", 2: "Mittwoch", 3: "Donnerstag", 4: "Freitag", 5: "Samstag", 6: "Sonntag"}
+    cfg["quiz_time"] = sched.get("time", DEFAULT_SCHEDULE["time"])
+    cfg["quiz_days"] = [day_names[d] for d in sched.get("days", []) if d in day_names]
+    cfg["auto_enabled"] = bool(sched.get("enabled", False))
+
+    return render_template(
+        "quiz_settings.html",
+        config={"quiz": cfg},
+        logs=logs,
+        is_running=is_quiz_bot_running(),
+        bot_status=build_bot_status(),
+        schedule=sched,
+        next_run=_format_dt_de(next_run, time_first=True),
+    )
+
+
+# --- UMFRAGE ROUTES ---
+@app.route("/umfrage-settings", methods=["GET", "POST"])
+def umfrage_settings():
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "start_umfrage_bot":
+            success, msg = start_umfrage_bot()
+            flash(msg, "success" if success else "danger")
+            return redirect(url_for("umfrage_settings"))
+
+        if action == "stop_umfrage_bot":
+            success, msg = stop_umfrage_bot()
+            flash(msg, "success" if success else "danger")
+            return redirect(url_for("umfrage_settings"))
+
+        if action == "save_schedule":
+            cfg = load_json(UMFRAGE_BOT_CONFIG_FILE, {})
+            current_sched = _load_schedule_from_cfg(cfg)
+            cfg["schedule"] = _parse_schedule_from_form(request.form, current_sched)
+            save_json(UMFRAGE_BOT_CONFIG_FILE, cfg)
+            flash("Umfrage Automatisierung gespeichert.", "success")
+            return redirect(url_for("umfrage_settings"))
+
+        if action == "save_settings":
+            was_running = is_umfrage_bot_running()
+            if was_running:
+                stop_umfrage_bot()
+
+            cfg = load_json(UMFRAGE_BOT_CONFIG_FILE, {})
+            cfg["token"] = (request.form.get("token") or "").strip()
+            cfg["channel_id"] = (request.form.get("channel_id") or "").strip()
+            cfg["topic_id"] = (request.form.get("topic_id") or "").strip() or None
+            save_json(UMFRAGE_BOT_CONFIG_FILE, cfg)
+            flash("Umfrage Einstellungen gespeichert.", "success")
+
+            if was_running:
+                start_umfrage_bot()
+                flash("Umfrage Bot neu gestartet.", "info")
+
+            return redirect(url_for("umfrage_settings"))
+
+        if action == "clear_log":
+            try:
+                with open(UMFRAGE_BOT_LOG, "w", encoding="utf-8") as f:
+                    f.write("")
+                flash("Umfrage Bot Log geleert.", "success")
+            except Exception as e:
+                flash(f"Fehler beim Leeren des Umfrage Bot Logs: {e}", "danger")
+            return redirect(url_for("umfrage_settings"))
+
+        return redirect(url_for("umfrage_settings"))
+
+    cfg = load_json(UMFRAGE_BOT_CONFIG_FILE, {})
+    logs = get_bot_logs(UMFRAGE_BOT_LOG, lines=50)
+    sched = _load_schedule_from_cfg(cfg)
+    next_run = _compute_next_run(sched)
+
+    return render_template(
+        "umfrage_settings.html",
+        config={"umfrage": cfg},
+        logs=logs,
+        is_running=is_umfrage_bot_running(),
+        bot_status=build_bot_status(),
+        schedule=sched,
+        next_run=_format_dt_de(next_run, time_first=True),
+    )
+
+
+# --- SEND RANDOM (Trigger-Dateien statt direkt Telegram senden) ---
+@app.route("/quiz/send-random", methods=["POST"])
+def send_random_quiz_route():
+    if not is_quiz_bot_running():
+        flash("Quiz Bot läuft nicht! Bitte starten.", "danger")
+        return redirect(url_for("quiz_settings"))
+
+    try:
+        write_trigger(os.path.join(QUIZ_BOT_DIR, "command_send_random.tmp"))
+        flash("Quiz-Trigger gesendet.", "success")
+    except Exception as e:
+        flash(f"Fehler beim Triggern des Quiz: {e}", "danger")
+
+    return redirect(url_for("quiz_settings"))
+
+
+@app.route("/send_quizfrage", methods=["POST"])
+def legacy_send_quizfrage():
+    return send_random_quiz_route()
+
+
+@app.route("/umfrage/send-random", methods=["POST"])
+def send_random_poll_route():
+    if not is_umfrage_bot_running():
+        flash("Umfrage Bot läuft nicht! Bitte starten.", "danger")
+        return redirect(url_for("umfrage_settings"))
+
+    try:
+        write_trigger(os.path.join(UMFRAGE_BOT_DIR, "command_send_random.tmp"))
+        flash("Umfrage-Trigger gesendet.", "success")
+    except Exception as e:
+        flash(f"Fehler beim Triggern der Umfrage: {e}", "danger")
+
+    return redirect(url_for("umfrage_settings"))
+
+
+# --- Cleanup beim Beenden ---
+def cleanup_processes():
+    global outfit_bot_process, id_finder_process, invite_bot_process, quiz_bot_process, umfrage_bot_process
+    global minecraft_bridge_process, minecraft_worker_process
+
+    for proc in (
+        outfit_bot_process,
+        id_finder_process,
+        invite_bot_process,
+        quiz_bot_process,
+        umfrage_bot_process,
+        minecraft_bridge_process,
+        minecraft_worker_process,
+    ):
+        try:
+            if proc and proc.poll() is None:
+                proc.terminate()
+        except Exception:
+            pass
+
+
+atexit.register(cleanup_processes)
+
+
+if __name__ == "__main__":
+    migrate_admins_permissions()
+    start_scheduler_thread()
+    app.run(host="0.0.0.0", port=9002, debug=False)
