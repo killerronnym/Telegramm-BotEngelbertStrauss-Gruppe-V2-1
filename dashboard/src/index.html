@@ -35,12 +35,24 @@
 
     <div class="row">
         <div class="col-md-6 mb-4">
+            <div class="card h-100 border-primary">
+                <div class="card-body d-flex flex-column">
+                    <h2 class="card-title">📢 Nachricht Planer</h2>
+                    <p class="card-text">Nachrichten, Bilder & Videos planen oder sofort senden (via ID-Finder Bot).</p>
+                    <div class="mt-auto">
+                        <a href="{{ url_for('broadcast_manager') }}" class="btn btn-primary w-100">Nachricht senden & planen</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
             <div class="card h-100">
                 <div class="card-body d-flex flex-column">
                     <h2 class="card-title">❔ Quiz Bot</h2>
                     <p class="card-text">Verwaltung der Quizfragen und Einstellungen.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('quiz_settings') }}" class="btn btn-primary">Quiz Einstellungen & Aktionen</a>
+                        <a href="{{ url_for('quiz_settings') }}" class="btn btn-outline-primary w-100">Quiz Einstellungen & Aktionen</a>
                     </div>
                 </div>
             </div>
@@ -52,7 +64,7 @@
                     <h2 class="card-title">📊 Umfrage Bot</h2>
                     <p class="card-text">Verwaltung der Umfragen und Einstellungen.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('umfrage_settings') }}" class="btn btn-primary">Umfrage Einstellungen & Aktionen</a>
+                        <a href="{{ url_for('umfrage_settings') }}" class="btn btn-outline-primary w-100">Umfrage Einstellungen & Aktionen</a>
                     </div>
                 </div>
             </div>
@@ -64,7 +76,7 @@
                     <h2 class="card-title">👗 Outfit-Wettbewerb Bot</h2>
                     <p class="card-text">Steuerung für den Outfit-Contest und Gewinnerauslosung.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('outfit_bot_dashboard') }}" class="btn btn-success">Outfit-Bot Dashboard</a>
+                        <a href="{{ url_for('outfit_bot_dashboard') }}" class="btn btn-success w-100">Outfit-Bot Dashboard</a>
                     </div>
                 </div>
             </div>
@@ -76,7 +88,7 @@
                     <h2 class="card-title">👋 Einladungs-Bot</h2>
                     <p class="card-text">Einstellungen für Begrüßungen und Beitrittsanfragen.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('bot_settings') }}" class="btn btn-success">Einladungs-Bot Einstellungen</a>
+                        <a href="{{ url_for('bot_settings') }}" class="btn btn-success w-100">Einladungs-Bot Einstellungen</a>
                     </div>
                 </div>
             </div>
@@ -88,7 +100,7 @@
                     <h2 class="card-title">🆔 ID-Finder Bot</h2>
                     <p class="card-text">Hilfsmittel zum Ermitteln von Chat- und Topic-IDs.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('id_finder_dashboard') }}" class="btn btn-secondary">ID-Finder Dashboard</a>
+                        <a href="{{ url_for('id_finder_dashboard') }}" class="btn btn-secondary w-100">ID-Finder Dashboard</a>
                     </div>
                 </div>
             </div>
@@ -100,7 +112,7 @@
                     <h2 class="card-title">⛏️ Minecraft Server</h2>
                     <p class="card-text">Live-Status & Einstellungen (DNS/IP, Chat/Topic, Update-Intervall).</p>
                     <div class="mt-auto">
-                     <a href="/minecraft" class="btn btn-warning">⛏️ Minecraft Dashboard</a>
+                     <a href="/minecraft" class="btn btn-warning w-100">⛏️ Minecraft Dashboard</a>
                     </div>
                 </div>
             </div>

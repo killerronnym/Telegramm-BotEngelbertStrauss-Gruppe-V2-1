@@ -53,6 +53,8 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # --- Flask App Initialisierung ---
+from werkzeug.utils import secure_filename
+import uuid
 app = Flask(__name__, template_folder="src")
 app.secret_key = "b13f172933b9a1274adb024d47fc7552d2e85864693cb9a2"
 app.config["TEMPLATES_AUTO_RELOAD"] = True
@@ -73,6 +75,12 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # Global logs dir (projektweit)
+
+# BROADCAST CONFIG
+BROADCAST_DATA_FILE = os.path.join(DATA_DIR, "scheduled_broadcasts.json")
+TOPIC_REGISTRY_FILE = os.path.join(DATA_DIR, "topic_registry.json")
+UPLOAD_FOLDER = os.path.join(DATA_DIR, "broadcast_uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 LOGS_DIR = os.path.join(PROJECT_ROOT, "logs")
 os.makedirs(LOGS_DIR, exist_ok=True)
 
@@ -581,6 +589,7 @@ def scheduler_loop():
 
 
 def start_scheduler_thread():
+    start_broadcast_scheduler()
     t = threading.Thread(target=scheduler_loop, daemon=True)
     t.start()
     return t
@@ -2303,6 +2312,246 @@ def api_id_finder_activity_stats():
 
 
 # --- ROUTEN ---
+
+
+# --- BROADCAST MANAGER ROUTES ---
+def load_broadcasts():
+    return load_json(BROADCAST_DATA_FILE, [])
+
+def save_broadcasts(data):
+    save_json(BROADCAST_DATA_FILE, data)
+
+
+async def send_telegram_broadcast(broadcast):
+    """Versendet eine Nachricht via Telegram Bot API (ID-Finder Token)."""
+    cfg = load_json(ID_FINDER_CONFIG_FILE, {})
+    token = cfg.get("bot_token")
+    chat_id = cfg.get("main_group_id")
+    
+    if not token or not chat_id:
+        return False, "Bot Token oder Haupt-Gruppen-ID fehlt in der ID-Finder Config."
+
+    text = broadcast.get("text", "")
+    topic_id = broadcast.get("topic_id")
+    media_path = broadcast.get("media_path")
+    send_mode = broadcast.get("send_mode", "document")
+    
+    import requests
+    url_base = f"https://api.telegram.org/bot{token}/"
+    
+    params = {
+        "chat_id": chat_id,
+        "message_thread_id": topic_id
+    }
+
+    try:
+        if media_path and os.path.exists(media_path):
+            filename = media_path.lower()
+            is_image = any(filename.endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".gif", ".webp"])
+            is_video = any(filename.endswith(ext) for ext in [".mp4", ".mov", ".avi", ".m4v"])
+            
+            if send_mode == "standard":
+                if is_image:
+                    method = "sendPhoto"
+                    media_key = "photo"
+                elif is_video:
+                    method = "sendVideo"
+                    media_key = "video"
+                else:
+                    method = "sendDocument"
+                    media_key = "document"
+            else:
+                method = "sendDocument"
+                media_key = "document"
+            
+            params["caption"] = text
+            with open(media_path, "rb") as f:
+                r = requests.post(url_base + method, data=params, files={media_key: f})
+        else:
+            params["text"] = text
+            r = requests.post(url_base + "sendMessage", data=params)
+        
+        res = r.json()
+        if res.get("ok"):
+            return True, None
+        return False, res.get("description", "Unbekannter API Fehler")
+    except Exception as e:
+        return False, str(e)
+
+# --- TOPIC REGISTRY ---
+def load_topics():
+    return load_json(TOPIC_REGISTRY_FILE, {"1": "Allgemein"})
+
+@app.context_processor
+def inject_topics():
+    return dict(known_topics=load_topics())
+
+@app.route("/broadcast/topics/delete/<topic_id>", methods=["POST"])
+def delete_topic_mapping(topic_id):
+    topics = load_topics()
+    if topic_id in topics:
+        name = topics.pop(topic_id)
+        save_json(TOPIC_REGISTRY_FILE, topics)
+        flash(f"Topic {name} ({topic_id}) wurde gelöscht.", "info")
+    return redirect(url_for("broadcast_manager"))
+
+
+@app.route("/broadcast/topics/save", methods=["POST"])
+def save_topic_mapping():
+    tid = request.form.get("topic_id").strip()
+    name = request.form.get("topic_name").strip()
+    if tid and name:
+        topics = load_topics()
+        topics[tid] = name
+        save_json(TOPIC_REGISTRY_FILE, topics)
+        flash(f"Topic {tid} als {name} gespeichert.", "success")
+    return redirect(url_for("broadcast_manager"))
+
+@app.route("/broadcast")
+def broadcast_manager():
+    broadcasts = load_broadcasts()
+    # Sortieren: Pending zuerst, dann nach Datum
+    broadcasts.sort(key=lambda x: (x["status"] != "pending", x.get("scheduled_at", "")), reverse=False)
+    return render_template("broadcast_manager.html", broadcasts=broadcasts, bot_status=build_bot_status())
+
+@app.route("/broadcast/save", methods=["POST"])
+def save_broadcast():
+    text = request.form.get("text")
+    topic_id = request.form.get("topic_id")
+    scheduled_at = request.form.get("scheduled_at")
+    action = request.form.get("action")
+    
+    media_path = None
+    media_name = None
+    if "media" in request.files:
+        file = request.files["media"]
+        if file and file.filename:
+            filename = secure_filename(f"{uuid.uuid4()}_{file.filename}")
+            media_path = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(media_path)
+            media_name = file.filename
+
+    broadcast = {
+        "id": str(uuid.uuid4()),
+        "text": text,
+        "topic_id": topic_id if topic_id else None,
+        "send_mode": request.form.get("send_mode", "document"),
+        "scheduled_at": scheduled_at if scheduled_at else None,
+        "send_mode": request.form.get("send_mode", "standard"),
+        "media_path": media_path,
+        "media_name": media_name,
+        "status": "pending",
+        "created_at": datetime.now().isoformat()
+    }
+
+    if action == "send_now":
+        # Sofort senden (Synchron für einfaches Feedback)
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        success, error = loop.run_until_complete(send_telegram_broadcast(broadcast))
+        loop.close()
+        
+        if success:
+            broadcast["status"] = "sent"
+            flash("Nachricht wurde erfolgreich versendet!", "success")
+        else:
+            broadcast["status"] = "failed"
+            broadcast["error"] = error
+            flash(f"Fehler beim Senden: {error}", "danger")
+    else:
+        flash("Nachricht wurde für später geplant.", "success")
+
+    broadcasts = load_broadcasts()
+    broadcasts.append(broadcast)
+    save_broadcasts(broadcasts)
+    
+    return redirect(url_for("broadcast_manager"))
+
+@app.route("/broadcast/delete/<broadcast_id>", methods=["POST"])
+def delete_broadcast(broadcast_id):
+    broadcasts = load_broadcasts()
+    new_list = []
+    for b in broadcasts:
+        if b["id"] == broadcast_id:
+            if b.get("media_path") and os.path.exists(b["media_path"]):
+                try: os.remove(b["media_path"])
+                except: pass
+            continue
+        new_list.append(b)
+    save_broadcasts(new_list)
+    flash("Geplante Nachricht gelöscht.", "info")
+    return redirect(url_for("broadcast_manager"))
+
+# --- BACKGROUND BROACAST SCHEDULER ---
+def broadcast_scheduler_loop():
+    log.info("Broadcast-Scheduler gestartet.")
+    while True:
+        try:
+            broadcasts = load_json(BROADCAST_DATA_FILE, [])
+            changed = False
+            now = datetime.now().isoformat()
+            
+            for b in broadcasts:
+                if b["status"] == "pending" and b["scheduled_at"] and b["scheduled_at"] <= now:
+                    log.info(f"Fälliger Broadcast erkannt: {b[id]}")
+                    import asyncio
+                    # Telegram API Call (wir nutzen hier requests direkt im Thread statt asyncio für Einfachheit)
+                    # Da dieser Loop in einem eigenen Thread läuft, ist das OK.
+                    
+                    cfg = load_json(ID_FINDER_CONFIG_FILE, {})
+                    token = cfg.get("bot_token")
+                    chat_id = cfg.get("main_group_id")
+                    
+                    if token and chat_id:
+                        import requests
+                        # Nutze die verbesserte send_telegram_broadcast Logik (via Loop-Aufruf oder Nachbau)
+                        # Hier der Einfachheit halber der Nachbau für den Thread
+                        text = b.get("text", "")
+                        tid = b.get("topic_id")
+                        m_path = b.get("media_path")
+                        s_mode = b.get("send_mode", "document")
+                        
+                        try:
+                            params = {"chat_id": chat_id, "message_thread_id": tid}
+                            if m_path and os.path.exists(m_path):
+                                fname = m_path.lower()
+                                is_img = any(fname.endswith(x) for x in [".jpg", ".jpeg", ".png", ".gif"])
+                                is_vid = any(fname.endswith(x) for x in [".mp4", ".mov", ".avi"])
+                                
+                                if s_mode == "standard":
+                                    method = "sendPhoto" if is_img else ("sendVideo" if is_vid else "sendDocument")
+                                    media_key = "photo" if is_img else ("video" if is_vid else "document")
+                                else:
+                                    method = "sendDocument"
+                                    media_key = "document"
+                                
+                                params["caption"] = text
+                                with open(m_path, "rb") as f:
+                                    r = requests.post(f"https://api.telegram.org/bot{token}/{method}", data=params, files={media_key: f})
+                            else:
+                                params["text"] = text
+                                r = requests.post(f"https://api.telegram.org/bot{token}/sendMessage", data=params)
+                            
+                            res = r.json()
+                            if res.get("ok"): b["status"] = "sent"
+                            else: b["status"] = "failed"; b["error"] = res.get("description")
+                        except Exception as e:
+                            b["status"] = "failed"; b["error"] = str(e)
+                    changed = True
+            
+            if changed:
+                save_json(BROADCAST_DATA_FILE, broadcasts)
+                
+        except Exception as e:
+            log.error(f"Broadcast-Scheduler-Loop Fehler: {e}")
+        time.sleep(30) # Alle 30 Sekunden prüfen
+
+def start_broadcast_scheduler():
+    t = threading.Thread(target=broadcast_scheduler_loop, daemon=True)
+    t.start()
+    return t
+
 @app.route("/")
 def index():
     # ✅ minecraft_route_exists: damit Templates optional anzeigen können
