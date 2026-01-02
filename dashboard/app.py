@@ -1249,6 +1249,7 @@ def _ensure_cached_avatar(user_id: str) -> str:
 
 # --- Telegram Proxy Routes ---
 @app.route("/tg/file/<file_id>")
+@login_required
 def tg_file_proxy(file_id):
     file_id = (file_id or "").strip()
     if not file_id:
@@ -1262,6 +1263,7 @@ def tg_file_proxy(file_id):
 
 
 @app.route("/tg/avatar/<user_id>")
+@login_required
 def tg_avatar_proxy(user_id):
     user_id = (user_id or "").strip()
     if not user_id:
@@ -1516,6 +1518,7 @@ def minecraft_status_page():
 
 
 @app.route("/minecraft/start", methods=["POST"], endpoint="minecraft_status_start")
+@login_required
 def minecraft_status_start():
     ok, msg = start_minecraft_status_bot()
     flash(msg, "success" if ok else "danger")
@@ -1523,6 +1526,7 @@ def minecraft_status_start():
 
 
 @app.route("/minecraft/stop", methods=["POST"], endpoint="minecraft_status_stop")
+@login_required
 def minecraft_status_stop():
     ok, msg = stop_minecraft_status_bot()
     flash(msg, "success" if ok else "danger")
@@ -1530,6 +1534,7 @@ def minecraft_status_stop():
 
 
 @app.route("/minecraft/save", methods=["POST"], endpoint="minecraft_status_save")
+@login_required
 def minecraft_status_save():
     was_running = is_minecraft_status_bot_running()
     if was_running:
@@ -1593,6 +1598,7 @@ def minecraft_status_save():
 
 
 @app.route("/minecraft/reset-message", methods=["POST"], endpoint="minecraft_status_reset_message")
+@login_required
 def minecraft_status_reset_message():
     was_running = is_minecraft_status_bot_running()
     if was_running:
@@ -2330,6 +2336,7 @@ def build_group_activity(days: int = 30, chat_id=None) -> dict:
 
 
 @app.route("/api/id-finder/group-activity")
+@login_required
 def api_id_finder_group_activity():
     days = request.args.get("days") or "30"
     chat_id = request.args.get("chat_id")
@@ -2337,6 +2344,7 @@ def api_id_finder_group_activity():
 
 
 @app.route("/api/id-finder/activity-stats")
+@login_required
 def api_id_finder_activity_stats():
     days = request.args.get("days") or "30"
     chat_id = request.args.get("chat_id")
@@ -2419,6 +2427,7 @@ def inject_topics():
     return dict(known_topics=load_topics())
 
 @app.route("/broadcast/topics/delete/<topic_id>", methods=["POST"])
+@login_required
 def delete_topic_mapping(topic_id):
     topics = load_topics()
     if topic_id in topics:
@@ -2429,6 +2438,7 @@ def delete_topic_mapping(topic_id):
 
 
 @app.route("/broadcast/topics/save", methods=["POST"])
+@login_required
 def save_topic_mapping():
     tid = request.form.get("topic_id").strip()
     name = request.form.get("topic_name").strip()
@@ -2448,6 +2458,7 @@ def broadcast_manager():
     return render_template("broadcast_manager.html", broadcasts=broadcasts, bot_status=build_bot_status())
 
 @app.route("/broadcast/save", methods=["POST"])
+@login_required
 def save_broadcast():
     text = request.form.get("text")
     topic_id = request.form.get("topic_id")
@@ -2502,6 +2513,7 @@ def save_broadcast():
     return redirect(url_for("broadcast_manager"))
 
 @app.route("/broadcast/delete/<broadcast_id>", methods=["POST"])
+@login_required
 def delete_broadcast(broadcast_id):
     broadcasts = load_broadcasts()
     new_list = []
@@ -2620,6 +2632,7 @@ def outfit_bot_dashboard():
 
 
 @app.route("/outfit-bot/start", methods=["POST"])
+@login_required
 def outfit_bot_start_route():
     success, msg = start_outfit_bot()
     flash(msg, "success" if success else "danger")
@@ -2627,6 +2640,7 @@ def outfit_bot_start_route():
 
 
 @app.route("/outfit-bot/stop", methods=["POST"])
+@login_required
 def outfit_bot_stop_route():
     success, msg = stop_outfit_bot()
     flash(msg, "success" if success else "danger")
@@ -2634,6 +2648,7 @@ def outfit_bot_stop_route():
 
 
 @app.route("/outfit-bot/clear-logs", methods=["POST"])
+@login_required
 def outfit_bot_clear_logs():
     try:
         with open(OUTFIT_BOT_LOG, "w", encoding="utf-8") as f:
@@ -2645,6 +2660,7 @@ def outfit_bot_clear_logs():
 
 
 @app.route("/outfit-bot/save-config", methods=["POST"])
+@login_required
 def outfit_bot_save_config():
     was_running = is_outfit_bot_running()
     if was_running:
@@ -2686,6 +2702,7 @@ def outfit_bot_save_config():
 
 
 @app.route("/outfit-bot/start-contest", methods=["POST"])
+@login_required
 def outfit_bot_start_contest():
     if is_outfit_bot_running():
         write_trigger(os.path.join(OUTFIT_BOT_DIR, "command_start_contest.tmp"))
@@ -2696,6 +2713,7 @@ def outfit_bot_start_contest():
 
 
 @app.route("/outfit-bot/announce-winner", methods=["POST"])
+@login_required
 def outfit_bot_announce_winner():
     if is_outfit_bot_running():
         write_trigger(os.path.join(OUTFIT_BOT_DIR, "command_announce_winner.tmp"))
@@ -2706,6 +2724,7 @@ def outfit_bot_announce_winner():
 
 
 @app.route("/outfit-bot/end-duel", methods=["POST"])
+@login_required
 def outfit_bot_end_duel():
     if is_outfit_bot_running():
         try:
@@ -2891,11 +2910,13 @@ def id_finder_dashboard():
 
 
 @app.route("/id-finder/commands")
+@login_required
 def id_finder_commands():
     return render_template("id_finder_commands.html", bot_status=build_bot_status())
 
 
 @app.route("/id-finder/user/<user_id>")
+@login_required
 def id_finder_user_detail(user_id):
     uid = str(user_id).strip()
     if not uid:
@@ -3074,6 +3095,7 @@ def id_finder_user_detail(user_id):
 
 
 @app.route("/id-finder/api/users")
+@login_required
 def id_finder_api_users():
     users = load_user_registry_list()
     q = (request.args.get("q") or "").strip()
@@ -3082,6 +3104,7 @@ def id_finder_api_users():
 
 
 @app.route("/id-finder/api/users/<user_id>/messages")
+@login_required
 def id_finder_api_user_messages(user_id):
     uid = str(user_id).strip()
     limit = _safe_int(request.args.get("limit"), 200) or 200
@@ -3098,6 +3121,7 @@ def id_finder_api_user_messages(user_id):
 
 # ✅ REWORK: Analytics liefert zusätzlich `stats` (für Template) + bleibt kompatibel
 @app.route("/id-finder/analytics", methods=["GET"])
+@login_required
 def id_finder_analytics():
     users = load_user_registry_list()
 
@@ -3182,6 +3206,7 @@ def id_finder_analytics():
 
 
 @app.route("/id-finder/admin-panel")
+@login_required
 def id_finder_admin_panel():
     admins = load_json(ADMINS_FILE, {})
     user_registry = load_user_registry_list()
@@ -3198,6 +3223,7 @@ def id_finder_admin_panel():
 
 
 @app.route("/id-finder/user-registry/delete", methods=["POST"])
+@login_required
 def id_finder_user_registry_delete():
     uid = (request.form.get("user_id") or "").strip()
     if not uid:
@@ -3243,6 +3269,7 @@ def id_finder_user_registry_delete():
 
 
 @app.route("/id-finder/user/delete-hierarchy", methods=["POST"])
+@login_required
 def id_finder_user_delete_hierarchy():
     uid = (request.form.get("user_id") or "").strip()
     if not uid:
@@ -3273,6 +3300,7 @@ def id_finder_user_delete_hierarchy():
 
 
 @app.route("/id-finder/add-admin", methods=["POST"])
+@login_required
 def id_finder_add_admin():
     admin_id = (request.form.get("admin_id") or "").strip()
     admin_name = (request.form.get("admin_name") or "").strip()
@@ -3295,6 +3323,7 @@ def id_finder_add_admin():
 
 
 @app.route("/id-finder/delete-admin", methods=["POST"])
+@login_required
 def id_finder_delete_admin():
     admin_id = request.form.get("admin_id")
     admins = load_json(ADMINS_FILE, {})
@@ -3310,6 +3339,7 @@ def id_finder_delete_admin():
 
 
 @app.route("/id-finder/update-admin-permissions", methods=["POST"])
+@login_required
 def id_finder_update_admin_permissions():
     admin_id = request.form.get("admin_id")
     admins = load_json(ADMINS_FILE, {})
@@ -3504,6 +3534,7 @@ def umfrage_settings():
 
 # --- SEND RANDOM (Trigger-Dateien statt direkt Telegram senden) ---
 @app.route("/quiz/send-random", methods=["POST"])
+@login_required
 def send_random_quiz_route():
     if not is_quiz_bot_running():
         flash("Quiz Bot läuft nicht! Bitte starten.", "danger")
@@ -3519,11 +3550,13 @@ def send_random_quiz_route():
 
 
 @app.route("/send_quizfrage", methods=["POST"])
+@login_required
 def legacy_send_quizfrage():
     return send_random_quiz_route()
 
 
 @app.route("/umfrage/send-random", methods=["POST"])
+@login_required
 def send_random_poll_route():
     if not is_umfrage_bot_running():
         flash("Umfrage Bot läuft nicht! Bitte starten.", "danger")
@@ -3668,4 +3701,3 @@ if __name__ == "__main__":
     migrate_admins_permissions()
     start_scheduler_thread()
     app.run(host="0.0.0.0", port=9002, debug=False)
-
