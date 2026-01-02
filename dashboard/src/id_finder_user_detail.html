@@ -109,6 +109,12 @@
             <option value="media" {% if filter_type == 'media' %}selected{% endif %}>Nur Media</option>
           </select>
         </div>
+        <div class="col-md-3">
+          <div class="form-check mt-md-4 mt-2">
+            <input class="form-check-input" type="checkbox" name="liked_only" value="1" id="likedOnlyCheck" {% if liked_only %}checked{% endif %}>
+            <label class="form-check-label" for="likedOnlyCheck">❤️ Nur gelikte</label>
+          </div>
+        </div>
         <div class="col-md-3 d-grid">
           <button class="btn btn-outline-secondary" type="submit">🔎 Anwenden</button>
         </div>
@@ -201,13 +207,13 @@
           <div class="d-flex gap-2">
             {% if has_prev %}
               <a class="btn btn-outline-secondary btn-sm"
-                 href="{{ url_for('id_finder_user_detail', user_id=user.id, q=q or '', type=filter_type or 'all', page=(page-1)) }}">
+                 href="{{ url_for('id_finder_user_detail', user_id=user.id, q=q or '', type=filter_type or 'all', liked_only=(1 if liked_only else 0), page=(page-1)) }}">
                 ← Vorherige
               </a>
             {% endif %}
             {% if has_next %}
               <a class="btn btn-outline-secondary btn-sm"
-                 href="{{ url_for('id_finder_user_detail', user_id=user.id, q=q or '', type=filter_type or 'all', page=(page+1)) }}">
+                 href="{{ url_for('id_finder_user_detail', user_id=user.id, q=q or '', type=filter_type or 'all', liked_only=(1 if liked_only else 0), page=(page+1)) }}">
                 Nächste →
               </a>
             {% endif %}

@@ -492,7 +492,7 @@ function normalizePayload(p) {
         name: r.full_name ?? r.name ?? "",
         messages: Number(r.messages ?? 0),
         media: Number(r.media ?? 0),
-        likes: Number(r.likes_given ?? r.reactions ?? r.likes ?? 0),
+        likes: Number(r.likes_received ?? r.reactions ?? 0), likes_given: Number(r.likes_given ?? 0),
         avatar_url: r.avatar_url ?? "",  // optional (wenn Backend es liefert)
         last_seen: r.last_seen ?? r.ts ?? ""
       };
@@ -531,7 +531,7 @@ function setKpis(norm) {
   document.getElementById("kpiActiveUsers").textContent = fmtNumber(k.active_users);
   document.getElementById("kpiBusiestDay").textContent = k.busiest_day ? fmtDateShort(k.busiest_day) : "—";
   document.getElementById("kpiMediaShared").textContent = fmtNumber(k.media_shared);
-  document.getElementById("kpiTotalReactions").textContent = fmtNumber(k.total_reactions);
+  document.getElementById("kpiTotalReactions").textContent = fmtNumber(k.total_reactions_received || k.totalReactions || 0);
   document.getElementById("kpiTopContributor").textContent = displayUser(k.top_contributor);
   document.getElementById("kpiMostLikedUser").textContent = displayUser(k.most_liked_user);
   document.getElementById("kpiTopChat").textContent = displayTopChat(k.top_chat);

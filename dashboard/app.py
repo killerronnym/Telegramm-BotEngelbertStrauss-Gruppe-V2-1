@@ -2118,53 +2118,32 @@ def _extract_user_id_from_msg(m: dict):
     return ""
 
 
-def build_group_activity(days: int = 30, chat_id=None) -> dict:
-    log.info("build_group_activity called with days=%s, chat_id=%s", days, chat_id)
-    days = int(days) if str(days).isdigit() else 30
-    if days < 1:
-        days = 1
-    if days > 365:
-        days = 365
 
-    chat_id_raw = (str(chat_id).strip() if chat_id is not None else "")
-    chat_id_filter = None
-    if chat_id_raw != "":
-        chat_id_filter = chat_id_raw
+def build_group_activity(days: int = 30, chat_id=None) -> dict:
+    import json, os, logging
+    from collections import defaultdict
+    from datetime import timedelta
+
+    lg = logging.getLogger(__name__)
+
+    days = int(days) if str(days).isdigit() else 30
+    chat_id_filter = str(chat_id).strip() if chat_id else None
 
     now = _now()
-    cutoff = now - timedelta(days=days)
-    cutoff_naive = cutoff.replace(tzinfo=None) if cutoff.tzinfo is not None else cutoff
+    cutoff_naive = (now - timedelta(days=days)).replace(tzinfo=None)
 
-    start_date = (now - timedelta(days=days - 1)).date()
-    labels = [(start_date + timedelta(days=i)).isoformat() for i in range(days)]
+    labels = [(now.date() - timedelta(days=i)).isoformat() for i in range(days)][::-1]
 
     per_hour = [0] * 24
     per_weekday = [0] * 7
     timeline_map = defaultdict(int)
-
-    per_user = defaultdict(lambda: {
-        "user_id": "",
-        "username": "",
-        "full_name": "",
-        "messages": 0,
-        "media": 0,
-        "likes_received": 0,
-        "likes_given": 0,
-        "last_seen": None,
-        "daily": defaultdict(int),
-    })
-
+    per_user = defaultdict(lambda: {'user_id': '', 'username': '', 'full_name': '', 'messages': 0, 'media': 0, 'likes_received': 0, 'likes_given': 0, 'last_seen': None, 'daily': defaultdict(int)})
     per_chat = defaultdict(int)
-    total = 0
-    media_shared = 0
-    total_reactions_received = 0
-    total_reactions_given = 0
+    total, media_shared, total_reactions_received, total_reactions_given = 0, 0, 0, 0
 
-        # --- Parse reactions_log.jsonl for likes_given & received ---
-    REACTIONS_LOG_FILE = os.path.join(DATA_DIR, "reactions_log.jsonl")
-    MESSAGE_INDEX_FILE = os.path.join(DATA_DIR, "message_index.jsonl")
-    
-    # 1. Map message_id -> author_id
+    REACTIONS_LOG_FILE = os.path.join(DATA_DIR, 'reactions_log.jsonl')
+    MESSAGE_INDEX_FILE = os.path.join(DATA_DIR, 'message_index.jsonl')
+
     mid_to_author = {}
     if os.path.exists(MESSAGE_INDEX_FILE):
         try:
@@ -2172,254 +2151,88 @@ def build_group_activity(days: int = 30, chat_id=None) -> dict:
                 for line in f:
                     try:
                         obj = json.loads(line)
-                        mid = obj.get('message_id')
-                        auid = obj.get('from_user_id')
-                        if mid and auid: mid_to_author[mid] = str(auid)
+                        c, m, a = str(obj.get('chat_id','')).strip(), str(obj.get('message_id','')).strip(), str(obj.get('from_user_id','')).strip()
+                        if c and m and a: mid_to_author[(c, m)] = a
                     except: continue
-        except: pass
+        except Exception as e:
+            lg.error('Failed reading message index: %s', e)
 
     if os.path.exists(REACTIONS_LOG_FILE):
-        r_lines = _tail_text_file(REACTIONS_LOG_FILE, max_lines=50000)
-        for rl in r_lines:
-            rl = (rl or "").strip()
-            if not rl: continue
-            try:
-                rj = json.loads(rl)
-                rdt = _parse_dt(rj.get("ts"))
-                if not rdt: continue
-                rdt_naive = rdt.replace(tzinfo=None) if rdt.tzinfo is not None else rdt
-                if rdt_naive < cutoff_naive: continue
-                
-                if chat_id_filter:
-                    rcid = rj.get("chat_id")
-                    if rcid is None or str(rcid) != chat_id_filter:
-                        continue
-
-                new_r = rj.get("new_reaction")
-                if new_r and isinstance(new_r, list) and len(new_r) > 0 and str(new_r[0]).strip() != '()':
-                    # GIVEN
-                    rid = str(rj.get("reactor_user_id", "")).strip()
-                    if rid:
-                        per_user[rid]["user_id"] = rid
-                        per_user[rid]["likes_given"] += 1
-                        total_reactions_given += 1
-                        if not per_user[rid].get("username"):
-                            per_user[rid]["username"] = rj.get("reactor_username", "")
-                        if not per_user[rid].get("full_name"):
-                            per_user[rid]["full_name"] = rj.get("reactor_full_name", "")
-                    
-                    # RECEIVED
-                    mid = rj.get("message_id")
-                    author_uid = mid_to_author.get(mid)
-                    if author_uid:
-                        per_user[author_uid]["likes_received"] += 1
+        re_state = {}
+        try:
+            r_lines = _tail_text_file(REACTIONS_LOG_FILE, max_lines=50000)
+            for rl in r_lines:
+                try:
+                    rj = json.loads(rl)
+                    rdt = _parse_dt(rj.get('ts'))
+                    if not rdt or rdt.replace(tzinfo=None) < cutoff_naive: continue
+                    c, m, r = str(rj.get('chat_id','')).strip(), str(rj.get('message_id','')).strip(), str(rj.get('reactor_user_id','')).strip()
+                    if chat_id_filter and c != chat_id_filter: continue
+                    new_r = rj.get('new_reaction')
+                    has_r = bool(new_r and isinstance(new_r, list) and len(new_r) > 0 and '()' not in str(new_r[0]))
+                    re_state[(c, m, r)] = 1 if has_r else 0
+                except: continue
+            for (c, m, r), val in re_state.items():
+                if val == 1:
+                    per_user[r]['likes_given'] += 1
+                    total_reactions_given += 1
+                    auth = mid_to_author.get((c, m))
+                    if auth:
+                        per_user[auth]['likes_received'] += 1
                         total_reactions_received += 1
-            except: continue
-    # (total initialized at start)
+        except Exception as e:
+            lg.error('Error processing reactions log: %s', e)
 
     reg_list = load_user_registry_list()
-    reg_map = {str(u.get("id")): u for u in reg_list if u.get("id")}
-
-    MAX_LINES_PER_FILE = 12000
+    reg_map = {str(u.get('id')): u for u in (reg_list or []) if u.get('id')}
 
     for fp in _iter_message_files():
-        lines = _tail_text_file(fp, max_lines=MAX_LINES_PER_FILE)
-        for line in lines:
-            line = (line or "").strip()
-            if not line:
-                continue
+        lines_m = _tail_text_file(fp, max_lines=12000)
+        for line in lines_m:
             try:
                 m = json.loads(line)
-            except Exception:
-                continue
+                dt = _parse_dt(m.get('ts'))
+                if not dt or dt.replace(tzinfo=None) < cutoff_naive: continue
+                cid = str(m.get('chat_id', '')).strip()
+                if chat_id_filter and cid != chat_id_filter: continue
+                au = _extract_user_id_from_msg(m)
+                if not au: continue
+                total += 1
+                dt_n = dt.replace(tzinfo=None)
+                try:
+                    per_hour[int(dt_n.hour)] += 1
+                    per_weekday[int(dt_n.weekday())] += 1
+                except: pass
+                dkey = dt_n.date().isoformat()
+                if dkey in labels: timeline_map[dkey] += 1
+                if cid: per_chat[cid] += 1
+                u = per_user[au]
+                u['user_id'] = au
+                u['messages'] += 1
+                has_m = bool(m.get('has_media') or m.get('media'))
+                if has_m:
+                    media_shared += 1
+                    u['media'] += 1
+                if au in reg_map:
+                    u['username'] = u.get('username') or reg_map[au].get('username', '')
+                    u['full_name'] = u.get('full_name') or reg_map[au].get('full_name', '')
+                if u['last_seen'] is None or dt_n > u['last_seen']: u['last_seen'] = dt_n
+                if dkey in labels: u['daily'][dkey] += 1
+            except: continue
 
-            dt = _parse_dt(m.get("ts"))
-            if not dt:
-                continue
-            try:
-                dt_naive = dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
-            except Exception:
-                dt_naive = dt
-
-            if dt_naive < cutoff_naive:
-                continue
-
-            cid = m.get("chat_id")
-            if chat_id_filter is not None:
-                if cid is None:
-                    continue
-                if str(cid) != chat_id_filter:
-                    continue
-
-            author_uid = _extract_user_id_from_msg(m)
-            if not author_uid:
-                continue
-
-            total += 1
-
-            try:
-                per_hour[int(dt_naive.hour)] += 1
-            except Exception:
-                pass
-            try:
-                per_weekday[int(dt_naive.weekday())] += 1
-            except Exception:
-                pass
-
-            dkey = dt_naive.date().isoformat()
-            if dkey in labels:
-                timeline_map[dkey] += 1
-
-            if cid is not None:
-                per_chat[str(cid)] += 1
-
-            has_media = bool(m.get("has_media"))
-            if has_media:
-                media_shared += 1
-
-            likes_received = 0 # Handled via reactions_log for better accuracy
-            # Handled via log
-
-# (likes_given now handled via reactions_log.jsonl)
-
-            u = per_user[author_uid]
-            u["user_id"] = author_uid
-            u["messages"] += 1
-            u["media"] += 1 if has_media else 0
-            u["likes_received"] += likes_received
-
-            username = m.get("username") or ""
-            full_name = m.get("full_name") or m.get("name") or ""
-
-            if author_uid in reg_map:
-                if not username:
-                    username = reg_map[author_uid].get("username", "") or ""
-                if not full_name:
-                    full_name = reg_map[author_uid].get("full_name", "") or ""
-
-            u["username"] = username
-            u["full_name"] = full_name
-
-            prev = u["last_seen"]
-            if prev is None or dt_naive > prev:
-                u["last_seen"] = dt_naive
-
-            if dkey in labels:
-                u["daily"][dkey] += 1
-
-    total_arr = [int(timeline_map.get(d, 0)) for d in labels]
-
-    busiest_day = None
-    if timeline_map:
-        busiest_day = max(timeline_map.items(), key=lambda x: x[1])[0]
-
-    leaderboard_list = sorted(per_user.values(), key=lambda x: x.get("messages", 0), reverse=True)
+    l_list = sorted(per_user.values(), key=lambda x: x.get('messages', 0), reverse=True)
     leaderboard = []
     user_series = {}
+    for idx, u in enumerate(l_list[:50], 1):
+        uid = u['user_id']
+        leaderboard.append({'rank': idx, 'user_id': uid, 'username': u.get('username', ''), 'name': u.get('full_name', ''), 'messages': u['messages'], 'media': u['media'], 'likes_received': u['likes_received'], 'likes_given': u['likes_given'], 'reactions': u['likes_received'], 'avatar_url': f'/tg/avatar/{uid}'})
+        user_series[uid] = [int(u['daily'].get(d, 0)) for d in labels]
 
-    for idx, u in enumerate(leaderboard_list[:20], start=1):
-        uid = u["user_id"]
-        avatar_url = reg_map.get(uid, {}).get("avatar_url") or f"/tg/avatar/{uid}"
-        leaderboard.append({
-            "rank": idx,
-            "user_id": uid,
-            "username": u.get("username", ""),
-            "name": u.get("full_name", ""),
-            "messages": int(u.get("messages", 0)),
-            "media": int(u.get("media", 0)),
-            "likes_received": int(u.get("likes_received", 0)),
-            "likes_given": int(u.get("likes_given", 0)),
-            "avatar_url": avatar_url,
-        })
-        user_series[uid] = [int(u["daily"].get(d, 0)) for d in labels]
+    top_contrib = (leaderboard[0]['name'] or leaderboard[0]['user_id']) if leaderboard else '—'
+    most_liked = max(leaderboard, key=lambda x: x['likes_received'])['name'] if leaderboard else '—'
+    top_c_id = max(per_chat.items(), key=lambda x: x[1])[0] if per_chat else '—'
 
-    top_contributor = None
-    most_liked_user = None
-    if leaderboard:
-        top_contributor = leaderboard[0].get("name") or (f"@{leaderboard[0].get('username')}" if leaderboard[0].get("username") else leaderboard[0].get("user_id"))
-        most = max(leaderboard, key=lambda x: x.get("likes_received", 0))
-        most_liked_user = most.get("name") or (f"@{most.get('username')}" if most.get("username") else most.get("user_id"))
-
-    top_chat = None
-    if per_chat:
-        cid, cnt = max(per_chat.items(), key=lambda x: x[1])
-        top_chat = {"chat_id": str(cid), "messages": int(cnt)}
-
-    peak_hour = max(range(24), key=lambda h: per_hour[h]) if total > 0 else None
-    peak_weekday = max(range(7), key=lambda d: per_weekday[d]) if total > 0 else None
-
-    recently_active = []
-    recent_sorted = sorted(per_user.values(), key=lambda x: x["last_seen"] or datetime.min, reverse=True)[:10]
-    for u in recent_sorted:
-        dt_last = u["last_seen"]
-        uid = u["user_id"]
-        recently_active.append({
-            "user_id": uid,
-            "username": u.get("username", ""),
-            "name": u.get("full_name", ""),
-            "last_seen": dt_last.isoformat() if isinstance(dt_last, datetime) else None,
-            "avatar_url": reg_map.get(uid, {}).get("avatar_url") or f"/tg/avatar/{uid}",
-        })
-
-    meta = {
-        "days": days,
-        "chat_id": chat_id_filter,
-        "total_messages": int(total),
-        "active_users": int(len(per_user)),
-        "media_shared": int(media_shared),
-        "total_reactions_received": int(total_reactions_received),
-        "total_reactions_given": int(total_reactions_given),
-        "peak_hour": peak_hour,
-        "peak_weekday": peak_weekday,
-        "busiest_day": busiest_day,
-        "top_contributor": top_contributor,
-        "most_liked_user": most_liked_user,
-        "top_chat": top_chat,
-    }
-
-    meta_compat = {
-        "days": meta["days"],
-        "chat_id": meta["chat_id"],
-        "totalMessages": meta["total_messages"],
-        "activeUsers": meta["active_users"],
-        "mediaShared": meta["media_shared"],
-        "totalReactions": meta["total_reactions_received"],
-        "totalReactionsGiven": meta["total_reactions_given"],
-        "busiestDay": meta["busiest_day"],
-        "topContributor": meta["top_contributor"],
-        "mostLikedUser": meta["most_liked_user"],
-        "topChat": meta["top_chat"],
-    }
-
-    timeline_list = [{"date": d, "count": int(timeline_map.get(d, 0))} for d in labels]
-
-    kpis = {
-        "total_messages": int(total),
-        "active_users": int(len(per_user)),
-        "busiest_day": busiest_day,
-        "media_shared": int(media_shared),
-        "total_reactions_received": int(total_reactions_received),
-        "total_reactions_given": int(total_reactions_given),
-        "top_contributor": top_contributor or "—",
-        "most_liked_user": most_liked_user or "—",
-        "top_chat": top_chat or "—",
-    }
-
-    return {
-        "ok": True,
-        "meta": meta_compat,
-        "per_hour": per_hour,
-        "per_weekday": per_weekday,
-        "timeline": timeline_list,
-        "leaderboard": leaderboard,
-        "kpis": kpis,
-        "timeline2": {"labels": labels, "total": total_arr},
-        "timeline_series": {"labels": labels, "total": total_arr},
-        "busiest_hours": per_hour,
-        "busiest_days": per_weekday,
-        "user_series": user_series,
-        "recently_active": recently_active,
-    }
+    return {'ok': True, 'meta': {'days': days, 'totalMessages': total, 'activeUsers': len(per_user), 'totalReactions': total_reactions_received, 'totalReactionsGiven': total_reactions_given}, 'per_hour': per_hour, 'per_weekday': per_weekday, 'timeline': [{'date': d, 'count': timeline_map[d]} for d in labels], 'leaderboard': leaderboard, 'user_series': user_series, 'kpis': {'total_messages': total, 'active_users': len(per_user), 'total_reactions_received': total_reactions_received, 'total_reactions_given': total_reactions_given, 'top_contributor': top_contrib, 'most_liked_user': most_liked, 'top_chat': top_c_id}}
 
 
 @app.route("/api/id-finder/group-activity")
