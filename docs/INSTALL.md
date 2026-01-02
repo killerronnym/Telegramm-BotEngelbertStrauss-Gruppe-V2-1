@@ -1,25 +1,24 @@
-# Installationsanleitung für das Telegram Bot Control Panel
+# Installationsanleitung: Telegram Bot Control Panel
 
-Diese Anleitung führt dich durch die Schritte zur Einrichtung und zum Starten der Flask-Webanwendung und der integrierten Telegram-Bots.
+Diese Anleitung führt dich durch die Einrichtung des Bot-Ökosystems, inklusive NexusMod (Moderation), Minecraft Status, Einladungs-Bot und Outfit-Bot.
 
-## Voraussetzungen
+## 📋 Voraussetzungen
 
-*   **Python 3.11+**: Die Anwendung basiert auf Python.
-*   **Git**: Zum Klonen des Repositorys.
-*   **Telegram Bot**: Du benötigst mindestens einen Telegram Bot, den du bei [@BotFather](https://t.me/BotFather) erstellen musst. Für die volle Funktionalität (ID-Finder, Einladungs-Bot, Outfit-Bot) könnten bis zu drei separate Bots erforderlich sein, oder du nutzt einen Bot für mehrere Zwecke.
-    *   Notiere dir den **Bot Token** und mache diesen Bot zum Administrator deiner Gruppe(n), damit er Nachrichten löschen, Mitglieder bannen/einschränken und Einladungslinks erstellen kann.
-*   **Telegram Gruppen Chat ID**: Du benötigst die Chat ID deiner Haupt-Telegram-Gruppe. Diese beginnt oft mit `-100` gefolgt von vielen Ziffern (z.B. `-1001234567890`). Nutze den `/ChatID` Befehl des ID-Finder Bots, um diese zu erhalten.
+*   **Python 3.9+**: Die Basis für alle Bots und das Dashboard.
+*   **Git**: Zum Verwalten des Quellcodes.
+*   **Telegram Bot(s)**: Erstelle deine Bots über [@BotFather](https://t.me/BotFather).
+    *   **Wichtig:** Der Bot benötigt Admin-Rechte in der Gruppe ("Delete Messages", "Ban Users", "Invite Users via Link").
+*   **Minecraft Server (Java)**: Für das Monitoring muss der Server Java-basiert sein und Anfragen (TCP-Port 25565 standardmäßig) erlauben.
 
-## Einrichtung des Projekts
+## 🚀 Einrichtung des Projekts
 
 1.  **Repository klonen:**
     ```bash
-    git clone [DEIN_REPO_URL_HIER]
-    cd telegramm-bot-es # Oder den Namen deines geklonten Ordners
+    git clone [DEIN_REPO_URL]
+    cd telegramm-bot-es
     ```
 
-2.  **Virtuelle Umgebung erstellen und aktivieren:**
-    Es wird dringend empfohlen, eine virtuelle Umgebung zu verwenden.
+2.  **Virtuelle Umgebung (Empfohlen):**
     ```bash
     python3 -m venv .venv
     source .venv/bin/activate
@@ -30,64 +29,51 @@ Diese Anleitung führt dich durch die Schritte zur Einrichtung und zum Starten d
     pip install -r requirements.txt
     ```
 
-## Konfiguration über die Web-Oberfläche
+## 🌐 Dashboard & Konfiguration
 
-Die Konfiguration der Bots erfolgt bequem über die Flask-Weboberfläche. Die Einstellungen werden in JSON-Dateien im Projektverzeichnis gespeichert.
+Das Dashboard ist die zentrale Steuerzentrale (Port 9002).
 
-### 1. Flask-Anwendung starten
-
-Starte die Flask-Anwendung. Dies versucht auch, die Bots im Hintergrund zu starten (sofern sie aktiviert sind).
+### 1. Dashboard starten
 
 ```bash
 ./devserver.sh
+# ODER manuell:
+python3 app.py
 ```
+Öffne `http://localhost:9002` in deinem Browser.
 
-*   Die Anwendung sollte unter `http://localhost:8080` erreichbar sein.
-*   **Wichtiger Hinweis:** Die Flask-Anwendung läuft jetzt mit `use_reloader=False`, um Konflikte mit den Telegram-Bots zu vermeiden. Das bedeutet, dass Änderungen am Code einen **manuellen Neustart** des `./devserver.sh`-Skripts erfordern, damit sie wirksam werden.
-*   Beachte die Terminal-Ausgabe auf Fehler.
+### 2. Minecraft Status Bot konfigurieren
+Navigiere zu `http://localhost:9002/minecraft`:
+*   **Interne IP/Port:** Die Adresse, die der Bot nutzt, um den Server zu pingen (z.B. lokale IP im Netzwerk).
+*   **Anzeige Host/Port:** Die Adresse, die im Telegram-Chat angezeigt wird (z.B. DuckDNS-Adresse).
+*   **Topic-ID:** Falls deine Gruppe ein Forum ist, gib hier die ID des "Minecraft"-Themas ein.
+*   **Update-Intervall:** Zeit in Sekunden zwischen den Status-Updates.
+*   **Rotation:** Der Bot rotiert die Nachricht alle 23h automatisch (Löschen + Neu-Senden), um Editierfehler zu vermeiden.
 
-### 2. ID-Finder & Moderations-Bot (NexusMod Bot) konfigurieren
+### 3. NexusMod (ID-Finder & Moderation) konfigurieren
+Navigiere zu `http://localhost:9002/id-finder`:
+*   Gib den Bot-Token ein.
+*   Setze die **Haupt-Gruppen-ID** (erhältlich via `/chatid` in der Gruppe).
+*   **Admin-Gruppe einrichten:** Erstelle eine private Gruppe mit dem Bot und sende dort `/setadmingroup`. Wichtige Moderations-Logs erscheinen nun dort.
 
-Navigiere im Browser zum ID-Finder Dashboard: `http://localhost:8080/id-finder`
+### 4. Einladungs-Bot & Datenschutz
+Navigiere zu `http://localhost:9002/bot-settings`:
+*   Aktiviere den Bot und gib den Token ein.
+*   Nutzer können nun `/letsgo` im DM des Bots nutzen.
+*   Neu: Nutzer können via `/datenschutz` Informationen zur Datenverarbeitung abrufen.
 
-*   **Bot Token**: Gib hier den **Bot Token deines NexusMod Bots** ein.
-*   **Haupt-Gruppen-ID**: Gib hier die Chat ID deiner Haupt-Telegram-Gruppe ein (z.B. `-1001234567890`).
-*   **Log-Topic-ID (Optional)**: Gib hier die Topic-ID ein, falls Bot-Bestätigungen und Logs in ein spezifisches Topic innerhalb deiner Hauptgruppe gesendet werden sollen. Lass es leer, wenn der Bot direkt im Kontext antworten soll.
-*   Klicke auf **"Nur Speichern"**.
-*   Nach dem Speichern: Klicke auf **"Start"**, um den Bot zu starten. Überprüfe die Logs auf dieser Seite auf Fehlermeldungen.
+## 🛡️ Stabilität & Sicherheit
 
-### 3. Admin-Gruppe des NexusMod Bots einrichten (WICHTIG!)
+*   **Globaler Lock:** Die Minecraft-Bridge nutzt einen `asyncio.Lock`. Dies verhindert, dass bei langsamen Internetverbindungen oder Timeouts doppelte Nachrichten gepostet werden.
+*   **Daten-Registry:** Alle Nutzerdaten werden lokal im Ordner `data/` in JSON/JSONL-Dateien gespeichert. Das System erstellt diesen Ordner beim ersten Start automatisch.
+*   **Prozess-Kontrolle:** Starte und stoppe die Bots ausschließlich über das Web-Dashboard, um sicherzustellen, dass keine Instanzen doppelt laufen.
 
-Nachdem der NexusMod Bot gestartet ist:
+## 🛠️ Fehlerbehebung
 
-1.  **Erstelle eine neue PRIVATE Telegram-Gruppe** (nur für dich und den Bot).
-2.  Füge deinen **NexusMod Bot** zu dieser Gruppe hinzu und mache ihn zum **Administrator**.
-3.  Sende in dieser **privaten Admin-Gruppe** den Befehl: `/setadmingroup`
-    *   Der Bot wird bestätigen, dass dieser Chat als Admin-Gruppe festgelegt wurde. Von nun an können wichtige Bot-Konfigurationen und Rollen-Management-Befehle nur hier ausgeführt werden.
+*   **Doppelte Nachrichten:** Stelle sicher, dass nur ein Bot-Prozess läuft. Überprüfe dies im Dashboard unter "Bot Status".
+*   **Nachricht wird nicht editiert:** Das ist normal, wenn die Nachricht älter als 48h ist. Der Bot erkennt dies automatisch, löscht die alte Nachricht und erstellt eine neue.
+*   **Syntaxfehler:** Falls du Code manuell änderst, prüfe ihn mit `python -m py_compile [dateiname.py]`.
 
-### 4. Weitere Bots konfigurieren (Einladungs-Bot, Outfit-Bot)
+---
 
-Navigiere zu den Dashboards der anderen Bots über die Hauptseite (`http://localhost:8080/`). Dort findest du die jeweiligen Einstellungsseiten und kannst sie wie gewohnt konfigurieren.
-
-*   **Einladungs-Bot (`/bot-settings`):**
-    *   **"Bot aktivieren"**: Aktiviere diesen Haken.
-    *   **"Bot Token"**: Gib hier den **Bot Token deines EINLADUNGS-BOTS** ein.
-    *   **"Haupt-Chat ID der Gruppe"**: Gib hier die Chat ID deiner Haupt-Telegram-Gruppe ein.
-    *   **"Topic-ID (Optional)"**: ID des Themas für Steckbriefe.
-    *   **"Gültigkeit des Einladungslinks (Minuten)"**: Lege die Dauer fest.
-    *   **"Steckbrief für bestehende Mitglieder erneut posten"**: Haken setzen, wenn gewünscht.
-*   **Outfit-Bot (`/outfit-bot/dashboard`):**
-    *   **"Bot Token"**: Gib hier den **Bot Token deines OUTFIT-BOTS** ein.
-    *   **"Gruppen-Chat-ID"**: Gib hier die Chat ID deiner Haupt-Telegram-Gruppe ein.
-    *   **"Topic ID (Optional)"**: ID des Themas für Outfit-Posts.
-    *   Konfiguriere `Automatische Posts`, `Start-Uhrzeit`, `Gewinner-Uhrzeit` nach deinen Wünschen.
-    *   **"Admin User IDs"**: Gib die Telegram User IDs der Administratoren an, die Admin-Befehle nutzen dürfen (kommagetrennt).
-
-Speichere die Einstellungen auf den jeweiligen Seiten und starte die Bots bei Bedarf.
-
-## Wichtige Hinweise
-
-*   **Telegram Bot Administratorrechte**: Stelle sicher, dass die Bots in den relevanten Gruppen die notwendigen Admin-Rechte besitzen (Nachrichten löschen, Mitglieder bannen/einschränken, etc.).
-*   **Einzige Bot-Instanz**: Starte die Bots IMMER ausschließlich über die Flask-Webanwendung. Manuelles Starten der Bot-Skripte aus dem Terminal führt zu Konflikten.
-*   **Bot Tokens**: Verwende für jeden Bot (falls du mehrere nutzt) **unterschiedliche Bot Tokens**.
-*   **Flask-App beenden**: Um die Flask-App und damit alle Bots sauber zu beenden, drücke `Strg + C` im Terminal, in dem `devserver.sh` läuft.
+**Wichtiger Hinweis:** Nach jeder Code-Änderung muss das Dashboard (`devserver.sh`) manuell neu gestartet werden.
