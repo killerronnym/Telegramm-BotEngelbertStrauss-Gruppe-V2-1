@@ -4,8 +4,21 @@ Willkommen zu deinem persönlichen Telegramm-Bot-Control-Panel! Dieses Projekt b
 
 ## ✨ Neuheiten & Highlights (Aktuelles Update)
 
-In den letzten Updates wurden signifikante Verbesserungen an der Stabilität und Funktionalität vorgenommen:
+In den letzten Updates wurden signifikante Verbesserungen an der Stabilität, Sicherheit und Benutzererfahrung vorgenommen:
 
+*   **🔐 Sicheres Login-System:**
+    *   **Benutzer-Authentifizierung:** Zugriff auf das Dashboard ist nur noch mit gültigen Zugangsdaten möglich.
+    *   **Passwort-Hashing:** Passwörter werden sicher mit modernsten Algorithmen (PBKDF2/scrypt) verschlüsselt gespeichert.
+    *   **Session-Management:** Sichere Sitzungsverwaltung verhindert unbefugten Zugriff.
+    *   **Dark Mode Login:** Ein augenfreundliches, komplett dunkles Login-Interface.
+*   **👥 Erweiterte Benutzerverwaltung:**
+    *   **Rollenbasiert:** Unterscheidung zwischen **Admins** (voller Zugriff) und **Usern** (eingeschränkter Zugriff).
+    *   **Zentrale Steuerung:** Direkt auf dem Dashboard können neue Benutzer angelegt, bearbeitet oder gelöscht werden.
+    *   **Profil-Bearbeitung:** Benutzernamen, Passwörter und Rollen können jederzeit über ein intuitives Modal-Fenster geändert werden.
+*   **🎨 Modernisiertes Dashboard-Design:**
+    *   **Kachel-Interface:** Alle Funktionen sind über übersichtliche Kacheln erreichbar.
+    *   **Navbar-Frei:** Die obere Navigationsleiste wurde entfernt, um mehr Platz für die Bot-Steuerung zu schaffen.
+    *   **Status-Infos:** Der aktuell angemeldete Benutzer und seine Rolle werden dezent auf der Startseite angezeigt.
 *   **🛡️ Minecraft Status Pro:** 
     *   **Anti-Duplikat-System:** Ein globaler `asyncio.Lock` verhindert doppelt gesendete Nachrichten bei Telegram-Timeouts.
     *   **Intelligente Rotation:** Status-Nachrichten werden alle 23 Stunden automatisch gelöscht und neu erstellt, um die 48h-Editiergrenze von Telegram sicher zu umgehen.
@@ -15,9 +28,6 @@ In den letzten Updates wurden signifikante Verbesserungen an der Stabilität und
     *   **Recently Active Users:** Eine neue Tabelle im Dashboard zeigt die zuletzt aktiven Nutzer mit Zeitstempel und Avatar an.
     *   **Echtzeit-KPIs:** Verbesserte Berechnung von Nachrichtenvolumen, aktiven Nutzern und Top-Contributoren.
     *   **Daten-Registry:** Automatisierte Erfassung von Nutzern beim Beitritt oder Schreiben, um vollständige Statistiken zu gewährleisten.
-*   **🤝 Einladungs-Bot Plus:**
-    *   **Transparenter Datenschutz:** Neuer Befehl `/datenschutz` klärt Nutzer über die Verarbeitung ihrer Daten während des Steckbrief-Prozesses auf.
-    *   **Mitglieder-Sync:** Verbesserte Erkennung bestehender Mitglieder zur Vermeidung doppelter Anmeldungen.
 
 ## ⛏️ Minecraft Status Bot Features
 
@@ -37,35 +47,12 @@ Der NexusMod Bot bleibt dein zentrales Werkzeug für die Gruppenmoderation:
 
 ## 🌐 Zentrales Web-Dashboard
 
-Das Dashboard (Port 9002) bietet die volle Kontrolle:
+Das Dashboard (Standard-Port 9002) bietet die volle Kontrolle:
 
-*   **Service-Steuerung:** Starte oder stoppe jeden Bot einzeln mit nur einem Klick.
-*   **Konfigurations-Editor:** Bearbeite Bot-Token und Gruppen-IDs bequem über Formulare.
-*   **Echtzeit-Logs:** Überwache alle Systemvorgänge und Befehlsausführungen direkt im Browser.
-*   **User-Management:** Verwalte Administratoren und deren Berechtigungen global für alle Bots.
-
-## 🚀 Installation & Betrieb
-
-1.  **Voraussetzungen:** Python 3.9+ und die Abhängigkeiten aus `requirements.txt`.
-2.  **Start:** Führe `app.py` im Hauptverzeichnis aus, um das Dashboard zu starten.
-3.  **Konfiguration:** Navigiere im Browser zur Dashboard-IP und konfiguriere deine Bots.
-4.  **Datenschutz:** Alle Daten werden lokal im Ordner `data/` gespeichert (JSON/JSONL-Format).
+1.  **Start/Stop:** Alle Bots können einzeln gestartet und gestoppt werden.
+2.  **Live-Logs:** Einblick in die Bot-Aktivitäten direkt im Browser.
+3.  **Konfiguration:** Änderungen an Token, IDs und Timern werden sofort übernommen.
+4.  **Benutzerverwaltung:** Nur für Admins zugänglich, um den Zugriff auf das System zu regeln.
 
 ---
-
-## 📋 Wichtige Befehlsübersicht (Auszug)
-
-| Bereich | Befehl | Funktion |
-| :--- | :--- | :--- |
-| **Moderation** | `/warn @user` | Gibt eine Verwarnung (Limit konfigurierbar) |
-| | `/mute @user 1h` | Schaltet Nutzer für 1 Stunde stumm |
-| **Minecraft** | `/player` | Zeigt Liste der aktuell eingeloggten Spieler |
-| **Invite** | `/letsgo` | Startet den Anmeldeprozess für neue Mitglieder |
-| | `/datenschutz`| Zeigt Informationen zur Datenverarbeitung an |
-| **ID-Tools** | `/id` | Zeigt alle relevanten IDs der aktuellen Nachricht |
-
----
-
-## 🤝 Beitrag & Entwicklung
-
-Das Projekt ist für die private Nutzung optimiert. Änderungen können direkt über das integrierte Code-Panel des Control-Panels vorgenommen und sofort getestet werden.
+*Entwickelt für maximale Kontrolle und Transparenz in deiner Telegram-Community.*
