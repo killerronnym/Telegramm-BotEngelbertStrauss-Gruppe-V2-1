@@ -2,7 +2,7 @@
     "users": {
         "7386906637": {
             "first_seen": "2025-12-17T01:33:20",
-            "last_seen": "2026-01-01T22:08:16+01:00",
+            "last_seen": "2026-01-02T12:17:20+01:00",
             "full_name": "Nils",
             "is_bot": false,
             "username": "didinils",
@@ -63,7 +63,7 @@
         },
         "5544098336": {
             "first_seen": "2025-12-17T01:41:14",
-            "last_seen": "2026-01-01T22:00:16+01:00",
+            "last_seen": "2026-01-02T12:17:20+01:00",
             "full_name": "Rinno 🐶💙🏳️‍🌈",
             "is_bot": false,
             "username": "pup_Rinno_cgn",
@@ -738,6 +738,16 @@
             "full_name": "Linus",
             "is_bot": false,
             "username": "doggylinus",
+            "chat_ids": [
+                -1002206300882
+            ]
+        },
+        "1543435391": {
+            "first_seen": "2026-01-02T12:20:44+01:00",
+            "last_seen": "2026-01-02T12:21:25+01:00",
+            "full_name": "Schnuffi",
+            "is_bot": false,
+            "username": "Schnuffi96",
             "chat_ids": [
                 -1002206300882
             ]

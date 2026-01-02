@@ -2225,14 +2225,67 @@ def build_group_activity(days: int = 30, chat_id=None) -> dict:
     user_series = {}
     for idx, u in enumerate(l_list[:50], 1):
         uid = u['user_id']
-        leaderboard.append({'rank': idx, 'user_id': uid, 'username': u.get('username', ''), 'name': u.get('full_name', ''), 'messages': u['messages'], 'media': u['media'], 'likes_received': u['likes_received'], 'likes_given': u['likes_given'], 'reactions': u['likes_received'], 'avatar_url': f'/tg/avatar/{uid}'})
+        leaderboard.append({
+            'rank': idx,
+            'user_id': uid,
+            'username': u.get('username', ''),
+            'name': u.get('full_name', ''),
+            'messages': u['messages'],
+            'media': u['media'],
+            'likes_received': u['likes_received'],
+            'likes_given': u['likes_given'],
+            'reactions': u['likes_received'],
+            'avatar_url': f'/tg/avatar/{uid}',
+            'last_seen': u['last_seen'].isoformat() if u['last_seen'] else None
+        })
         user_series[uid] = [int(u['daily'].get(d, 0)) for d in labels]
+
+    # Sort for recently active
+    recently_active_list = sorted(
+        [u for u in per_user.values() if u['last_seen']],
+        key=lambda x: x['last_seen'],
+        reverse=True
+    )
+    recently_active = []
+    for u in recently_active_list[:20]:
+        recently_active.append({
+            'user_id': u['user_id'],
+            'username': u.get('username', ''),
+            'name': u.get('full_name', ''),
+            'last_seen': u['last_seen'].isoformat() if u['last_seen'] else None,
+            'avatar_url': f'/tg/avatar/{u["user_id"]}'
+        })
 
     top_contrib = (leaderboard[0]['name'] or leaderboard[0]['user_id']) if leaderboard else '—'
     most_liked = max(leaderboard, key=lambda x: x['likes_received'])['name'] if leaderboard else '—'
     top_c_id = max(per_chat.items(), key=lambda x: x[1])[0] if per_chat else '—'
 
-    return {'ok': True, 'meta': {'days': days, 'totalMessages': total, 'activeUsers': len(per_user), 'totalReactions': total_reactions_received, 'totalReactionsGiven': total_reactions_given}, 'per_hour': per_hour, 'per_weekday': per_weekday, 'timeline': [{'date': d, 'count': timeline_map[d]} for d in labels], 'leaderboard': leaderboard, 'user_series': user_series, 'kpis': {'total_messages': total, 'active_users': len(per_user), 'total_reactions_received': total_reactions_received, 'total_reactions_given': total_reactions_given, 'top_contributor': top_contrib, 'most_liked_user': most_liked, 'top_chat': top_c_id}}
+    return {
+        'ok': True,
+        'meta': {
+            'days': days,
+            'totalMessages': total,
+            'activeUsers': len(per_user),
+            'totalReactions': total_reactions_received,
+            'totalReactionsGiven': total_reactions_given
+        },
+        'per_hour': per_hour,
+        'per_weekday': per_weekday,
+        'timeline': [{'date': d, 'count': timeline_map[d]} for d in labels],
+        'leaderboard': leaderboard,
+        'recently_active': recently_active,
+        'user_series': user_series,
+        'kpis': {
+            'total_messages': total,
+            'active_users': len(per_user),
+            'total_reactions_received': total_reactions_received,
+            'total_reactions_given': total_reactions_given,
+            'top_contributor': top_contrib,
+            'most_liked_user': most_liked,
+            'top_chat': top_c_id
+        }
+    }
+
 
 
 @app.route("/api/id-finder/group-activity")
