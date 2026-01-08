@@ -3,324 +3,110 @@
 {% block title %}Minecraft Server Status{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <a href="/" class="btn btn-secondary mb-3">← Zurück zum Haupt-Dashboard</a>
+<style>
+    .dashboard-container { padding: 2.5rem; }
+    .btn-back { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-muted); color: var(--text-secondary); font-weight: 500; border-radius: 8px; padding: 0.6rem 1.25rem; transition: all 0.2s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; }
+    .btn-back:hover { background: rgba(255, 255, 255, 0.05); color: #fff; border-color: var(--blue-accent); }
+    .status-badge-container { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-muted); padding: 0.4rem 1.2rem; border-radius: 30px; display: inline-flex; align-items: center; gap: 0.6rem; }
+    .log-display { background: #000; color: #a5b4fc; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; padding: 1rem; border-radius: 8px; border: 1px solid #1e293b; line-height: 1.5; }
+    .stat-card { background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.05); padding: 1.25rem; border-radius: 10px; }
+    .stat-label { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+    .stat-value { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); }
+</style>
 
-  <!-- Header + Controls -->
-  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-    <h1 class="display-6 mb-0">⛏️ Minecraft Server Status</h1>
-
-    <div class="d-flex align-items-center gap-2">
-      <!-- Bot läuft Badge -->
-      <span class="badge {{ 'bg-success' if is_running else 'bg-danger' }} p-2">
-        {{ '● Bot läuft' if is_running else '● Bot gestoppt' }}
-      </span>
-
-      <!-- Bot Start -->
-      <form method="post" action="{{ url_for('minecraft_status_start') }}" class="m-0">
-        <button class="btn btn-success" type="submit" {{ 'disabled' if is_running else '' }}>▶ Start</button>
-      </form>
-
-      <!-- Bot Stop -->
-      <form method="post" action="{{ url_for('minecraft_status_stop') }}" class="m-0">
-        <button class="btn btn-danger" type="submit" {{ '' if is_running else 'disabled' }}>■ Stop</button>
-      </form>
-
-      <!-- Refresh -->
-      <form method="get" action="{{ url_for('minecraft_status_page') }}" class="m-0">
-        <button class="btn btn-outline-primary" type="submit">🔄 Refresh</button>
-      </form>
-    </div>
-  </div>
-
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <div class="mt-3">
-        {% for category, message in messages %}
-          <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-  {% endwith %}
-
-  <!-- Minecraft Server Live Status -->
-  <div class="card mt-3">
-    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div>🟩 Minecraft Server (Live)</div>
-      <small class="text-muted">Letztes Update: {{ status.last_update or '—' }}</small>
-    </div>
-
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-4">
-          <div class="p-3 border rounded">
-            <div class="text-muted">Server</div>
-            <div class="fw-bold">
-              {{ cfg.display_host or cfg.mc_host or '—' }}:{{ cfg.display_port or cfg.mc_port or '—' }}
-            </div>
-            <div class="mt-2">
-              <span class="badge {{ 'bg-success' if server_online else 'bg-danger' }} p-2">
-                {{ '● Online' if server_online else '● Offline' }}
-              </span>
-            </div>
-            {% if status.ping_ms %}
-              <div class="mt-2 text-muted small">Ping: <span class="fw-semibold">{{ status.ping_ms }} ms</span></div>
+<div class="dashboard-container">
+    <div class="d-flex justify-content-between align-items-start mb-5">
+        <div>
+            <a href="/" class="btn-back mb-4"><i class="bi bi-chevron-left"></i> ZURÜCK ZUR ÜBERSICHT</a>
+            <h1 class="fw-bold mb-1 h3 text-white">Minecraft <span class="text-blue">Status</span></h1>
+            <p class="text-secondary small">Live-Monitoring & System-Metriken</p>
+        </div>
+        <div class="status-badge-container mt-2">
+            {% if is_running %}
+                <span class="rounded-circle bg-success" style="width: 8px; height: 8px; box-shadow: 0 0 8px #10b981;"></span>
+                <span class="small fw-bold text-success tracking-wider">AKTIV</span>
+            {% else %}
+                <span class="rounded-circle bg-danger" style="width: 8px; height: 8px;"></span>
+                <span class="small fw-bold text-danger tracking-wider">OFFLINE</span>
             {% endif %}
-          </div>
         </div>
+    </div>
 
-        <div class="col-md-4">
-          <div class="p-3 border rounded">
-            <div class="text-muted">Spieler</div>
-            <div class="fw-bold">
-              {{ status.players or '—' }}
-              {% if status.max_players %}
-                <span class="text-muted">/ {{ status.max_players }}</span>
-              {% endif %}
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header"><h6>Steuerung</h6></div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 mb-2">
+                        <form method="post" action="{{ url_for('minecraft_status_start') }}" class="flex-grow-1"><button class="btn btn-success w-100 fw-bold" type="submit" {% if is_running %}disabled{% endif %}>▶ START</button></form>
+                        <form method="post" action="{{ url_for('minecraft_status_stop') }}" class="flex-grow-1"><button class="btn btn-danger w-100 fw-bold" type="submit" {% if not is_running %}disabled{% endif %}>■ STOP</button></form>
+                    </div>
+                    <form method="get" action="{{ url_for('minecraft_status_page') }}" class="m-0"><button class="btn btn-outline-light w-100" type="submit">🔄 REFRESH</button></form>
+                </div>
             </div>
-            {% if status.player_count is not none %}
-              <div class="text-muted small">Aktuell: <span class="fw-semibold">{{ status.player_count }}</span></div>
-            {% endif %}
-          </div>
-        </div>
 
-        <div class="col-md-4">
-          <div class="p-3 border rounded">
-            <div class="text-muted">Version</div>
-            <div class="fw-bold">{{ status.version or '—' }}</div>
-            {% if status.software %}
-              <div class="text-muted small">Software: <span class="fw-semibold">{{ status.software }}</span></div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-
-      {% if status.motd %}
-        <div class="mt-3 p-3 border rounded">
-          <div class="text-muted">MOTD</div>
-          <div class="fw-semibold">{{ status.motd }}</div>
-        </div>
-      {% endif %}
-
-      {% if status.online_names %}
-        <div class="mt-3 p-3 border rounded">
-          <div class="text-muted">Online Spieler</div>
-          <div class="d-flex flex-wrap gap-2">
-            {% for n in status.online_names %}
-              <span class="badge bg-secondary">{{ n }}</span>
-            {% endfor %}
-          </div>
-        </div>
-      {% else %}
-        <div class="mt-3 text-muted small">
-          Hinweis: Spieler-Namen sind nicht immer verfügbar (abhängig von Query/RCON/Server-Setup).
-        </div>
-      {% endif %}
-
-      <!-- Optional: Minecraft-Server Start/Stop (nur anzeigen, wenn später aktiviert) -->
-      {% if enable_server_control %}
-        <hr class="my-4">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <div>
-            <div class="fw-semibold">⚡ Minecraft Server starten/stoppen</div>
-            <div class="text-muted small">Wird später via SSH/Docker/systemd umgesetzt.</div>
-          </div>
-
-          <div class="d-flex gap-2">
-            <form method="post" action="{{ url_for('minecraft_server_start') }}" class="m-0">
-              <button class="btn btn-success" type="submit" {{ 'disabled' if server_online else '' }}>▶ Server Start</button>
-            </form>
-            <form method="post" action="{{ url_for('minecraft_server_stop') }}" class="m-0">
-              <button class="btn btn-danger" type="submit" {{ '' if server_online else 'disabled' }}>■ Server Stop</button>
-            </form>
-          </div>
-        </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Raspberry Pi Metrics (CPU/RAM etc.) -->
-  <div class="card mt-3">
-    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div>🍓 Raspberry Pi (System)</div>
-      <small class="text-muted">Quelle: {{ pi.host or cfg.pi_host or '—' }}</small>
-    </div>
-
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-3">
-          <div class="p-3 border rounded">
-            <div class="text-muted">CPU</div>
-            <div class="fw-bold">
-              {% if pi.cpu_percent is not none %}
-                {{ pi.cpu_percent }}%
-              {% else %}
-                —
-              {% endif %}
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center"><h6>🟩 Minecraft Server</h6> <small class="text-dim">{{ status.last_update or '—' }}</small></div>
+                <div class="card-body">
+                    <div class="stat-card mb-2">
+                        <div class="stat-label">Server</div>
+                        <div class="stat-value small">{{ cfg.display_host or cfg.mc_host or '—' }}:{{ cfg.display_port or cfg.mc_port or '—' }}</div>
+                        <div class="mt-2"><span class="badge p-2 {{ 'bg-success' if server_online else 'bg-danger' }}">{{ '● Online' if server_online else '● Offline' }}</span></div>
+                    </div>
+                    <div class="stat-card mb-2">
+                        <div class="stat-label">Spieler</div>
+                        <div class="stat-value">{{ status.players or '—' }}{% if status.max_players %} <span class="text-dim small">/ {{ status.max_players }}</span>{% endif %}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Version</div>
+                        <div class="stat-value small">{{ status.version or '—' }}</div>
+                    </div>
+                </div>
             </div>
-            {% if pi.load1 is not none %}
-              <div class="text-muted small">Load: {{ pi.load1 }}{% if pi.load5 is not none %} / {{ pi.load5 }}{% endif %}{% if pi.load15 is not none %} / {{ pi.load15 }}{% endif %}</div>
-            {% endif %}
-          </div>
         </div>
 
-        <div class="col-md-3">
-          <div class="p-3 border rounded">
-            <div class="text-muted">RAM</div>
-            <div class="fw-bold">
-              {% if pi.ram_used_mb is not none and pi.ram_total_mb is not none %}
-                {{ pi.ram_used_mb }} MB <span class="text-muted">/ {{ pi.ram_total_mb }} MB</span>
-              {% else %}
-                —
-              {% endif %}
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header"><h6>🍓 Raspberry Pi Metriken</h6></div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-3"><div class="stat-card text-center"><div class="stat-label">CPU</div><div class="stat-value">{{ pi.cpu_percent or '—' }}%</div></div></div>
+                        <div class="col-md-3"><div class="stat-card text-center"><div class="stat-label">RAM</div><div class="stat-value small">{{ pi.ram_used_mb or '—' }} MB</div></div></div>
+                        <div class="col-md-3"><div class="stat-card text-center"><div class="stat-label">TEMP</div><div class="stat-value">{{ pi.temp_c or '—' }}°C</div></div></div>
+                        <div class="col-md-3"><div class="stat-card text-center"><div class="stat-label">DISK</div><div class="stat-value small">{{ pi.disk_percent or '—' }}%</div></div></div>
+                    </div>
+                </div>
             </div>
-            {% if pi.ram_percent is not none %}
-              <div class="text-muted small">Auslastung: <span class="fw-semibold">{{ pi.ram_percent }}%</span></div>
-            {% endif %}
-          </div>
-        </div>
 
-        <div class="col-md-3">
-          <div class="p-3 border rounded">
-            <div class="text-muted">Temperatur</div>
-            <div class="fw-bold">
-              {% if pi.temp_c is not none %}
-                {{ pi.temp_c }} °C
-              {% else %}
-                —
-              {% endif %}
+            <div class="card">
+                <div class="card-header"><h6>⚙️ Konfiguration</h6></div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('minecraft_status_save') }}">
+                        <div class="row g-3">
+                            <div class="col-md-8"><label class="small text-secondary fw-bold mb-1">Interne IP / Host</label><input class="form-control" name="mc_host" value="{{ cfg.mc_host or '' }}" required></div>
+                            <div class="col-md-4"><label class="small text-secondary fw-bold mb-1">Port</label><input class="form-control" name="mc_port" value="{{ cfg.mc_port or 25565 }}" type="number" required></div>
+                            <div class="col-md-8"><label class="small text-secondary fw-bold mb-1">Anzeige Host (Telegram)</label><input class="form-control" name="display_host" value="{{ cfg.display_host or '' }}"></div>
+                            <div class="col-md-4"><label class="small text-secondary fw-bold mb-1">Anzeige Port</label><input class="form-control" name="display_port" value="{{ cfg.display_port or cfg.mc_port or 25565 }}" type="number"></div>
+                            <div class="col-md-8"><label class="small text-secondary fw-bold mb-1">Gruppenchat ID</label><input class="form-control" name="chat_id" value="{{ cfg.chat_id or '' }}" required></div>
+                            <div class="col-md-4"><label class="small text-secondary fw-bold mb-1">Topic ID</label><input class="form-control" name="topic_id" value="{{ cfg.topic_id or '' }}"></div>
+                        </div>
+                        <hr class="my-4 border-white border-opacity-10">
+                        <div class="d-flex gap-2">
+                            <button class="btn-blue-action flex-grow-1" type="submit">EINSTELLUNGEN SPEICHERN</button>
+                            <button class="btn btn-outline-warning" type="submit" formaction="{{ url_for('minecraft_status_reset_message') }}" formmethod="post">RESET MESSAGE</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-            {% if pi.uptime %}
-              <div class="text-muted small">Uptime: {{ pi.uptime }}</div>
-            {% endif %}
-          </div>
-        </div>
 
-        <div class="col-md-3">
-          <div class="p-3 border rounded">
-            <div class="text-muted">Disk</div>
-            <div class="fw-bold">
-              {% if pi.disk_used_gb is not none and pi.disk_total_gb is not none %}
-                {{ pi.disk_used_gb }} GB <span class="text-muted">/ {{ pi.disk_total_gb }} GB</span>
-              {% else %}
-                —
-              {% endif %}
+            <div class="card bg-black border-0">
+                <div class="card-header border-0 pb-0"><h6 class="text-secondary small font-monospace">System Console</h6></div>
+                <div class="card-body p-0">
+                    <pre class="log-display mb-0" style="height: 160px; overflow-y: auto;">{% if log_tail %}{% for line in log_tail.split('\n') %}{{ line }}
+{% endfor %}{% else %}—{% endif %}</pre>
+                </div>
             </div>
-            {% if pi.disk_percent is not none %}
-              <div class="text-muted small">Auslastung: <span class="fw-semibold">{{ pi.disk_percent }}%</span></div>
-            {% endif %}
-          </div>
         </div>
-      </div>
-
-      <div class="mt-3 text-muted small">
-        Hinweis: Diese Werte erscheinen erst, sobald wir in Flask/Worker die Raspberry-Pi-Metriken liefern (z.B. via SSH/Exporter).
-      </div>
     </div>
-  </div>
-
-  <!-- Config -->
-  <div class="card mt-3">
-    <div class="card-header">⚙️ Einstellungen</div>
-    <div class="card-body">
-      <form method="post" action="{{ url_for('minecraft_status_save') }}">
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Interne Server-IP / Host (für Abfrage)</label>
-            <input class="form-control" name="mc_host" value="{{ cfg.mc_host or '' }}" placeholder="z.B. 10.0.0.141" required>
-            <div class="form-text">Damit verbindet sich die Status-Abfrage (lokal im Netzwerk).</div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Interner Port</label>
-            <input class="form-control" name="mc_port" value="{{ cfg.mc_port or 25565 }}" type="number" min="1" max="65535" required>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Anzeige Host (DuckDNS / Public)</label>
-            <input class="form-control" name="display_host" value="{{ cfg.display_host or '' }}" placeholder="z.B. es-workwear-mc.duckdns.org">
-            <div class="form-text">Das wird im Telegram-Post angezeigt.</div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Anzeige Port</label>
-            <input class="form-control" name="display_port" value="{{ cfg.display_port or cfg.mc_port or 25565 }}" type="number" min="1" max="65535">
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Telegram Gruppenchat ID</label>
-            <input class="form-control" name="chat_id" value="{{ cfg.chat_id or '' }}" placeholder="-100..." required>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label">Topic ID (Thema)</label>
-            <input class="form-control" name="topic_id" value="{{ cfg.topic_id or '' }}" placeholder="z.B. 14332">
-            <div class="form-text">Leer lassen = normaler Chat (kein Topic).</div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Update Intervall (Sek.)</label>
-            <input class="form-control" name="update_seconds" value="{{ cfg.update_seconds or 30 }}" type="number" min="5" max="3600" required>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">/player Auto-Delete (Sek.)</label>
-            <input class="form-control" name="delete_player_seconds" value="{{ cfg.delete_player_seconds or 8 }}" type="number" min="0" max="600" required>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Status Message ID</label>
-            <input class="form-control" name="status_message_id" value="{{ cfg.status_message_id or '' }}" placeholder="leer = neue Nachricht" readonly>
-            <div class="form-text">Wird automatisch gesetzt, wenn neu gesendet wurde.</div>
-          </div>
-
-          <!-- Optional: Raspberry Pi Host (für später SSH/Exporter) -->
-          <div class="col-md-6">
-            <label class="form-label">Raspberry Pi Host (für Systemdaten)</label>
-            <input class="form-control" name="pi_host" value="{{ cfg.pi_host or '' }}" placeholder="z.B. 10.0.0.50">
-            <div class="form-text">Optional – wird später für CPU/RAM-Abfrage genutzt.</div>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">SSH Port (Pi)</label>
-            <input class="form-control" name="pi_ssh_port" value="{{ cfg.pi_ssh_port or 22 }}" type="number" min="1" max="65535">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">SSH User (Pi)</label>
-            <input class="form-control" name="pi_ssh_user" value="{{ cfg.pi_ssh_user or '' }}" placeholder="z.B. ronnym">
-          </div>
-        </div>
-
-        <div class="d-flex gap-2 mt-4">
-          <button class="btn btn-primary" type="submit">💾 Speichern</button>
-
-          <!-- Kein nested form! Reset als Button mit formaction -->
-          <button
-            class="btn btn-outline-warning"
-            type="submit"
-            formaction="{{ url_for('minecraft_status_reset_message') }}"
-            formmethod="post"
-          >
-            🧽 Status-Message resetten
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Logs -->
-  <div class="card mt-3 mb-4">
-    <div class="card-header d-flex align-items-center justify-content-between">
-      <div>📜 Logs</div>
-      <small class="text-muted">{{ log_path }}</small>
-    </div>
-    <div class="card-body">
-      <pre style="max-height: 420px; overflow: auto; white-space: pre-wrap; margin:0;">{{ log_tail or "—" }}</pre>
-    </div>
-  </div>
 </div>
 {% endblock %}

@@ -1,135 +1,229 @@
 {% extends "base.html" %}
 
-{% block title %}Bot Steuerung{% endblock %}
+{% block title %}Bot Steuerung | Dashboard{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="display-4 mb-0">🏠 Bot Steuerung</h1>
+<style>
+    .dashboard-container { padding: 2.5rem; }
+    .card { height: 100%; transition: all 0.2s ease; border: 1px solid var(--border-muted); }
+    .card:hover { transform: translateY(-3px); background-color: var(--card-hover); border-color: rgba(59, 130, 246, 0.2); }
+    .status-badge { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .btn-action-sm { padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px; border: none; text-transform: uppercase; }
+    .btn-settings-big { background-color: var(--blue-deep); color: white; border: none; font-weight: 600; border-radius: 8px; padding: 0.75rem 1rem; transition: all 0.2s; text-align: center; text-decoration: none; display: block; width: 100%; font-size: 0.9rem; }
+    .btn-settings-big:hover { background-color: #2563eb; color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+    .btn-settings-outline { background: transparent; color: var(--text-secondary); border: 1px solid var(--border-muted); font-weight: 600; border-radius: 8px; padding: 0.75rem 1rem; transition: all 0.2s; text-align: center; text-decoration: none; display: block; width: 100%; font-size: 0.9rem; }
+    .btn-settings-outline:hover { background: rgba(255, 255, 255, 0.05); color: #fff; border-color: var(--blue-accent); }
+    .action-header { border-bottom: 1px solid var(--border-muted); margin-bottom: 2rem; padding-bottom: 1.5rem; }
+    .btn-logout { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); font-weight: 600; }
+    .btn-logout:hover { background: #ef4444; color: white; }
+</style>
+
+<div class="dashboard-container">
+    <div class="d-flex justify-content-between align-items-center mb-5">
         <div>
-            <span class="text-muted me-3"><i class="bi bi-person-circle"></i> {{ session.get('user') }}</span>
-            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Abmelden</a>
+            <h1 class="fw-bold mb-1 h3 text-white">Bot <span class="text-blue">Steuerung</span></h1>
+            <p class="text-secondary small">Zentrale Verwaltung aller Bot-Systeme</p>
+        </div>
+        <div>
+            <span class="text-secondary me-3 small"><i class="bi bi-person-circle"></i> {{ session.get('user') }}</span>
+            <a href="{{ url_for('logout') }}" class="btn btn-logout btn-sm px-3">Abmelden</a>
         </div>
     </div>
 
-    <div class="card text-center mb-4 bg-dark border-secondary">
-      <div class="card-header border-secondary">
-        <h2 class="h4 mb-0">Sofort-Aktionen</h2>
-      </div>
-      <div class="card-body">
-        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-            <form action="{{ url_for('send_random_quiz_route') }}" method="POST" class="d-inline">
-                <button type="submit" class="btn btn-primary btn-lg">❔ Quizfrage Senden</button>
+    <!-- ⚡ SOFORT-AKTIONEN MITTIG -->
+    <div class="action-header text-center">
+        <h5 class="text-white fw-bold mb-4" style="letter-spacing: 0.05em;"><i class="bi bi-lightning-charge-fill text-warning me-2"></i> SOFORT-AKTIONEN</h5>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <form action="/quiz/send-random" method="POST" class="m-0">
+                <button type="submit" class="btn btn-primary fw-bold px-5 py-2" style="border-radius: 12px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2); font-size: 0.85rem;">
+                    ❔ QUIZFRAGE SENDEN
+                </button>
             </form>
-            <form action="{{ url_for('send_random_poll_route') }}" method="POST" class="d-inline">
-                <button type="submit" class="btn btn-secondary btn-lg">📊 Umfrage Senden</button>
+            <form action="/umfrage/send-random" method="POST" class="m-0">
+                <button type="submit" class="btn btn-secondary fw-bold px-5 py-2" style="border-radius: 12px; background-color: #475569; border: none; font-size: 0.85rem;">
+                    📊 UMFRAGE SENDEN
+                </button>
             </form>
         </div>
-      </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 border-primary bg-dark">
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <!-- 📢 Nachricht Planer -->
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6>📢 Nachricht Planer</h6>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.id_finder.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.id_finder.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.id_finder.running else 'OFFLINE' }}
+                    </span>
+                </div>
                 <div class="card-body d-flex flex-column">
-                    <h2 class="card-title h4"><i class="bi bi-megaphone"></i> Nachricht Planer</h2>
-                    <p class="card-text text-muted">Nachrichten, Bilder & Videos planen oder sofort senden (via ID-Finder Bot).</p>
+                    <p class="card-text small text-secondary mb-4">Nachrichten & Medien planen oder sofort über den ID-Finder senden.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('broadcast_manager') }}" class="btn btn-primary w-100">Nachricht senden & planen</a>
+                        <a href="{{ url_for('broadcast_manager') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 border-secondary bg-dark">
+        <!-- 👋 Einladungs-Bot -->
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6>👋 Einladungs-Bot</h6>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.invite.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.invite.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.invite.running else 'OFFLINE' }}
+                    </span>
+                </div>
                 <div class="card-body d-flex flex-column">
-                    <h2 class="card-title h4">❔ Quiz Bot</h2>
-                    <p class="card-text text-muted">Verwaltung der Quizfragen und Einstellungen.</p>
+                    <p class="card-text small text-secondary mb-4">Begrüßungstexte & automatische Beitrittskontrolle.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('quiz_settings') }}" class="btn btn-outline-primary w-100">Quiz Einstellungen & Aktionen</a>
+                        <div class="d-flex gap-2 mb-2">
+                            {% if bot_status.invite.running %}
+                                <form action="/bot-action/invite/stop" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
+                            {% else %}
+                                <form action="/bot-action/invite/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('bot_settings') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 border-secondary bg-dark">
+        <!-- ❔ Quiz Bot -->
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6>❔ Quiz Bot</h6>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.quiz.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.quiz.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.quiz.running else 'OFFLINE' }}
+                    </span>
+                </div>
                 <div class="card-body d-flex flex-column">
-                    <h2 class="card-title h4">📊 Umfrage Bot</h2>
-                    <p class="card-text text-muted">Verwaltung der Umfragen und Einstellungen.</p>
+                    <p class="card-text small text-secondary mb-4">Verwaltung der Quizfragen und automatischer Zeitplaner.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('umfrage_settings') }}" class="btn btn-outline-primary w-100">Umfrage Einstellungen & Aktionen</a>
+                        <div class="d-flex gap-2 mb-2">
+                            {% if bot_status.quiz.running %}
+                                <form action="/bot-action/quiz/stop" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
+                            {% else %}
+                                <form action="/bot-action/quiz/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('quiz_settings') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 border-secondary bg-dark">
+        <!-- 📊 Umfrage Bot -->
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6>📊 Umfrage Bot</h6>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.umfrage.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.umfrage.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.umfrage.running else 'OFFLINE' }}
+                    </span>
+                </div>
                 <div class="card-body d-flex flex-column">
-                    <h2 class="card-title h4">👗 Outfit-Wettbewerb Bot</h2>
-                    <p class="card-text text-muted">Steuerung für den Outfit-Contest und Gewinnerauslosung.</p>
+                    <p class="card-text small text-secondary mb-4">Verwaltung der Umfragen und automatischer Zeitplaner.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('outfit_bot_dashboard') }}" class="btn btn-success w-100">Outfit-Bot Dashboard</a>
+                        <div class="d-flex gap-2 mb-2">
+                            {% if bot_status.umfrage.running %}
+                                <form action="/bot-action/umfrage/stop" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
+                            {% else %}
+                                <form action="/bot-action/umfrage/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('umfrage_settings') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 border-secondary bg-dark">
+        <!-- 👗 Outfit-Wettbewerb -->
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6>👗 Outfit-Wettbewerb</h6>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.outfit.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.outfit.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.outfit.running else 'OFFLINE' }}
+                    </span>
+                </div>
                 <div class="card-body d-flex flex-column">
-                    <h2 class="card-title h4">👋 Einladungs-Bot</h2>
-                    <p class="card-text text-muted">Einstellungen für Begrüßungen und Beitrittsanfragen.</p>
+                    <p class="card-text small text-secondary mb-4">Steuerung für den täglichen Outfit-Contest.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('bot_settings') }}" class="btn btn-success w-100">Einladungs-Bot Einstellungen</a>
+                        <div class="d-flex gap-2 mb-2">
+                            {% if bot_status.outfit.running %}
+                                <form action="/bot-action/outfit/stop" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
+                            {% else %}
+                                <form action="/bot-action/outfit/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('outfit_bot_dashboard') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 border-secondary bg-dark">
+        <!-- 🔍 ID-Finder Bot -->
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6>🔍 ID-Finder Bot</h6>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.id_finder.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.id_finder.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.id_finder.running else 'OFFLINE' }}
+                    </span>
+                </div>
                 <div class="card-body d-flex flex-column">
-                    <h2 class="card-title h4"><i class="bi bi-search"></i> ID-Finder Bot</h2>
-                    <p class="card-text text-muted">Hilfsmittel zum Ermitteln von Chat- und Topic-IDs.</p>
+                    <p class="card-text small text-secondary mb-4">Werkzeuge zum Ermitteln von Chat-IDs & Topic-IDs.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('id_finder_dashboard') }}" class="btn btn-secondary w-100">ID-Finder Dashboard</a>
+                        <div class="d-flex gap-2 mb-2">
+                            {% if bot_status.id_finder.running %}
+                                <form action="/bot-action/id_finder/stop" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
+                            {% else %}
+                                <form action="/bot-action/id_finder/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('id_finder_dashboard') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 border-warning bg-dark">
+        <!-- ⛏️ Minecraft -->
+        <div class="col">
+            <div class="card">
+                <div class="card-header"><h6>⛏️ Minecraft Server Status</h6></div>
                 <div class="card-body d-flex flex-column">
-                    <h2 class="card-title h4">⛏️ Minecraft Server</h2>
-                    <p class="card-text text-muted">Live-Status & Einstellungen (DNS/IP, Chat/Topic, Update-Intervall).</p>
+                    <p class="card-text small text-secondary mb-4">Statusüberwachung und Benachrichtigungen.</p>
                     <div class="mt-auto">
-                     <a href="/minecraft" class="btn btn-warning w-100 text-dark fw-bold">⛏️ Minecraft Dashboard</a>
+                     <a href="/minecraft" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- 👥 Benutzerverwaltung -->
         {% if session.get('role') == 'admin' %}
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 border-info bg-dark">
+        <div class="col">
+            <div class="card">
+                <div class="card-header"><h6 class="text-info">👥 Benutzerverwaltung</h6></div>
                 <div class="card-body d-flex flex-column">
-                    <h2 class="card-title h4 text-info"><i class="bi bi-people"></i> Benutzerverwaltung</h2>
-                    <p class="card-text text-muted">Neue Benutzer hinzufügen, Rollen verwalten oder Benutzer löschen.</p>
+                    <p class="card-text small text-secondary mb-4">Benutzerkonten & Zugriffsrechte verwalten.</p>
                     <div class="mt-auto">
-                        <a href="{{ url_for('manage_users') }}" class="btn btn-info w-100 text-dark fw-bold">Benutzer verwalten</a>
+                        <a href="{{ url_for('manage_users') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
                 </div>
             </div>
         </div>
         {% endif %}
-    </div>
-    
-    <div class="text-center mt-4 mb-5">
-        <p class="text-muted small">Angemeldet als <strong>{{ session.get('user') }}</strong> ({{ session.get('role') }})</p>
     </div>
 </div>
 {% endblock %}

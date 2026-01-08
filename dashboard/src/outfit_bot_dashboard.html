@@ -1,193 +1,133 @@
 {% extends "base.html" %}
 
-{% block title %}Outfit-Bot Dashboard{% endblock %}
+{% block title %}Outfit-Bot | Dashboard{% endblock %}
 
 {% block content %}
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <span class="navbar-brand">Outfit-Bot Dashboard</span>
-             <a href="/" class="btn btn-outline-light ms-auto">🏠 Zurück zur Übersicht</a>
-        </div>
-    </nav>
-    <div class="container mt-4">
+<style>
+    .dashboard-container { padding: 2.5rem; }
+    .btn-back { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-muted); color: var(--text-secondary); font-weight: 500; border-radius: 8px; padding: 0.6rem 1.25rem; transition: all 0.2s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; }
+    .btn-back:hover { background: rgba(255, 255, 255, 0.05); color: #fff; border-color: var(--blue-accent); }
+    .status-badge-container { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-muted); padding: 0.4rem 1.2rem; border-radius: 30px; display: inline-flex; align-items: center; gap: 0.6rem; }
+    .log-display { background: #000; color: #a5b4fc; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; padding: 1rem; border-radius: 8px; border: 1px solid #1e293b; line-height: 1.5; }
+</style>
 
-        <h1 class="mb-4">👔 Outfit-Bot Dashboard</h1>
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
+<div class="dashboard-container">
+    <div class="d-flex justify-content-between align-items-start mb-5">
+        <div>
+            <a href="/" class="btn-back mb-4"><i class="bi bi-chevron-left"></i> ZURÜCK ZUR ÜBERSICHT</a>
+            <h1 class="fw-bold mb-1 h3 text-white">Outfit-Bot <span class="text-blue">Dashboard</span></h1>
+            <p class="text-secondary small">Wettbewerbs-Steuerung & Konfiguration</p>
+        </div>
+        <div class="status-badge-container mt-2">
+            {% if is_running %}
+                <span class="rounded-circle bg-success" style="width: 8px; height: 8px; box-shadow: 0 0 8px #10b981;"></span>
+                <span class="small fw-bold text-success tracking-wider">AKTIV</span>
+            {% else %}
+                <span class="rounded-circle bg-danger" style="width: 8px; height: 8px;"></span>
+                <span class="small fw-bold text-danger tracking-wider">OFFLINE</span>
             {% endif %}
-        {% endwith %}
+        </div>
+    </div>
 
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="card bg-dark text-white h-100">
-                    <div class="card-header">
-                        <h3>Prozess-Steuerung</h3>
-                    </div>
-                    <div class="card-body">
-                        <p class="status-box {{ 'text-success' if is_running else 'text-danger' }}">
-                            Status: {{ '🟢 AKTIV (Läuft)' if is_running else '🔴 INAKTIV (Gestoppt)' }}
-                        </p>
-                        {% if is_running %}
-                            <form action="{{ url_for('outfit_bot_stop_route') }}" method="post">
-                                <button type="submit" class="btn btn-danger w-100">🛑 Bot stoppen</button>
-                            </form>
-                        {% else %}
-                            <form action="{{ url_for('outfit_bot_start_route') }}" method="post">
-                                <button type="submit" class="btn btn-success w-100">▶️ Bot starten</button>
-                            </form>
-                        {% endif %}
-                    </div>
+    <div class="row g-4">
+        <!-- Steuerung & Aktionen -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header"><h6>Prozess-Steuerung</h6></div>
+                <div class="card-body">
+                    <form action="/bot-action/outfit/{{ 'stop' if is_running else 'start' }}" method="POST" class="m-0">
+                        <button type="submit" class="btn btn-{{ 'danger' if is_running else 'success' }} w-100 py-3 fw-bold">
+                            {{ '⏹️ BOT STOPPEN' if is_running else '▶️ BOT STARTEN' }}
+                        </button>
+                    </form>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="card bg-dark text-white h-100">
-                    <div class="card-header">
-                        <h3>Manuelle Aktionen</h3>
-                    </div>
-                    <div class="card-body">
-                        <form action="{{ url_for('outfit_bot_start_contest') }}" method="post" class="mb-2">
-                            <button type="submit" class="btn btn-info w-100" {{ 'disabled' if not is_running }}>📸 Wettbewerb jetzt starten</button>
-                        </form>
-                        <form action="{{ url_for('outfit_bot_announce_winner') }}" method="post" class="mb-3">
-                            <button type="submit" class="btn btn-warning w-100" {{ 'disabled' if not is_running }}>🏆 Gewinner jetzt auslosen</button>
-                        </form>
 
-                        {% if duel_status and duel_status.active %}
-                            <div class="duel-status-box border border-warning p-2 rounded mb-3 text-center">
-                                <p class="mb-1 text-warning">⚔️ **Duell ist aktiv!**</p>
-                                <p class="small mb-2">{{ duel_status.contestants }}</p>
-                                <form action="{{ url_for('outfit_bot_end_duel') }}" method="post">
-                                    <button type="submit" class="btn btn-danger btn-sm w-100">Duell manuell beenden</button>
-                                </form>
-                            </div>
-                        {% endif %}
+            <div class="card">
+                <div class="card-header"><h6>Manuelle Aktionen</h6></div>
+                <div class="card-body">
+                    <form action="{{ url_for('outfit_bot_start_contest') }}" method="post" class="mb-2">
+                        <button type="submit" class="btn btn-info w-100 fw-bold" {{ 'disabled' if not is_running }}>📸 WETTBEWERB STARTEN</button>
+                    </form>
+                    <form action="{{ url_for('outfit_bot_announce_winner') }}" method="post" class="mb-2">
+                        <button type="submit" class="btn btn-warning w-100 fw-bold" {{ 'disabled' if not is_running }}>🏆 GEWINNER AUSLOSEN</button>
+                    </form>
 
-                        {% if not is_running %}
-                            <p class="text-danger mt-2 mb-0">⚠️ Bot muss laufen, um Aktionen auszuführen.</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card bg-dark text-white mb-4">
-            <div class="card-header">
-                <h2>⚙️ Konfiguration</h2>
-            </div>
-            <div class="card-body">
-                <form action="{{ url_for('outfit_bot_save_config') }}" method="post">
-                    <div class="mb-3">
-                        <label for="bot_token" class="form-label">Bot Token</label>
-                        <input type="text" class="form-control" id="bot_token" name="BOT_TOKEN" value="{{ config.BOT_TOKEN or '' }}">
-                    </div>
-                    <div class="mb-3">
-                        <label for="chat_id" class="form-label">Gruppen-Chat-ID</label>
-                        <input type="text" class="form-control" id="chat_id" name="CHAT_ID" value="{{ config.CHAT_ID or '' }}">
-                    </div>
-                    <div class="mb-3">
-                        <label for="topic_id" class="form-label">Topic ID (Optional)</label>
-                        <input type="text" class="form-control" id="topic_id" name="TOPIC_ID" value="{{ config.TOPIC_ID or '' }}">
-                    </div>
-                    
-                    <div class="mb-3 form-check form-switch">
-                        <input type="checkbox" class="form-check-input" id="auto_post_enabled" name="AUTO_POST_ENABLED" {% if config.AUTO_POST_ENABLED %}checked{% endif %}>
-                        <label class="form-check-label" for="auto_post_enabled">Automatische Posts aktivieren</label>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="post_time" class="form-label">Start-Uhrzeit (HH:MM)</label>
-                            <input type="time" class="form-control" id="post_time" name="POST_TIME" value="{{ config.POST_TIME or '18:00' }}">
+                    {% if duel_status and duel_status.active %}
+                        <div class="border border-warning p-2 rounded text-center mt-3" style="background: rgba(255, 193, 7, 0.05);">
+                            <p class="mb-1 text-warning small fw-bold">⚔️ Duell aktiv!</p>
+                            <p class="small mb-2 text-secondary">{{ duel_status.contestants }}</p>
+                            <form action="{{ url_for('outfit_bot_end_duel') }}" method="post">
+                                <button type="submit" class="btn btn-danger btn-sm w-100">DUELL BEENDEN</button>
+                            </form>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="winner_time" class="form-label">Gewinner-Uhrzeit (HH:MM)</label>
-                            <input type="time" class="form-control" id="winner_time" name="WINNER_TIME" value="{{ config.WINNER_TIME or '22:00' }}">
-                        </div>
-                    </div>
-
-                    <h3 class="mt-4 mb-3">⚔️ Duell-Einstellungen</h3>
-                    <div class="mb-3 form-check form-switch">
-                        <input type="checkbox" class="form-check-input" id="duel_mode" name="DUEL_MODE" {% if config.DUEL_MODE %}checked{% endif %}>
-                        <label class="form-check-label" for="duel_mode">Duell-Modus aktivieren</label>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label d-block">Duell-Typ</label>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="DUEL_TYPE" id="tie_breaker" value="tie_breaker" {% if config.DUEL_TYPE == 'tie_breaker' or config.DUEL_TYPE is none %}checked{% endif %}>
-                                <label class="form-check-label" for="tie_breaker">Stechen (2 zufällige)</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="DUEL_TYPE" id="multiple_winners" value="multiple_winners" {% if config.DUEL_TYPE == 'multiple_winners' %}checked{% endif %}>
-                                <label class="form-check-label" for="multiple_winners">Mehrere Gewinner anerkennen</label>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="duel_duration" class="form-label">Duell-Dauer (Minuten)</label>
-                            <input type="number" class="form-control" id="duel_duration" name="DUEL_DURATION_MINUTES" value="{{ config.DUEL_DURATION_MINUTES or 60 }}" min="1">
-                        </div>
-                    </div>
-
-                    <div class="mt-4 mb-2">
-                        <h4 class="mb-2">Admin-Befehle (Telegram)</h4>
-                        <ul class="list-unstyled">
-                            <li class="mb-1 d-flex align-items-center">
-                                <span class="me-2">/start_contest</span> 
-                                <i class="bi bi-info-circle text-info" data-bs-toggle="tooltip" data-bs-placement="right" title="Startet den Outfit-Wettbewerb sofort manuell."></i>
-                            </li>
-                            <li class="mb-1 d-flex align-items-center">
-                                <span class="me-2">/announce_winner</span> 
-                                <i class="bi bi-info-circle text-info" data-bs-toggle="tooltip" data-bs-placement="right" title="Löst die Gewinnerermittlung sofort manuell aus."></i>
-                            </li>
-                            <li class="mb-1 d-flex align-items-center">
-                                <span class="me-2">/end_duel</span> 
-                                <i class="bi bi-info-circle text-info" data-bs-toggle="tooltip" data-bs-placement="right" title="Beendet ein laufendes Duell sofort und ermittelt den Gewinner."></i>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="admin_ids" class="form-label">Admin User IDs (kommagetrennt)</label>
-                        <textarea class="form-control" id="admin_ids" name="ADMIN_USER_IDS" rows="2">{{ (config.ADMIN_USER_IDS or [])|join(', ') }}</textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="temp_msg_duration" class="form-label">Dauer temporärer Nachrichten (Sekunden)</label>
-                        <input type="number" class="form-control" id="temp_msg_duration" name="TEMPORARY_MESSAGE_DURATION_SECONDS" value="{{ config.TEMPORARY_MESSAGE_DURATION_SECONDS or 30 }}" min="1">
-                    </div>
-
-                    <button type="submit" class="btn btn-primary mt-3 w-100">Konfiguration speichern & neustarten</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="card bg-dark text-white mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h2>📜 Live Logs (Letzte 30 Zeilen)</h2>
-                <form action="{{ url_for('outfit_bot_clear_logs') }}" method="post" onsubmit="return confirm('Sicher, dass du die Logs leeren möchtest?');">
-                    <button type="submit" class="btn btn-outline-danger btn-sm">Logs leeren</button>
-                </form>
-            </div>
-            <div class="card-body">
-                <div class="log-window p-2 rounded bg-secondary text-white-50" style="max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 0.85em;">
-                    {% if logs %}
-                        {% for line in logs %}
-                            <pre class="mb-0">{{ line.strip() }}</pre>
-                        {% endfor %}
-                    {% else %}
-                        <p>Keine Logs vorhanden oder Bot wurde noch nicht gestartet.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
 
+        <!-- Konfiguration -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header"><h6>⚙️ Konfiguration</h6></div>
+                <div class="card-body">
+                    <form action="{{ url_for('outfit_bot_save_config') }}" method="post">
+                        <div class="mb-3">
+                            <label class="small text-secondary fw-bold mb-1">BOT TOKEN</label>
+                            <input type="password" class="form-control" name="BOT_TOKEN" value="{{ config.BOT_TOKEN or '' }}">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-8 mb-3"><label class="small text-secondary fw-bold mb-1">GRUPPEN-CHAT-ID</label><input type="text" class="form-control" name="CHAT_ID" value="{{ config.CHAT_ID or '' }}"></div>
+                            <div class="col-md-4 mb-3"><label class="small text-secondary fw-bold mb-1">TOPIC ID</label><input type="text" class="form-control" name="TOPIC_ID" value="{{ config.TOPIC_ID or '' }}"></div>
+                        </div>
+
+                        <div class="form-check form-switch mb-4 mt-2">
+                            <input type="checkbox" class="form-check-input" id="auto_post_enabled" name="AUTO_POST_ENABLED" {% if config.AUTO_POST_ENABLED %}checked{% endif %}>
+                            <label class="form-check-label small fw-bold" for="auto_post_enabled">Automatische Posts aktivieren</label>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6"><label class="small text-secondary fw-bold mb-1">START-UHRZEIT</label><input type="time" class="form-control" name="POST_TIME" value="{{ config.POST_TIME or '18:00' }}"></div>
+                            <div class="col-md-6"><label class="small text-secondary fw-bold mb-1">GEWINNER-UHRZEIT</label><input type="time" class="form-control" name="WINNER_TIME" value="{{ config.WINNER_TIME or '22:00' }}"></div>
+                        </div>
+
+                        <hr class="my-4 border-white border-opacity-10">
+                        <h6 class="text-white mb-3">⚔️ Duell-Einstellungen</h6>
+                        
+                        <div class="form-check form-switch mb-3">
+                            <input type="checkbox" class="form-check-input" id="duel_mode" name="DUEL_MODE" {% if config.DUEL_MODE %}checked{% endif %}>
+                            <label class="form-check-label small fw-bold" for="duel_mode">Duell-Modus aktiv</label>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="small text-secondary fw-bold d-block mb-2">DUELL-TYP</label>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="DUEL_TYPE" id="tie_breaker" value="tie_breaker" {% if config.DUEL_TYPE == 'tie_breaker' or config.DUEL_TYPE is none %}checked{% endif %}><label class="form-check-label small" for="tie_breaker">Stechen</label></div>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="DUEL_TYPE" id="multiple_winners" value="multiple_winners" {% if config.DUEL_TYPE == 'multiple_winners' %}checked{% endif %}><label class="form-check-label small" for="multiple_winners">Mehrere Gewinner</label></div>
+                            </div>
+                            <div class="col-md-6"><label class="small text-secondary fw-bold mb-1">DAUER (MINUTEN)</label><input type="number" class="form-control" name="DUEL_DURATION_MINUTES" value="{{ config.DUEL_DURATION_MINUTES or 60 }}"></div>
+                        </div>
+
+                        <div class="mb-3"><label class="small text-secondary fw-bold mb-1">ADMIN USER IDS (KOMMAGETRENNT)</label><textarea class="form-control font-monospace" name="ADMIN_USER_IDS" rows="2">{{ (config.ADMIN_USER_IDS or [])|join(', ') }}</textarea></div>
+                        
+                        <button type="submit" class="btn-blue-action w-100 mt-3">KONFIGURATION SPEICHERN & NEUSTARTEN</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card bg-black border-0 mt-4">
+                <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
+                    <h6 class="text-secondary small font-monospace">System Console</h6>
+                    <form action="{{ url_for('outfit_bot_clear_logs') }}" method="post" class="m-0">
+                        <button type="submit" class="btn btn-link text-danger text-decoration-none p-0 fw-bold small">CLEAR</button>
+                    </form>
+                </div>
+                <div class="card-body p-0">
+                    <pre class="log-display mb-0" style="height: 250px; overflow-y: auto;">{% for line in logs %}{{ line.strip() }}
+{% endfor %}</pre>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
 {% endblock %}

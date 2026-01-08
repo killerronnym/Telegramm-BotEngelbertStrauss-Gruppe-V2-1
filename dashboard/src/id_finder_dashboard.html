@@ -1,367 +1,149 @@
 {% extends "base.html" %}
 
-{% block title %}ID-Finder Bot Dashboard{% endblock %}
+{% block title %}ID-Finder | Dashboard{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <a href="/" class="btn btn-secondary mb-3">← Zurück zum Haupt-Dashboard</a>
-    
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="display-5">🆔 ID-Finder & Moderations-Bot</h1>
-        <span class="badge {{ 'bg-success' if is_running else 'bg-danger' }}" style="font-size: 1rem; padding: 0.8rem;">
-            {{ 'Läuft' if is_running else 'Gestoppt' }}
-        </span>
-    </div>
+<style>
+    .dashboard-container { padding: 2.5rem; }
+    .btn-back { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-muted); color: var(--text-secondary); font-weight: 500; border-radius: 8px; padding: 0.6rem 1.25rem; transition: all 0.2s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; }
+    .btn-back:hover { background: rgba(255, 255, 255, 0.05); color: #fff; border-color: var(--blue-accent); }
+    .card { background: var(--card-base); border: 1px solid var(--border-muted); border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); }
+    .card-header { background: rgba(0, 0, 0, 0.1); border-bottom: 1px solid var(--border-muted); padding: 1rem 1.5rem; }
+    .card-header h6 { margin-bottom: 0; font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-secondary); text-transform: uppercase; }
+    .status-badge-container { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-muted); padding: 0.4rem 1.2rem; border-radius: 30px; display: inline-flex; align-items: center; gap: 0.6rem; }
+    .log-display { background: #000; color: #a5b4fc; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; padding: 1rem; border-radius: 8px; border: 1px solid #1e293b; line-height: 1.5; }
+    .table { color: var(--text-primary); --bs-table-bg: transparent; --bs-table-border-color: rgba(255, 255, 255, 0.04); font-size: 0.85rem; }
+    .table thead th { background: rgba(0, 0, 0, 0.15); color: var(--text-dim); font-weight: 600; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--border-muted); }
+    .text-blue { color: var(--blue-accent); }
+</style>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    <!-- Konfiguration & Steuerung -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h3>⚙️ Konfiguration & Steuerung</h3>
+<div class="dashboard-container">
+    <div class="d-flex justify-content-between align-items-start mb-5">
+        <div>
+            <a href="/" class="btn-back mb-4"><i class="bi bi-chevron-left"></i> ZURÜCK ZUR ÜBERSICHT</a>
+            <h1 class="fw-bold mb-1 h3 text-white">ID-Finder <span class="text-blue">Zentrale</span></h1>
+            <p class="text-secondary small">Konfiguration, Moderation & User-Verwaltung</p>
         </div>
-        <div class="card-body">
-            <form method="POST" action="{{ url_for('id_finder_dashboard') }}">
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <label for="bot_token" class="form-label">Bot Token</label>
-                        <input type="password" class="form-control" id="bot_token" name="bot_token" value="{{ config.bot_token or '' }}">
-                    </div>
-
-                    <div class="col-md-6 mt-3">
-                        <label for="admin_group_id" class="form-label">Admin-Gruppen-ID</label>
-                        <input type="text" class="form-control" id="admin_group_id" name="admin_group_id" value="{{ config.admin_group_id or '' }}" placeholder="-100123456789">
-                    </div>
-
-                    <div class="col-md-6 mt-3">
-                        <label for="main_group_id" class="form-label">Haupt-Gruppen-ID</label>
-                        <input type="text" class="form-control" id="main_group_id" name="main_group_id" value="{{ config.main_group_id or '' }}" placeholder="-100123456789">
-                    </div>
-
-                    <div class="col-md-6 mt-3">
-                        <label for="admin_log_topic_id" class="form-label">Log-Topic-ID (Optional)</label>
-                        <input type="text" class="form-control" id="admin_log_topic_id" name="admin_log_topic_id"
-                               value="{{ config.admin_log_topic_id or config.log_topic_id or '' }}"
-                               placeholder="z.B. 123">
-                        <small class="form-text text-muted">
-                            Wird vom Bot als <code>admin_log_topic_id</code> gelesen. (Fallback: <code>log_topic_id</code>)
-                        </small>
-                    </div>
-                </div>
-
-                <!-- Auto-Cleanup -->
-                <div class="row mb-3 mt-4 border-top pt-3">
-                    <div class="col-md-12">
-                         <h5 class="mb-3">🧹 Automatische Bereinigung</h5>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="delete_commands" name="delete_commands" {% if config.delete_commands %}checked{% endif %}>
-                            <label class="form-check-label" for="delete_commands">Admin-Befehle automatisch löschen</label>
-                            <small class="form-text text-muted d-block">
-                                Löscht Nachrichten wie <code>/warn 123456 Grund</code> sofort nach Ausführung.
-                            </small>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="bot_message_cleanup_seconds" class="form-label">Bot-Antworten löschen nach (Sekunden)</label>
-                        <input type="number" class="form-control" id="bot_message_cleanup_seconds" name="bot_message_cleanup_seconds" value="{{ config.bot_message_cleanup_seconds or 0 }}" min="0">
-                        <small class="form-text text-muted">
-                            0 = Nie löschen (Antworten bleiben stehen).
-                        </small>
-                    </div>
-                </div>
-
-                <!-- ✅ NEU: Message-Logging (nur hinzugefügt, sonst nichts verändert) -->
-                <div class="row mb-3 mt-4 border-top pt-3">
-                    <div class="col-md-12">
-                        <h5 class="mb-3">📝 Message-Logging</h5>
-                        <small class="form-text text-muted d-block mb-2">
-                            Hier kannst du einstellen, ob der Bot Chatverläufe in <code>data/user_messages/*.jsonl</code> mitschreibt.
-                        </small>
-                    </div>
-
-                    <!-- Hidden Fallbacks: sorgt dafür, dass "aus" als false ankommt -->
-                    <input type="hidden" name="message_logging_enabled" value="0">
-                    <input type="hidden" name="message_logging_groups_only" value="0">
-                    <input type="hidden" name="message_logging_ignore_commands" value="0">
-
-                    <div class="col-md-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   id="message_logging_enabled"
-                                   name="message_logging_enabled"
-                                   value="1"
-                                   {% if config.message_logging_enabled %}checked{% endif %}>
-                            <label class="form-check-label" for="message_logging_enabled">Message-Logging aktiv</label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   id="message_logging_groups_only"
-                                   name="message_logging_groups_only"
-                                   value="1"
-                                   {% if config.message_logging_groups_only %}checked{% endif %}>
-                            <label class="form-check-label" for="message_logging_groups_only">Nur Gruppen loggen</label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6 mt-3">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   id="message_logging_ignore_commands"
-                                   name="message_logging_ignore_commands"
-                                   value="1"
-                                   {% if config.message_logging_ignore_commands %}checked{% endif %}>
-                            <label class="form-check-label" for="message_logging_ignore_commands">Commands ignorieren</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="d-flex justify-content-end align-items-center mt-4">
-                    <button type="submit" name="action" value="save_config" class="btn btn-primary me-2">💾 Nur Speichern</button>
-                    {% if is_running %}
-                        <button type="submit" name="action" value="stop_bot" class="btn btn-danger">🛑 Stoppen</button>
-                    {% else %}
-                        <button type="submit" name="action" value="start_bot" class="btn btn-success">▶️ Starten</button>
-                    {% endif %}
-                </div>
-            </form>
-
-            <hr class="my-4">
-
-            <div class="d-grid gap-2 d-md-block">
-                 <a href="{{ url_for('id_finder_commands') }}" class="btn btn-info text-white me-2">📖 Zur Befehls-Dokumentation</a>
-                 <a href="{{ url_for('id_finder_admin_panel') }}" class="btn btn-warning text-dark me-2">👮 Admin Panel öffnen</a>
-                 <a href="{{ url_for('id_finder_analytics') }}"
-                    class="btn text-white"
-                    style="background-color:#7a1f1f; border-color:#7a1f1f;">
-                    📊 Analytics
-                 </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- ✅ User Registry -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-2">
-                <h3 class="mb-0">👥 User Registry</h3>
-            </div>
-
-            <span class="badge bg-dark">
-                {{ user_registry_count if user_registry_count is defined else (user_registry|length if user_registry is defined else 0) }} Users
-            </span>
-        </div>
-
-        <div class="card-body">
-
-            <form method="GET" action="{{ url_for('id_finder_dashboard') }}" class="row g-2 align-items-end mb-3">
-                <div class="col-md-8">
-                    <label for="registrySearch" class="form-label">Suche (ID / Username / Name)</label>
-                    <input type="text"
-                           class="form-control"
-                           id="registrySearch"
-                           name="q"
-                           value="{{ search_query or '' }}"
-                           placeholder="z.B. 123456, username, Max Mustermann">
-                    <small class="form-text text-muted d-block">
-                        Tipp: Enter = Server-Suche. Während du tippst, filtert es zusätzlich live in der Tabelle.
-                    </small>
-                </div>
-                <div class="col-md-2 d-grid">
-                    <button class="btn btn-outline-secondary" type="submit">🔎 Suchen</button>
-                </div>
-                <div class="col-md-2 d-grid">
-                    <a class="btn btn-outline-secondary" href="{{ url_for('id_finder_dashboard') }}" id="clearRegistrySearch">🧹 Reset</a>
-                </div>
-            </form>
-
-            {% if user_registry is not defined %}
-                <div class="alert alert-warning mb-0">⚠️ Registry-Daten wurden vom Backend nicht übergeben.</div>
-            {% elif user_registry|length == 0 %}
-                <div class="alert alert-info mb-0">ℹ️ Noch keine User in der Registry.</div>
+        <div class="status-badge-container mt-2">
+            {% if is_running %}
+                <span class="rounded-circle bg-success" style="width: 8px; height: 8px; box-shadow: 0 0 8px #10b981;"></span>
+                <span class="small fw-bold text-success tracking-wider">AKTIV</span>
             {% else %}
-                <div class="table-responsive"
-                     style="max-height: 420px; overflow-y: auto; border: 1px solid rgba(255,255,255,.08); border-radius: .5rem;">
-                    <table class="table table-hover align-middle mb-0" id="registryTable">
-                        <thead class="table-dark" style="position: sticky; top: 0; z-index: 2;">
-                            <tr>
-                                <th style="width: 160px;">User-ID</th>
-                                <th style="width: 180px;">Username</th>
-                                <th>Name</th>
-                                <th style="width: 190px;">Last Seen</th>
-                                <th style="width: 220px;">Chats</th>
-                                <th style="width: 320px;">Aktion</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for u in user_registry %}
-                            <tr>
-                                <td>
-                                    <a href="{{ url_for('id_finder_user_detail', user_id=u.id) }}" class="text-decoration-none">
-                                        <code class="user-id">{{ u.id }}</code>
-                                    </a>
-                                </td>
-                                <td>
-                                    {% if u.username %}
-                                        <a href="{{ url_for('id_finder_user_detail', user_id=u.id) }}" class="text-decoration-none">
-                                            <span>@{{ u.username }}</span>
-                                        </a>
-                                    {% else %}
-                                        <span class="text-muted">—</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ u.full_name or '' }}</td>
-                                <td><code>{{ u.last_seen or '' }}</code></td>
-                                <td>
-                                    {% if u.chat_ids %}
-                                        <code style="white-space: normal;">{{ u.chat_ids }}</code>
-                                    {% else %}
-                                        <span class="text-muted">—</span>
-                                    {% endif %}
-                                </td>
-                                <td class="d-flex flex-wrap gap-2">
-                                    <button type="button" class="btn btn-sm btn-outline-primary copy-id-btn">Copy ID</button>
-
-                                    <a href="{{ url_for('id_finder_user_detail', user_id=u.id) }}"
-                                       class="btn btn-sm btn-outline-success">🧾 Verlauf</a>
-
-                                    <form method="POST" action="{{ url_for('id_finder_user_registry_delete') }}"
-                                          class="m-0 p-0 delete-user-form">
-                                        <input type="hidden" name="user_id" value="{{ u.id }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">🗑️ Registry</button>
-                                    </form>
-
-                                    <form method="POST" action="{{ url_for('id_finder_user_delete_hierarchy') }}"
-                                          class="m-0 p-0 delete-hierarchy-form">
-                                        <input type="hidden" name="user_id" value="{{ u.id }}">
-                                        <input type="hidden" name="delete_registry" value="1">
-                                        <input type="hidden" name="delete_messages" value="1">
-                                        <input type="hidden" name="delete_moderation" value="1">
-                                        <input type="hidden" name="delete_cache" value="1">
-                                        <button type="submit" class="btn btn-sm btn-danger">🧨 Hierarchie</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                <span class="rounded-circle bg-danger" style="width: 8px; height: 8px;"></span>
+                <span class="small fw-bold text-danger tracking-wider">OFFLINE</span>
             {% endif %}
         </div>
     </div>
 
-    <!-- Logs -->
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3>📜 Befehls-Logbuch</h3>
-                    <form method="POST" action="{{ url_for('id_finder_dashboard') }}">
-                        <button type="submit" name="action" value="clear_command_log" class="btn btn-danger btn-sm">🗑️ Logs leeren</button>
+    <div class="row g-4">
+        <!-- Links: Steuerung & Config -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header"><h6>Steuerung</h6></div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 mb-4 pb-4 border-bottom border-white border-opacity-5">
+                        <form action="/bot-action/id_finder/start" method="POST" class="flex-grow-1">
+                            <button type="submit" class="btn btn-success w-100 fw-bold py-2 shadow-sm" {% if is_running %}disabled{% endif %}>START</button>
+                        </form>
+                        <form action="/bot-action/id_finder/stop" method="POST" class="flex-grow-1">
+                            <button type="submit" class="btn btn-danger w-100 fw-bold py-2 shadow-sm" {% if not is_running %}disabled{% endif %}>STOP</button>
+                        </form>
+                    </div>
+
+                    <form action="/id-finder/save-config" method="POST">
+                        <div class="mb-3">
+                            <label class="small text-secondary fw-bold mb-1">BOT TOKEN</label>
+                            <input type="password" class="form-control" name="bot_token" value="{{ config.bot_token or '' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="small text-secondary fw-bold mb-1">ADMIN-GRUPPEN-ID</label>
+                            <input type="text" class="form-control" name="admin_group_id" value="{{ config.admin_group_id or '' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="small text-secondary fw-bold mb-1">HAUPT-GRUPPEN-ID</label>
+                            <input type="text" class="form-control" name="main_group_id" value="{{ config.main_group_id or '' }}">
+                        </div>
+                        <div class="mb-4">
+                            <label class="small text-secondary fw-bold mb-1">LOG-TOPIC-ID (OPTIONAL)</label>
+                            <input type="text" class="form-control" name="admin_log_topic_id" value="{{ config.admin_log_topic_id or '' }}">
+                        </div>
+                        <button type="submit" class="btn-blue-action w-100">KONFIGURATION SICHERN</button>
                     </form>
                 </div>
-                <div class="card-body">
-                    <div style="background-color: #212529; color: #f8f9fa; border-radius: 5px; padding: 15px; height: 300px; overflow-y: scroll; font-family: monospace; white-space: pre-wrap;">
-{% for line in command_logs %}{{ line }}{% endfor %}
-                    </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h6>Schnellzugriff</h6></div>
+                <div class="card-body d-grid gap-2">
+                    <a href="{{ url_for('id_finder_analytics') }}" class="btn btn-outline-light btn-sm text-start"><i class="bi bi-bar-chart-fill me-2"></i> Analytics Dashboard</a>
+                    <a href="#" class="btn btn-outline-light btn-sm text-start"><i class="bi bi-shield-lock-fill me-2"></i> Moderations-Tools</a>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
+        <!-- Rechts: Registry & Logs -->
+        <div class="col-lg-8">
+            <!-- User Registry -->
+            <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3>🖥️ System- & Fehler-Log</h3>
-                    <form method="POST" action="{{ url_for('id_finder_dashboard') }}">
-                        <button type="submit" name="action" value="clear_system_log" class="btn btn-danger btn-sm">🗑️ Logs leeren</button>
-                    </form>
+                    <h6>👥 User Registry</h6>
+                    <span class="badge bg-dark border border-white border-opacity-10 px-3">{{ user_registry|length }} Users</span>
                 </div>
-                <div class="card-body">
-                    <div style="background-color: #212529; color: #f8f9fa; border-radius: 5px; padding: 15px; height: 300px; overflow-y: scroll; font-family: monospace; white-space: pre-wrap;">
-{% for line in system_logs %}{{ line }}{% endfor %}
+                <div class="card-body p-0">
+                    <div class="px-3 py-3 border-bottom border-white border-opacity-5">
+                        <input type="text" id="registrySearch" class="form-control form-control-sm" placeholder="Suche nach Name, ID oder Username...">
                     </div>
+                    <div class="table-responsive" style="max-height: 400px;">
+                        <table class="table table-borderless align-middle mb-0" id="registryTable">
+                            <thead>
+                                <tr><th>USER</th><th>USER-ID</th><th class="text-end pe-4">AKTION</th></tr>
+                            </thead>
+                            <tbody>
+                                {% if user_registry %}
+                                    {% for u in user_registry %}
+                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.02) !important;">
+                                        <td class="ps-4">
+                                            <div class="fw-bold">{{ u.full_name or 'Unbekannt' }}</div>
+                                            <div class="small text-blue">@{{ u.username or '—' }}</div>
+                                        </td>
+                                        <td><code>{{ u.id }}</code></td>
+                                        <td class="text-end pe-4">
+                                            <div class="d-flex justify-content-end gap-2">
+                                                <button class="btn btn-outline-light btn-sm border-0"><i class="bi bi-journal-text"></i></button>
+                                                <button class="btn btn-outline-danger btn-sm border-0"><i class="bi bi-trash3"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Console Logs -->
+            <div class="card bg-black border-0">
+                <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
+                    <h6 class="text-secondary small font-monospace">System Console</h6>
+                    <button class="btn btn-link text-danger text-decoration-none p-0 fw-bold small">CLEAR</button>
+                </div>
+                <div class="card-body p-0">
+                    <pre class="log-display mb-0" style="height: 250px; overflow-y: auto;">{% for line in system_logs %}{{ line.strip() }}
+{% endfor %}</pre>
                 </div>
             </div>
         </div>
     </div>
-
 </div>
 
 <script>
-(function() {
-    const input = document.getElementById("registrySearch");
-    const table = document.getElementById("registryTable");
-
-    function filterTable() {
-        if (!table || !input) return;
-        const q = (input.value || "").toLowerCase().trim();
-        const rows = table.querySelectorAll("tbody tr");
-        rows.forEach(r => {
-            const text = r.innerText.toLowerCase();
-            r.style.display = text.includes(q) ? "" : "none";
+    document.getElementById("registrySearch").addEventListener("input", function() {
+        let q = this.value.toLowerCase();
+        let rows = document.querySelectorAll("#registryTable tbody tr");
+        rows.forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(q) ? "" : "none";
         });
-    }
-    if (input) input.addEventListener("input", filterTable);
-
-    document.addEventListener("click", async (e) => {
-        const btn = e.target.closest(".copy-id-btn");
-        if (!btn) return;
-        const row = btn.closest("tr");
-        const idEl = row ? row.querySelector(".user-id") : null;
-        const id = idEl ? idEl.textContent.trim() : "";
-        if (!id) return;
-
-        try {
-            await navigator.clipboard.writeText(id);
-            const old = btn.textContent;
-            btn.textContent = "✅ Copied";
-            setTimeout(() => btn.textContent = old, 900);
-        } catch (err) {
-            alert("Copy fehlgeschlagen. ID: " + id);
-        }
     });
-
-    document.addEventListener("submit", (e) => {
-        const regForm = e.target.closest(".delete-user-form");
-        if (regForm) {
-            const uid = regForm.querySelector('input[name="user_id"]')?.value || "";
-            const ok = confirm("User wirklich NUR aus der Registry löschen?\n\nUser-ID: " + uid + "\n\nHinweis: Message-Logs bleiben bestehen.");
-            if (!ok) e.preventDefault();
-            return;
-        }
-        const hierForm = e.target.closest(".delete-hierarchy-form");
-        if (hierForm) {
-            const uid = hierForm.querySelector('input[name="user_id"]')?.value || "";
-            const ok = confirm(
-                "⚠️ HIERARCHIE LÖSCHEN?\n\n" +
-                "User-ID: " + uid + "\n\n" +
-                "Das löscht:\n" +
-                "• Registry\n" +
-                "• Message-Logs (Chatverlauf)\n" +
-                "• Moderation-Daten\n" +
-                "• Username-Cache\n\n" +
-                "Wirklich machen?"
-            );
-            if (!ok) e.preventDefault();
-            return;
-        }
-    });
-})();
 </script>
 {% endblock %}

@@ -1,8 +1,71 @@
 {
-    "bot_token": "7520803994:AAGPynp1vlWVjTLRK7s2EPVaMzHyROTetgc",
+    "bot_token": "8241505829:AAHhD4o-NnnN9LTHmbfmfEU3VAWY7of7K7c",
     "main_chat_id": "-1002206300882",
     "topic_id": null,
     "is_enabled": true,
     "repost_profile_for_existing_members": true,
-    "link_ttl_minutes": 15
+    "link_ttl_minutes": 15,
+    "start_message": "👋 Hey und herzlich willkommen! \r\n\r\nDu bist hier, weil du in unsere Engelbert—Strauss Gruppe möchtest 👷‍♂️🦺\r\n\r\nDamit wir wissen, wer du bist und dich richtig freischalten können, hilft dir dieser Bot dabei, einen kurzen Steckbrief auszufüllen 📋\r\n\r\n➡️ Das dauert nur 1–2 Minuten! \r\n➡️ Danach bekommst du automatisch den Einladungslink zur Gruppe 🔗\r\n\r\n🔐 Wenn du vorher wissen willst, was mit deinen Daten passiert: /datenschutz\r\n\r\nDas hier ist kein Spam, sondern eine kleine Sicherheitsabfrage ✅\r\n\r\n👉 Schreibe jetzt einfach /letsgo, um zu starten!",
+    "rules_message": "📜 *Bevor du in die Gruppe kommst, lies bitte unsere Regeln:*\n\n✅ *DOS:*\n• Respektvoller Umgang\n• Überwiegend gute Laune 😄\n\n❌ *DON'TS:*\n✖️ Beleidigungen, Diskriminierung, Hardcore-Inhalte\n\n👉 *Wenn du einverstanden bist, bestätige mit OK\\.*",
+    "privacy_policy": "🔐 Datenschutz & Datenverarbeitung\r\n\r\nDieser Bot hilft dir, in die Engelbert—Strauss Gruppe beizutreten, indem du vorher einen kurzen Steckbrief ausfüllst.\r\n\r\n✅ Pflichtangaben:\r\n• Name\r\n• Alter\r\n• Bundesland\r\n• Foto (als normales Foto, kein Dokument)\r\n• Bestätigung der Regeln („OK“)\r\n\r\n➕ Freiwillige Angaben (mit „nein“ überspringen):\r\n• Hobbys / Interessen\r\n• Social Media\r\n• Sonstiges\r\n• Sexualität\r\n\r\n🧠 Wofür werden die Daten genutzt?\r\n• Damit du nach dem Ausfüllen automatisch einen Einladungslink bekommst.\r\n• Sobald du der Hauptgruppe beitrittst, wird dein Steckbrief automatisch in der Gruppe gepostet.\r\n\r\n🗑️ Speicherung & Löschung:\r\n• Die Angaben werden nur so lange gespeichert, bis dein Beitritt genehmigt wurde und der Steckbrief gepostet ist.\r\n• Danach werden die intern gespeicherten Profildaten wieder gelöscht.\r\n• Das Foto wird über Telegram verarbeitet (es wird nur die Telegram file_id genutzt, um es zu posten).\r\n\r\n📌 Wichtig: Gruppenverlauf\r\nDer Steckbrief-Post bleibt im Chatverlauf sichtbar, solange er nicht von Admins gelöscht wird.\r\n\r\n📊 Analyse / Aktivitätsauswertung\r\nIn der Gruppe kann zusätzlich ein Analyse-Bot genutzt werden, um Aktivität/Inaktivität zu erkennen.\r\nDaten können dabei bis zu 1 Jahr gespeichert und danach gelöscht werden.\r\n\r\n📄 Telegram\r\nZusätzlich gelten die Telegram-Regeln und die Telegram-Datenschutzerklärung.\r\n\r\n👤 Kontakt\r\nEntwickler: @pup_Rinno_cgn\r\nBei Fragen kannst du mir jederzeit schreiben 😊",
+    "form_fields": [
+        {
+            "id": "name",
+            "label": "Wie ist dein Name? Es reicht dein Vorname.",
+            "type": "text",
+            "required": true,
+            "enabled": true
+        },
+        {
+            "id": "age",
+            "label": "Wie alt bist du?",
+            "type": "number",
+            "required": true,
+            "enabled": true,
+            "min_value": 12,
+            "max_value": 99
+        },
+        {
+            "id": "state",
+            "label": "Aus welchem Bundesland kommst du? (z.B. NRW, Bayern, Berlin ...)",
+            "type": "text",
+            "required": true,
+            "enabled": true
+        },
+        {
+            "id": "photo",
+            "label": "Bitte sende ein *normales Foto* von dir (kein Dokument).",
+            "type": "photo",
+            "required": true,
+            "enabled": true
+        },
+        {
+            "id": "hobbies",
+            "label": "🎯 Was sind deine Hobbys oder Interessen?",
+            "type": "text",
+            "required": false,
+            "enabled": true
+        },
+        {
+            "id": "instagram",
+            "label": "📱 Trage hier deinen Instagram oder einen anderen Social Media Account ein:",
+            "type": "text",
+            "required": false,
+            "enabled": true
+        },
+        {
+            "id": "other",
+            "label": "💬 Möchtest du noch etwas über dich sagen?",
+            "type": "text",
+            "required": false,
+            "enabled": true
+        },
+        {
+            "id": "sexuality",
+            "label": "🏳️‍🌈 Wie ist deine Sexualität?",
+            "type": "text",
+            "required": false,
+            "enabled": true
+        }
+    ]
 }
