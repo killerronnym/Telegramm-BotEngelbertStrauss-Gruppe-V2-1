@@ -15,10 +15,20 @@
     .table { color: var(--text-primary); --bs-table-bg: transparent; --bs-table-border-color: rgba(255, 255, 255, 0.04); font-size: 0.85rem; }
     .table thead th { background: rgba(0, 0, 0, 0.15); color: var(--text-dim); font-weight: 600; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--border-muted); }
     .text-blue { color: var(--blue-accent); }
+    
+    /* Action Buttons Style */
+    .btn-quick-action { font-weight: 600; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; color: white; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: transform 0.2s; font-size: 0.9rem; }
+    .btn-quick-action:hover { transform: translateY(-2px); color: white; }
+    .btn-cyan { background-color: #06b6d4; }
+    .btn-cyan:hover { background-color: #0891b2; }
+    .btn-amber { background-color: #f59e0b; color: #111; }
+    .btn-amber:hover { background-color: #d97706; }
+    .btn-rose { background-color: #e11d48; }
+    .btn-rose:hover { background-color: #be123c; }
 </style>
 
 <div class="dashboard-container">
-    <div class="d-flex justify-content-between align-items-start mb-5">
+    <div class="d-flex justify-content-between align-items-start mb-4">
         <div>
             <a href="/" class="btn-back mb-4"><i class="bi bi-chevron-left"></i> ZURÜCK ZUR ÜBERSICHT</a>
             <h1 class="fw-bold mb-1 h3 text-white">ID-Finder <span class="text-blue">Zentrale</span></h1>
@@ -35,6 +45,19 @@
         </div>
     </div>
 
+    <!-- ⚡ Schnellzugriff-Leiste -->
+    <div class="d-flex flex-wrap gap-3 mb-5 pb-3 border-bottom border-white border-opacity-10">
+        <a href="{{ url_for('id_finder_commands') }}" class="btn-quick-action btn-cyan">
+            <i class="bi bi-journal-code"></i> Zur Befehls-Dokumentation
+        </a>
+        <a href="{{ url_for('id_finder_admin_panel') }}" class="btn-quick-action btn-amber">
+            <i class="bi bi-shield-lock-fill"></i> Admin Panel öffnen
+        </a>
+        <a href="{{ url_for('id_finder_analytics') }}" class="btn-quick-action btn-rose">
+            <i class="bi bi-bar-chart-fill"></i> Analytics
+        </a>
+    </div>
+
     <div class="row g-4">
         <!-- Links: Steuerung & Config -->
         <div class="col-lg-4">
@@ -42,15 +65,16 @@
                 <div class="card-header"><h6>Steuerung</h6></div>
                 <div class="card-body">
                     <div class="d-flex gap-2 mb-4 pb-4 border-bottom border-white border-opacity-5">
-                        <form action="/bot-action/id_finder/start" method="POST" class="flex-grow-1">
+                        <form action="/bot-action/id_finder/start" method="POST" class="flex-grow-1 m-0">
                             <button type="submit" class="btn btn-success w-100 fw-bold py-2 shadow-sm" {% if is_running %}disabled{% endif %}>START</button>
                         </form>
-                        <form action="/bot-action/id_finder/stop" method="POST" class="flex-grow-1">
+                        <form action="/bot-action/id_finder/stop" method="POST" class="flex-grow-1 m-0">
                             <button type="submit" class="btn btn-danger w-100 fw-bold py-2 shadow-sm" {% if not is_running %}disabled{% endif %}>STOP</button>
                         </form>
                     </div>
 
                     <form action="/id-finder/save-config" method="POST">
+                        <input type="hidden" name="action" value="save_config">
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">BOT TOKEN</label>
                             <input type="password" class="form-control" name="bot_token" value="{{ config.bot_token or '' }}">
@@ -72,65 +96,73 @@
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header"><h6>Schnellzugriff</h6></div>
-                <div class="card-body d-grid gap-2">
-                    <a href="{{ url_for('id_finder_analytics') }}" class="btn btn-outline-light btn-sm text-start"><i class="bi bi-bar-chart-fill me-2"></i> Analytics Dashboard</a>
-                    <a href="#" class="btn btn-outline-light btn-sm text-start"><i class="bi bi-shield-lock-fill me-2"></i> Moderations-Tools</a>
+            <!-- Console Logs -->
+            <div class="card bg-black border-0">
+                <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
+                    <h6 class="text-secondary small font-monospace">System Console</h6>
+                    <form action="{{ url_for('id_finder_dashboard') }}" method="POST" class="m-0">
+                        <input type="hidden" name="action" value="clear_system_log">
+                        <button type="submit" class="btn btn-link text-danger text-decoration-none p-0 fw-bold small">CLEAR</button>
+                    </form>
+                </div>
+                <div class="card-body p-0">
+                    <pre class="log-display mb-0" style="height: 250px; overflow-y: auto;">{% for line in system_logs %}{{ line.strip() }}
+{% endfor %}</pre>
                 </div>
             </div>
         </div>
 
-        <!-- Rechts: Registry & Logs -->
+        <!-- Rechts: Registry -->
         <div class="col-lg-8">
-            <!-- User Registry -->
-            <div class="card mb-4">
+            <div class="card mb-4" style="height: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6>👥 User Registry</h6>
                     <span class="badge bg-dark border border-white border-opacity-10 px-3">{{ user_registry|length }} Users</span>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body p-0 d-flex flex-column">
                     <div class="px-3 py-3 border-bottom border-white border-opacity-5">
                         <input type="text" id="registrySearch" class="form-control form-control-sm" placeholder="Suche nach Name, ID oder Username...">
                     </div>
-                    <div class="table-responsive" style="max-height: 400px;">
+                    <div class="table-responsive flex-grow-1" style="max-height: 600px;">
                         <table class="table table-borderless align-middle mb-0" id="registryTable">
-                            <thead>
-                                <tr><th>USER</th><th>USER-ID</th><th class="text-end pe-4">AKTION</th></tr>
+                            <thead class="sticky-top" style="background: var(--card-base); z-index: 5;">
+                                <tr>
+                                    <th class="ps-4">USER</th>
+                                    <th>USER-ID</th>
+                                    <th>ZULETZT GESEHEN</th>
+                                    <th class="text-end pe-4">AKTION</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 {% if user_registry %}
                                     {% for u in user_registry %}
                                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.02) !important;">
                                         <td class="ps-4">
-                                            <div class="fw-bold">{{ u.full_name or 'Unbekannt' }}</div>
-                                            <div class="small text-blue">@{{ u.username or '—' }}</div>
-                                        </td>
-                                        <td><code>{{ u.id }}</code></td>
-                                        <td class="text-end pe-4">
-                                            <div class="d-flex justify-content-end gap-2">
-                                                <button class="btn btn-outline-light btn-sm border-0"><i class="bi bi-journal-text"></i></button>
-                                                <button class="btn btn-outline-danger btn-sm border-0"><i class="bi bi-trash3"></i></button>
+                                            <div class="d-flex align-items-center gap-3">
+                                                {% if u.avatar_url %}
+                                                    <img src="{{ u.avatar_url }}" class="rounded-circle border border-secondary" width="32" height="32" onerror="this.style.display='none'">
+                                                {% else %}
+                                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white small" style="width:32px; height:32px;">{{ u.full_name[:1] }}</div>
+                                                {% endif %}
+                                                <div>
+                                                    <div class="fw-bold text-white">{{ u.full_name or 'Unbekannt' }}</div>
+                                                    {% if u.username %}<div class="small text-blue">@{{ u.username }}</div>{% endif %}
+                                                </div>
                                             </div>
+                                        </td>
+                                        <td><code class="text-dim">{{ u.id }}</code></td>
+                                        <td><small class="text-secondary">{{ u.last_seen or '—' }}</small></td>
+                                        <td class="text-end pe-4">
+                                            <a href="{{ url_for('id_finder_user_detail', user_id=u.id) }}" class="btn btn-outline-light btn-sm border-0" title="Verlauf ansehen"><i class="bi bi-journal-text"></i></a>
                                         </td>
                                     </tr>
                                     {% endfor %}
+                                {% else %}
+                                    <tr><td colspan="4" class="text-center py-5 text-muted">Keine Benutzerdaten vorhanden.</td></tr>
                                 {% endif %}
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </div>
-
-            <!-- Console Logs -->
-            <div class="card bg-black border-0">
-                <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
-                    <h6 class="text-secondary small font-monospace">System Console</h6>
-                    <button class="btn btn-link text-danger text-decoration-none p-0 fw-bold small">CLEAR</button>
-                </div>
-                <div class="card-body p-0">
-                    <pre class="log-display mb-0" style="height: 250px; overflow-y: auto;">{% for line in system_logs %}{{ line.strip() }}
-{% endfor %}</pre>
                 </div>
             </div>
         </div>
