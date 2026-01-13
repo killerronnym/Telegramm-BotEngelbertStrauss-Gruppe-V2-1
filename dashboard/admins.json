@@ -38,5 +38,19 @@
             "can_see_logs": true,
             "can_manage_admins": true
         }
+    },
+    "3432423432": {
+        "name": "t",
+        "permissions": {
+            "can_warn": true,
+            "can_kick": true,
+            "can_ban": true,
+            "can_mute": true,
+            "can_delete_messages": true,
+            "can_pin_messages": true,
+            "can_configure": true,
+            "can_see_ids": true,
+            "can_see_logs": true
+        }
     }
 }

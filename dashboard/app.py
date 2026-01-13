@@ -280,6 +280,18 @@ def id_finder_delete_admin():
         flash("Admin gelöscht.", "info")
     return redirect(url_for("id_finder_admin_panel"))
 
+@app.route("/id-finder/update-admin-permissions", methods=["POST"])
+@login_required
+def id_finder_update_admin_permissions():
+    admins = load_json(ADMINS_FILE)
+    uid = request.form.get("admin_id")
+    if uid in admins:
+        new_permissions = {p: (p in request.form) for p in AVAILABLE_PERMISSIONS}
+        admins[uid]["permissions"] = new_permissions
+        save_json(ADMINS_FILE, admins)
+        flash("Rechte für {} aktualisiert.".format(admins[uid].get("name", uid)), "success")
+    return redirect(url_for("id_finder_admin_panel"))
+
 # --- ⛏️ MINECRAFT ---
 @app.route("/minecraft")
 @login_required
