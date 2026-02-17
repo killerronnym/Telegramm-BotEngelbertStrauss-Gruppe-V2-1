@@ -9,6 +9,10 @@
     .btn-back:hover { background: rgba(255, 255, 255, 0.05); color: #fff; border-color: var(--blue-accent); }
     .status-badge-container { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-muted); padding: 0.4rem 1.2rem; border-radius: 30px; display: inline-flex; align-items: center; gap: 0.6rem; }
     .log-display { background: #000; color: #a5b4fc; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; padding: 1rem; border-radius: 8px; border: 1px solid #1e293b; line-height: 1.5; }
+    .stat-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-muted); }
+    .stat-item:last-child { border-bottom: none; }
+    .stat-label { color: var(--text-secondary); font-size: 0.9rem; }
+    .stat-value { font-weight: bold; color: #fff; font-size: 1rem; }
 </style>
 
 {% set umfrage_running = bot_status.umfrage.running %}
@@ -18,7 +22,7 @@
         <div>
             <a href="/" class="btn-back mb-4"><i class="bi bi-chevron-left"></i> ZURÜCK ZUR ÜBERSICHT</a>
             <h1 class="fw-bold mb-1 h3 text-white">Umfrage <span class="text-blue">Einstellungen</span></h1>
-            <p class="text-secondary small">Konfiguration & Zeitplanung für Umfragen</p>
+            <p class="text-secondary small">Konfiguration, Statistiken und Fragen für den Umfrage Bot.</p>
         </div>
         <div class="status-badge-container mt-2">
             {% if umfrage_running %}
@@ -44,6 +48,24 @@
                 </div>
             </div>
 
+            <div class="card mb-4">
+                <div class="card-header"><h6>Statistiken</h6></div>
+                <div class="card-body">
+                    <div class="stat-item">
+                        <span class="stat-label">Gesamte Umfragen</span>
+                        <span class="stat-value text-primary">{{ stats.total }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Gestellte Umfragen</span>
+                        <span class="stat-value text-warning">{{ stats.asked }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Verbleibende Umfragen</span>
+                        <span class="stat-value text-success">{{ stats.remaining }}</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header"><h6>Sofort-Aktionen</h6></div>
                 <div class="card-body">
@@ -62,12 +84,11 @@
                 <div class="card-header"><h6>Konfiguration</h6></div>
                 <div class="card-body">
                     <form action="/umfrage-settings" method="POST">
-                        <input type="hidden" name="config_type" value="umfrage">
                         <input type="hidden" name="action" value="save_settings">
                         
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">TELEGRAM BOT TOKEN</label>
-                            <input type="password" class="form-control" name="token" value="{{ config.umfrage.token or '' }}">
+                            <input type="password" class="form-control" name="token" value="{{ config.umfrage.bot_token or '' }}">
                         </div>
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">CHANNEL ID</label>
@@ -77,54 +98,28 @@
                             <label class="small text-secondary fw-bold mb-1">TOPIC ID (OPTIONAL)</label>
                             <input type="text" class="form-control" name="topic_id" value="{{ config.umfrage.topic_id or '' }}">
                         </div>
-                        <button type="submit" class="btn-blue-action w-100">KONFIGURATION SPEICHERN</button>
+                        <button type="submit" class="btn-blue-action w-100 mt-2">KONFIGURATION SPEICHERN</button>
                     </form>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header"><h6>Automatisierung</h6></div>
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6>Umfragen bearbeiten (JSON)</h6>
+                </div>
                 <div class="card-body">
-                    <form action="/umfrage-settings" method="POST" onsubmit="(function(){ var h = document.getElementById('schedule_hour').value || '00'; var m = document.getElementById('schedule_minute').value || '00'; h = h.toString().padStart(2,'0'); m = m.toString().padStart(2,'0'); document.getElementById('schedule_time').value = h + ':' + m; })();">
-                        <input type="hidden" name="config_type" value="umfrage">
-                        <input type="hidden" name="action" value="save_schedule">
-                        <input type="hidden" id="schedule_time" name="schedule_time" value="{{ schedule.time or '19:00' }}">
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="small text-secondary fw-bold mb-1">⏰ UHRZEIT FÜR UMFRAGE</label>
-                                <div class="d-flex align-items-center gap-2">
-                                    <input type="number" id="schedule_hour" class="form-control" min="0" max="23" value="{{ (schedule.time or '19:00').split(':')[0] }}">
-                                    <span class="fw-bold">:</span>
-                                    <input type="number" id="schedule_minute" class="form-control" min="0" max="59" value="{{ (schedule.time or '19:00').split(':')[1] }}">
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3 d-flex align-items-end">
-                                <div class="form-check form-switch p-2 ps-5 rounded border border-white border-opacity-5 w-100" style="background: rgba(255,255,255,0.01);">
-                                    <input class="form-check-input" type="checkbox" id="schedule_enabled" name="schedule_enabled" value="true" {% if schedule.enabled %}checked{% endif %}>
-                                    <label class="form-check-label small fw-bold" for="schedule_enabled">Auto-Trigger aktiv</label>
-                                </div>
-                            </div>
+                    <form action="/umfrage-settings" method="POST">
+                        <input type="hidden" name="action" value="save_questions">
+                        <div class="mb-3">
+                            <textarea class="form-control font-monospace" name="questions_json" rows="15" style="font-size: 0.8rem;">{{ questions_json }}</textarea>
+                            <div class="form-text">Bearbeiten Sie hier die JSON-Daten der Umfragen. Achten Sie auf valides JSON-Format.</div>
                         </div>
-
-                        <div class="mb-4 mt-2">
-                            <label class="small text-secondary fw-bold mb-2">📅 WOCHENTAGE</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                {% set tage = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] %}
-                                {% for tag in tage %}
-                                    <div class="form-check form-check-inline m-0">
-                                        <input class="form-check-input d-none" type="checkbox" name="schedule_days" id="umf_tag_{{ loop.index }}" value="{{ loop.index0 }}" {% if loop.index0 in (schedule.days or []) %}checked{% endif %}>
-                                        <label class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1 fw-bold day-label" for="umf_tag_{{ loop.index }}" style="font-size: 0.7rem;">{{ tag|upper }}</label>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <button type="submit" class="btn-blue-action w-100">AUTOMATISIERUNG SPEICHERN</button>
+                        <button type="submit" class="btn btn-primary w-100">UMFRAGEN SPEICHERN</button>
                     </form>
                 </div>
             </div>
 
-            <div class="card bg-black border-0">
+            <div class="card bg-black border-0 mt-4">
                 <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
                     <h6 class="text-secondary small font-monospace">System Console</h6>
                     <form action="/umfrage-settings" method="POST" class="m-0">

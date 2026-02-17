@@ -72,6 +72,12 @@ MINECRAFT_STATUS_CONFIG_FILE = os.path.join(DATA_DIR, "minecraft_status_config.j
 MINECRAFT_STATUS_CACHE_FILE = os.path.join(DATA_DIR, "minecraft_status_cache.json")
 USER_MESSAGE_DIR = os.path.join(DATA_DIR, "user_messages")
 
+# Data files for Quiz and Umfrage bots
+QUIZ_FRAGEN_FILE = os.path.join(PROJECT_ROOT, "data", "quizfragen.json")
+QUIZ_FRAGEN_GESTELLT_FILE = os.path.join(QUIZ_BOT_DIR, "quizfragen_gestellt.json")
+UMFRAGEN_FILE = os.path.join(PROJECT_ROOT, "data", "umfragen.json")
+UMFRAGEN_GESTELLT_FILE = os.path.join(UMFRAGE_BOT_DIR, "umfragen_gestellt.json")
+
 # Log Files
 OUTFIT_BOT_LOG = os.path.join(OUTFIT_BOT_DIR, "outfit_bot.log")
 ID_FINDER_BOT_LOG = os.path.join(ID_FINDER_BOT_DIR, "id_finder_bot.log")
@@ -298,7 +304,7 @@ def id_finder_analytics():
         if not latest_user or udata.get("last_seen", "") > latest_user.get("last_seen", ""): latest_user = udata
     chat_counts = defaultdict(int)
     for u in users:
-        for c in (u.get("chat_ids") or u.get("groups_seen") or []): chat_counts[str(c)] += 1
+        for c in (u.get("chat_ids") or udata.get("groups_seen") or []): chat_counts[str(c)] += 1
     stats = {"total_users": len(users), "unique_chats": len(unique_chats), "most_recent_user": latest_user, "top_chats": sorted(chat_counts.items(), key=lambda x: x[1], reverse=True)[:10]}
     activity_data = build_group_activity(days=request.args.get("days"), month=request.args.get("month"), year=request.args.get("year"))
     return render_template("id_finder_analytics.html", activity=activity_data, stats=stats, user_registry=sorted(users, key=lambda x: x.get("last_seen", ""), reverse=True), bot_status=build_bot_status())
@@ -568,38 +574,140 @@ def minecraft_status_reset_message(): return redirect(url_for("minecraft_status_
 @app.route("/quiz-settings", methods=["GET", "POST"])
 @login_required
 def quiz_settings():
-    cfg = load_json(QUIZ_BOT_CONFIG_FILE); 
+    cfg = load_json(QUIZ_BOT_CONFIG_FILE)
     if request.method == "POST":
         action = request.form.get("action")
-        if action == "save_settings": cfg.update({"bot_token": request.form.get("token"), "channel_id": request.form.get("channel_id")}); save_json(QUIZ_BOT_CONFIG_FILE, cfg); flash("Gespeichert.", "success")
-        elif action == "save_schedule": cfg["schedule"] = {"time": request.form.get("schedule_time"), "enabled": "schedule_enabled" in request.form, "days": [int(d) for d in request.form.getlist("schedule_days")]}; save_json(QUIZ_BOT_CONFIG_FILE, cfg); flash("Zeitplan gespeichert.", "success")
+        if action == "save_settings":
+            cfg.update({
+                "bot_token": request.form.get("token"), 
+                "channel_id": request.form.get("channel_id"),
+                "topic_id": request.form.get("topic_id")
+            })
+            save_json(QUIZ_BOT_CONFIG_FILE, cfg)
+            flash("Gespeichert.", "success")
+        elif action == "save_schedule":
+            cfg["schedule"] = {
+                "time": request.form.get("schedule_time"),
+                "enabled": "schedule_enabled" in request.form,
+                "days": [int(d) for d in request.form.getlist("schedule_days")]
+            }
+            save_json(QUIZ_BOT_CONFIG_FILE, cfg)
+            flash("Zeitplan gespeichert.", "success")
         elif action == "clear_log":
             if os.path.exists(QUIZ_BOT_LOG):
-                with open(QUIZ_BOT_LOG, "w") as f: f.write("")
+                with open(QUIZ_BOT_LOG, "w") as f:
+                    f.write("")
+        elif action == "save_questions":
+            questions_json = request.form.get("questions_json")
+            try:
+                json.loads(questions_json)  # Validate JSON
+                with open(QUIZ_FRAGEN_FILE, "w", encoding="utf-8") as f:
+                    f.write(questions_json)
+                flash("Fragen gespeichert.", "success")
+            except json.JSONDecodeError:
+                flash("Fehler: Ungültiges JSON-Format.", "danger")
+
         return redirect(url_for("quiz_settings"))
-    return render_template("quiz_settings.html", config={"quiz": cfg}, is_running=is_bot_running("quiz"), logs=get_bot_logs(QUIZ_BOT_LOG), bot_status=build_bot_status(), schedule=cfg.get("schedule", {}))
+
+    # Load questions and stats
+    questions = load_json(QUIZ_FRAGEN_FILE, [])
+    asked_questions = load_json(QUIZ_FRAGEN_GESTELLT_FILE, [])
+    
+    stats = {
+        "total": len(questions),
+        "asked": len(asked_questions),
+        "remaining": len(questions) - len(asked_questions)
+    }
+    
+    questions_json_str = json.dumps(questions, indent=4, ensure_ascii=False)
+
+    return render_template(
+        "quiz_settings.html",
+        config={"quiz": cfg},
+        is_running=is_bot_running("quiz"),
+        logs=get_bot_logs(QUIZ_BOT_LOG),
+        bot_status=build_bot_status(),
+        schedule=cfg.get("schedule", {}),
+        stats=stats,
+        questions_json=questions_json_str
+    )
 
 @app.route("/umfrage-settings", methods=["GET", "POST"])
 @login_required
 def umfrage_settings():
-    cfg = load_json(UMFRAGE_BOT_CONFIG_FILE); 
+    cfg = load_json(UMFRAGE_BOT_CONFIG_FILE)
     if request.method == "POST":
         action = request.form.get("action")
-        if action == "save_settings": cfg.update({"bot_token": request.form.get("token"), "channel_id": request.form.get("channel_id")}); save_json(UMFRAGE_BOT_CONFIG_FILE, cfg); flash("Gespeichert.", "success")
-        elif action == "save_schedule": cfg["schedule"] = {"time": request.form.get("schedule_time"), "enabled": "schedule_enabled" in request.form, "days": [int(d) for d in request.form.getlist("schedule_days")]}; save_json(UMFRAGE_BOT_CONFIG_FILE, cfg); flash("Zeitplan gespeichert.", "success")
+        if action == "save_settings":
+            cfg.update({
+                "bot_token": request.form.get("token"), 
+                "channel_id": request.form.get("channel_id"),
+                "topic_id": request.form.get("topic_id")
+            })
+            save_json(UMFRAGE_BOT_CONFIG_FILE, cfg)
+            flash("Gespeichert.", "success")
+        elif action == "save_schedule":
+            cfg["schedule"] = {
+                "time": request.form.get("schedule_time"),
+                "enabled": "schedule_enabled" in request.form,
+                "days": [int(d) for d in request.form.getlist("schedule_days")]
+            }
+            save_json(UMFRAGE_BOT_CONFIG_FILE, cfg)
+            flash("Zeitplan gespeichert.", "success")
         elif action == "clear_log":
             if os.path.exists(UMFRAGE_BOT_LOG):
-                with open(UMFRAGE_BOT_LOG, "w") as f: f.write("")
+                with open(UMFRAGE_BOT_LOG, "w") as f:
+                    f.write("")
+        elif action == "save_questions":
+            questions_json = request.form.get("questions_json")
+            try:
+                json.loads(questions_json)  # Validate JSON
+                with open(UMFRAGEN_FILE, "w", encoding="utf-8") as f:
+                    f.write(questions_json)
+                flash("Umfragen gespeichert.", "success")
+            except json.JSONDecodeError:
+                flash("Fehler: Ungültiges JSON-Format.", "danger")
+
         return redirect(url_for("umfrage_settings"))
-    return render_template("umfrage_settings.html", config={"umfrage": cfg}, is_running=is_bot_running("umfrage"), logs=get_bot_logs(UMFRAGE_BOT_LOG), bot_status=build_bot_status(), schedule=cfg.get("schedule", {}))
+    
+    # Load questions and stats
+    questions = load_json(UMFRAGEN_FILE, [])
+    asked_questions = load_json(UMFRAGEN_GESTELLT_FILE, [])
+    
+    stats = {
+        "total": len(questions),
+        "asked": len(asked_questions),
+        "remaining": len(questions) - len(asked_questions)
+    }
+    
+    questions_json_str = json.dumps(questions, indent=4, ensure_ascii=False)
+
+    return render_template(
+        "umfrage_settings.html",
+        config={"umfrage": cfg},
+        is_running=is_bot_running("umfrage"),
+        logs=get_bot_logs(UMFRAGE_BOT_LOG),
+        bot_status=build_bot_status(),
+        schedule=cfg.get("schedule", {}),
+        stats=stats,
+        questions_json=questions_json_str
+    )
 
 @app.route("/umfrage/send-random", methods=["POST"])
 @login_required
-def umfrage_send_random(): flash("Umfrage angestoßen.", "info"); return redirect(url_for("index"))
+def umfrage_send_random():
+    with open(os.path.join(UMFRAGE_BOT_DIR, "send_now.tmp"), "w") as f:
+        f.write("1")
+    flash("Befehl zum Senden einer Umfrage gesendet.", "info")
+    return redirect(url_for("umfrage_settings"))
 
 @app.route("/quiz/send-random", methods=["POST"])
 @login_required
-def quiz_send_random(): flash("Quiz angestoßen.", "info"); return redirect(url_for("index"))
+def quiz_send_random():
+    with open(os.path.join(QUIZ_BOT_DIR, "send_now.tmp"), "w") as f:
+        f.write("1")
+    flash("Befehl zum Senden einer Quizfrage gesendet.", "info")
+    return redirect(url_for("quiz_settings"))
 
 # Proxy für Avatare
 @app.route("/tg/avatar/<user_id>")

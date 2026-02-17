@@ -5,24 +5,27 @@ import random
 import asyncio
 import logging
 import hashlib
-from datetime import datetime
+from datetime import datetime, time as dt_time
 from telegram import Bot
 
 # ----------------- Setup -----------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(BASE_DIR)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
 
 CONFIG_FILE = os.path.join(BASE_DIR, "umfrage_bot_config.json")
-TRIGGER_FILE = os.path.join(BASE_DIR, "command_send_random.tmp")
+TRIGGER_FILE = os.path.join(BASE_DIR, "send_now.tmp")
 
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
-POLL_FILE_A = os.path.join(DATA_DIR, "umfragen.json")            # alt
-POLL_FILE_B = os.path.join(BASE_DIR, "umfragen.json")            # neu (im Bot-Ordner)
-USED_FILE = os.path.join(BASE_DIR, "umfragen_gestellt.json")     # neu: gestellte Umfragen
+POLL_FILE = os.path.join(DATA_DIR, "umfragen.json")
+USED_FILE = os.path.join(BASE_DIR, "umfragen_gestellt.json")
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s %(levelname)s: %(message)s"
+    format="%(asctime)s %(levelname)s: %(message)s",
+    handlers=[
+        logging.FileHandler(os.path.join(BASE_DIR, "umfrage_bot.log")),
+        logging.StreamHandler()
+    ]
 )
 log = logging.getLogger("umfrage_bot")
 
@@ -34,140 +37,133 @@ def load_json(path, default):
             return default
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except Exception as e:
+        log.error(f"Error loading JSON from {path}: {e}")
         return default
 
-
 def save_json(path, data):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-
-def pick_poll_file():
-    if os.path.exists(POLL_FILE_B):
-        return POLL_FILE_B
-    return POLL_FILE_A
-
-
-def normalize_polls(raw):
-    """
-    Unterstützt:
-      - Liste: [ {frage, optionen}, ... ]
-      - Dict: { "polls": [ ... ] } oder { "umfragen": [ ... ] }
-    """
-    if isinstance(raw, list):
-        return raw
-    if isinstance(raw, dict):
-        if isinstance(raw.get("polls"), list):
-            return raw.get("polls", [])
-        if isinstance(raw.get("umfragen"), list):
-            return raw.get("umfragen", [])
-    return []
-
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        log.error(f"Error saving JSON to {path}: {e}")
 
 def poll_fingerprint(p: dict) -> str:
     frage = str(p.get("frage", "")).strip()
     optionen = p.get("optionen", [])
     if not isinstance(optionen, list):
         optionen = []
-    payload = frage + "||" + "||".join([str(x).strip() for x in optionen])
+    payload = frage + "||" + "||".join([str(x).strip() for x in sorted(optionen)])
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()
 
-
-def safe_int(x, fallback=None):
-    try:
-        return int(x)
-    except Exception:
-        return fallback
-
-
-# ----------------- Core -----------------
-async def send_poll_once():
+# ----------------- Core Logic -----------------
+async def send_poll():
     cfg = load_json(CONFIG_FILE, {})
-    token = (cfg.get("token") or "").strip()
-    chat_id = (cfg.get("channel_id") or "").strip()
-    topic_id = cfg.get("topic_id")
+    token = cfg.get("bot_token", "").strip()
+    chat_id = cfg.get("channel_id", "").strip()
+    topic_id = cfg.get("topic_id", "").strip()
 
     if not token or not chat_id:
-        return False, "Config fehlt: token oder channel_id"
+        log.warning("Bot token or channel_id is not configured.")
+        return False, "Konfiguration (Token/Channel ID) fehlt."
 
-    poll_file = pick_poll_file()
-    raw = load_json(poll_file, [])
-    polls = normalize_polls(raw)
-
+    polls = load_json(POLL_FILE, [])
     if not polls:
-        return False, f"Keine Umfragen gefunden in: {poll_file}"
+        return False, "Keine Umfragen in 'data/umfragen.json' gefunden."
 
-    used = load_json(USED_FILE, {"used": [], "updated_at": None})
-    used_set = set(used.get("used", [])) if isinstance(used, dict) else set()
+    used_hashes = set(load_json(USED_FILE, []))
+    available_polls = [p for p in polls if poll_fingerprint(p) not in used_hashes]
 
-    available = []
-    for p in polls:
-        if not isinstance(p, dict):
-            continue
-        fp = poll_fingerprint(p)
-        if fp not in used_set:
-            available.append((fp, p))
+    if not available_polls:
+        log.info("All polls have been sent.")
+        return False, "Alle Umfragen wurden bereits gestellt."
 
-    if not available:
-        return False, "Alle Umfragen wurden bereits gestellt (kein Reset gewünscht)."
-
-    fp, p = random.choice(available)
-
-    frage = str(p.get("frage", "")).strip()
-    optionen = p.get("optionen", [])
-    if not isinstance(optionen, list):
-        optionen = []
+    poll_data = random.choice(available_polls)
+    
+    frage = poll_data.get("frage", "").strip()
+    optionen = poll_data.get("optionen", [])
 
     if not frage or len(optionen) < 2:
-        used_set.add(fp)
-        save_json(USED_FILE, {"used": sorted(list(used_set)), "updated_at": datetime.utcnow().isoformat()})
-        return False, "Ungültige Umfrage (leer oder <2 Optionen). Markiert als gestellt."
-
-    bot = Bot(token=token)
-    message_thread_id = safe_int(topic_id, None) if str(topic_id).isdigit() else None
-
-    await bot.send_poll(
-        chat_id=chat_id,
-        question=frage,
-        options=[str(o) for o in optionen],
-        is_anonymous=False,
-        allows_multiple_answers=False,
-        message_thread_id=message_thread_id,
-    )
-
-    used_set.add(fp)
-    save_json(USED_FILE, {"used": sorted(list(used_set)), "updated_at": datetime.utcnow().isoformat()})
-
-    return True, "Umfrage erfolgreich gesendet."
-
-
-def handle_trigger():
-    if not os.path.exists(TRIGGER_FILE):
-        return
+        log.warning(f"Skipping invalid poll: {poll_data}")
+        return False, "Ungültige Umfrage übersprungen."
 
     try:
-        os.remove(TRIGGER_FILE)
-    except Exception:
-        pass
-
-    try:
-        ok, msg = asyncio.run(send_poll_once())
-        if ok:
-            log.info(msg)
-        else:
-            log.warning(msg)
+        bot = Bot(token=token)
+        message_thread_id = int(topic_id) if topic_id and topic_id.isdigit() else None
+        
+        await bot.send_poll(
+            chat_id=chat_id,
+            question=frage,
+            options=optionen,
+            is_anonymous=False,
+            allows_multiple_answers=False,
+            message_thread_id=message_thread_id
+        )
+        log.info(f"Successfully sent poll: {frage}")
+        
+        used_hashes.add(poll_fingerprint(poll_data))
+        save_json(USED_FILE, list(used_hashes))
+        
+        return True, "Umfrage erfolgreich gesendet."
     except Exception as e:
-        log.error(f"Unerwarteter Fehler beim Senden: {e}")
+        log.error(f"Failed to send poll: {e}")
+        return False, f"Fehler beim Senden: {e}"
 
+# ----------------- Scheduler and Trigger -----------------
+def check_triggers():
+    if os.path.exists(TRIGGER_FILE):
+        log.info("'send_now.tmp' trigger detected.")
+        try:
+            os.remove(TRIGGER_FILE)
+            asyncio.run(send_poll())
+        except Exception as e:
+            log.error(f"Error processing trigger file: {e}")
 
+def check_schedule(last_sent_date):
+    cfg = load_json(CONFIG_FILE, {})
+    schedule = cfg.get("schedule", {})
+    
+    if not schedule.get("enabled"):
+        return False
+
+    now = datetime.now()
+    today = now.date()
+    
+    if last_sent_date == today:
+        return False
+
+    scheduled_time_str = schedule.get("time")
+    if not scheduled_time_str:
+        return False
+
+    try:
+        scheduled_time = dt_time.fromisoformat(scheduled_time_str)
+    except ValueError:
+        log.error(f"Invalid time format in schedule: {scheduled_time_str}")
+        return False
+
+    scheduled_days = schedule.get("days", [])
+    
+    if now.weekday() in scheduled_days and now.time() >= scheduled_time:
+        log.info(f"Scheduled time reached for today. Sending poll.")
+        asyncio.run(send_poll())
+        return True
+
+    return False
+
+# ----------------- Main Loop -----------------
 def main():
-    log.info("Umfrage-Bot gestartet.")
+    log.info("Umfrage Bot started.")
+    last_sent_date = None
+    
     while True:
-        handle_trigger()
-        time.sleep(1)
+        check_triggers()
+        
+        if check_schedule(last_sent_date):
+            last_sent_date = datetime.now().date()
 
+        time.sleep(10)
 
 if __name__ == "__main__":
     main()
