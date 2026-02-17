@@ -304,7 +304,7 @@ def id_finder_analytics():
         if not latest_user or udata.get("last_seen", "") > latest_user.get("last_seen", ""): latest_user = udata
     chat_counts = defaultdict(int)
     for u in users:
-        for c in (u.get("chat_ids") or udata.get("groups_seen") or []): chat_counts[str(c)] += 1
+        for c in (u.get("chat_ids") or u.get("groups_seen") or []): chat_counts[str(c)] += 1
     stats = {"total_users": len(users), "unique_chats": len(unique_chats), "most_recent_user": latest_user, "top_chats": sorted(chat_counts.items(), key=lambda x: x[1], reverse=True)[:10]}
     activity_data = build_group_activity(days=request.args.get("days"), month=request.args.get("month"), year=request.args.get("year"))
     return render_template("id_finder_analytics.html", activity=activity_data, stats=stats, user_registry=sorted(users, key=lambda x: x.get("last_seen", ""), reverse=True), bot_status=build_bot_status())
@@ -571,6 +571,14 @@ def minecraft_status_stop(): flash("Überwachung aus.", "info"); return redirect
 def minecraft_status_reset_message(): return redirect(url_for("minecraft_status_page"))
 
 # --- QUIZ & UMFRAGE ---
+def question_fingerprint(q: dict) -> str:
+    frage = str(q.get("frage", "")).strip()
+    optionen = q.get("optionen", [])
+    if not isinstance(optionen, list):
+        optionen = []
+    payload = frage + "||" + "||".join([str(x).strip() for x in sorted(optionen)])
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+
 @app.route("/quiz-settings", methods=["GET", "POST"])
 @login_required
 def quiz_settings():
@@ -593,33 +601,40 @@ def quiz_settings():
             }
             save_json(QUIZ_BOT_CONFIG_FILE, cfg)
             flash("Zeitplan gespeichert.", "success")
-        elif action == "clear_log":
-            if os.path.exists(QUIZ_BOT_LOG):
-                with open(QUIZ_BOT_LOG, "w") as f:
-                    f.write("")
         elif action == "save_questions":
             questions_json = request.form.get("questions_json")
             try:
-                json.loads(questions_json)  # Validate JSON
+                json.loads(questions_json)
                 with open(QUIZ_FRAGEN_FILE, "w", encoding="utf-8") as f:
                     f.write(questions_json)
                 flash("Fragen gespeichert.", "success")
             except json.JSONDecodeError:
                 flash("Fehler: Ungültiges JSON-Format.", "danger")
-
+        elif action == "save_asked_questions":
+            asked_questions_json = request.form.get("asked_questions_json")
+            try:
+                asked_questions_list = json.loads(asked_questions_json)
+                asked_hashes = [question_fingerprint(q) for q in asked_questions_list]
+                save_json(QUIZ_FRAGEN_GESTELLT_FILE, asked_hashes)
+                flash("Liste der gestellten Fragen gespeichert.", "success")
+            except json.JSONDecodeError:
+                flash("Fehler: Ungültiges JSON-Format bei gestellten Fragen.", "danger")
+        
         return redirect(url_for("quiz_settings"))
 
-    # Load questions and stats
-    questions = load_json(QUIZ_FRAGEN_FILE, [])
-    asked_questions = load_json(QUIZ_FRAGEN_GESTELLT_FILE, [])
+    all_questions = load_json(QUIZ_FRAGEN_FILE, [])
+    asked_hashes = load_json(QUIZ_FRAGEN_GESTELLT_FILE, [])
+    question_map = {question_fingerprint(q): q for q in all_questions}
+    asked_questions_objects = [question_map[h] for h in asked_hashes if h in question_map]
     
     stats = {
-        "total": len(questions),
-        "asked": len(asked_questions),
-        "remaining": len(questions) - len(asked_questions)
+        "total": len(all_questions),
+        "asked": len(asked_questions_objects),
+        "remaining": len(all_questions) - len(asked_questions_objects)
     }
     
-    questions_json_str = json.dumps(questions, indent=4, ensure_ascii=False)
+    all_questions_json_str = json.dumps(all_questions, indent=4, ensure_ascii=False)
+    asked_questions_json_str = json.dumps(asked_questions_objects, indent=4, ensure_ascii=False)
 
     return render_template(
         "quiz_settings.html",
@@ -629,7 +644,8 @@ def quiz_settings():
         bot_status=build_bot_status(),
         schedule=cfg.get("schedule", {}),
         stats=stats,
-        questions_json=questions_json_str
+        questions_json=all_questions_json_str,
+        asked_questions_json=asked_questions_json_str
     )
 
 @app.route("/umfrage-settings", methods=["GET", "POST"])
@@ -654,33 +670,40 @@ def umfrage_settings():
             }
             save_json(UMFRAGE_BOT_CONFIG_FILE, cfg)
             flash("Zeitplan gespeichert.", "success")
-        elif action == "clear_log":
-            if os.path.exists(UMFRAGE_BOT_LOG):
-                with open(UMFRAGE_BOT_LOG, "w") as f:
-                    f.write("")
         elif action == "save_questions":
             questions_json = request.form.get("questions_json")
             try:
-                json.loads(questions_json)  # Validate JSON
+                json.loads(questions_json)
                 with open(UMFRAGEN_FILE, "w", encoding="utf-8") as f:
                     f.write(questions_json)
                 flash("Umfragen gespeichert.", "success")
             except json.JSONDecodeError:
                 flash("Fehler: Ungültiges JSON-Format.", "danger")
+        elif action == "save_asked_questions":
+            asked_questions_json = request.form.get("asked_questions_json")
+            try:
+                asked_questions_list = json.loads(asked_questions_json)
+                asked_hashes = [question_fingerprint(q) for q in asked_questions_list]
+                save_json(UMFRAGEN_GESTELLT_FILE, asked_hashes)
+                flash("Liste der gestellten Umfragen gespeichert.", "success")
+            except json.JSONDecodeError:
+                flash("Fehler: Ungültiges JSON-Format bei gestellten Umfragen.", "danger")
 
         return redirect(url_for("umfrage_settings"))
     
-    # Load questions and stats
-    questions = load_json(UMFRAGEN_FILE, [])
-    asked_questions = load_json(UMFRAGEN_GESTELLT_FILE, [])
+    all_polls = load_json(UMFRAGEN_FILE, [])
+    asked_hashes = load_json(UMFRAGEN_GESTELLT_FILE, [])
+    poll_map = {question_fingerprint(p): p for p in all_polls}
+    asked_polls_objects = [poll_map[h] for h in asked_hashes if h in poll_map]
     
     stats = {
-        "total": len(questions),
-        "asked": len(asked_questions),
-        "remaining": len(questions) - len(asked_questions)
+        "total": len(all_polls),
+        "asked": len(asked_polls_objects),
+        "remaining": len(all_polls) - len(asked_polls_objects)
     }
     
-    questions_json_str = json.dumps(questions, indent=4, ensure_ascii=False)
+    all_polls_json_str = json.dumps(all_polls, indent=4, ensure_ascii=False)
+    asked_polls_json_str = json.dumps(asked_polls_objects, indent=4, ensure_ascii=False)
 
     return render_template(
         "umfrage_settings.html",
@@ -690,7 +713,8 @@ def umfrage_settings():
         bot_status=build_bot_status(),
         schedule=cfg.get("schedule", {}),
         stats=stats,
-        questions_json=questions_json_str
+        questions_json=all_polls_json_str,
+        asked_questions_json=asked_polls_json_str
     )
 
 @app.route("/umfrage/send-random", methods=["POST"])

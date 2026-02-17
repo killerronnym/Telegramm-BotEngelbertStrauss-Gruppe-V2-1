@@ -13,6 +13,7 @@
     .stat-item:last-child { border-bottom: none; }
     .stat-label { color: var(--text-secondary); font-size: 0.9rem; }
     .stat-value { font-weight: bold; color: #fff; font-size: 1rem; }
+    .json-editor { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
 </style>
 
 {% set umfrage_running = bot_status.umfrage.running %}
@@ -22,7 +23,7 @@
         <div>
             <a href="/" class="btn-back mb-4"><i class="bi bi-chevron-left"></i> ZURÜCK ZUR ÜBERSICHT</a>
             <h1 class="fw-bold mb-1 h3 text-white">Umfrage <span class="text-blue">Einstellungen</span></h1>
-            <p class="text-secondary small">Konfiguration, Statistiken und Fragen für den Umfrage Bot.</p>
+            <p class="text-secondary small">Konfiguration, Statistiken und Umfragen für den Bot.</p>
         </div>
         <div class="status-badge-container mt-2">
             {% if umfrage_running %}
@@ -85,7 +86,6 @@
                 <div class="card-body">
                     <form action="/umfrage-settings" method="POST">
                         <input type="hidden" name="action" value="save_settings">
-                        
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">TELEGRAM BOT TOKEN</label>
                             <input type="password" class="form-control" name="token" value="{{ config.umfrage.bot_token or '' }}">
@@ -103,30 +103,36 @@
                 </div>
             </div>
 
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h6>Umfragen bearbeiten (JSON)</h6>
-                </div>
-                <div class="card-body">
-                    <form action="/umfrage-settings" method="POST">
-                        <input type="hidden" name="action" value="save_questions">
-                        <div class="mb-3">
-                            <textarea class="form-control font-monospace" name="questions_json" rows="15" style="font-size: 0.8rem;">{{ questions_json }}</textarea>
-                            <div class="form-text">Bearbeiten Sie hier die JSON-Daten der Umfragen. Achten Sie auf valides JSON-Format.</div>
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header"><h6>Alle Umfragen (Verfügbar)</h6></div>
+                        <div class="card-body">
+                            <form action="/umfrage-settings" method="POST">
+                                <input type="hidden" name="action" value="save_questions">
+                                <textarea class="form-control json-editor" name="questions_json" rows="15">{{ questions_json }}</textarea>
+                                <button type="submit" class="btn btn-primary w-100 mt-3">Verfügbare Umfragen speichern</button>
+                            </form>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">UMFRAGEN SPEICHERN</button>
-                    </form>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header"><h6>Gestellte Umfragen (Protokoll)</h6></div>
+                        <div class="card-body">
+                            <form action="/umfrage-settings" method="POST">
+                                <input type="hidden" name="action" value="save_asked_questions">
+                                <textarea class="form-control json-editor" name="asked_questions_json" rows="15">{{ asked_questions_json }}</textarea>
+                                <div class="form-text mt-2">Entfernen Sie Umfragen hier, um sie wieder in den Pool der verfügbaren Umfragen zu verschieben.</div>
+                                <button type="submit" class="btn btn-warning w-100 mt-3">Protokoll der gestellten Umfragen speichern</button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="card bg-black border-0 mt-4">
-                <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-center">
-                    <h6 class="text-secondary small font-monospace">System Console</h6>
-                    <form action="/umfrage-settings" method="POST" class="m-0">
-                         <input type="hidden" name="action" value="clear_log">
-                         <button type="submit" class="btn btn-link text-danger text-decoration-none p-0 fw-bold small">CLEAR</button>
-                    </form>
-                </div>
+                <div class="card-header border-0 pb-0"><h6 class="text-secondary small font-monospace">System Console</h6></div>
                 <div class="card-body p-0">
                     <pre class="log-display mb-0" style="height: 200px; overflow-y: auto;">{% for line in logs %}{{ line.strip() }}
 {% endfor %}</pre>
@@ -135,12 +141,4 @@
         </div>
     </div>
 </div>
-
-<style>
-    .form-check-input:checked + .day-label {
-        background-color: var(--blue-accent);
-        border-color: var(--blue-accent);
-        color: white;
-    }
-</style>
 {% endblock %}
