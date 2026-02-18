@@ -486,6 +486,7 @@ def id_finder_delete_user(user_id):
 def id_finder_analytics():
     try:
         reg = load_json(USER_REGISTRY_FILE, {"users": {}})
+        msg_counts = get_all_user_msg_counts()
         users = []; unique_chats = set(); latest_user = None
         for uid, udata in reg.get("users", {}).items():
             udata["id"] = uid
