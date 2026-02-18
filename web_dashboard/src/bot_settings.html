@@ -127,11 +127,16 @@
                                         <div class="small text-white-50 mb-1">{{ field.label[:60] }}...</div>
                                         <div class="fw-bold text-info">{{ field.emoji or '🔹' }} {{ field.display_name or field.id|capitalize }}</div>
                                     </td>
-                                    <td><span class="small text-secondary fw-bold text-uppercase">{{ field.type }}</span></td>
+                                    <td>
+                                        <div class="small text-secondary fw-bold text-uppercase">{{ field.type }}</div>
+                                        {% if field.min_age %}
+                                        <div class="small text-warning" style="font-size: 0.7em;">Min: {{ field.min_age }}J</div>
+                                        {% endif %}
+                                    </td>
                                     <td class="text-center">{% if field.required %}<i class="bi bi-check-lg text-success"></i>{% else %}<i class="bi bi-dash text-secondary opacity-50"></i>{% endif %}</td>
                                     <td class="text-end pe-4">
                                         <div class="d-flex justify-content-end gap-2">
-                                            <button class="btn btn-outline-light btn-sm border-0" onclick="openEditModal('{{ field.id }}', '{{ field.label|e }}', '{{ field.type }}', {{ 'true' if field.required else 'false' }}, {{ 'true' if field.enabled else 'false' }}, '{{ field.emoji or '🔹' }}', '{{ field.display_name or '' }}')"><i class="bi bi-pencil-square"></i></button>
+                                            <button class="btn btn-outline-light btn-sm border-0" onclick="openEditModal('{{ field.id }}', '{{ field.label|e }}', '{{ field.type }}', {{ 'true' if field.required else 'false' }}, {{ 'true' if field.enabled else 'false' }}, '{{ field.emoji or '🔹' }}', '{{ field.display_name or '' }}', '{{ field.min_age or '' }}', '{{ field.min_age_error_msg or ''|e }}')"><i class="bi bi-pencil-square"></i></button>
                                             <form action="/bot-settings/delete-field" method="POST" style="display:inline;"><input type="hidden" name="field_id" value="{{ field.id }}"><button type="submit" class="btn btn-outline-danger btn-sm border-0" onclick="return confirm('Löschen?');"><i class="bi bi-trash3"></i></button></form>
                                         </div>
                                     </td>
@@ -143,7 +148,52 @@
                 </div>
             </div>
 
-            <!-- ... Rest der Logs ... -->
+            <!-- Logs Section -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6>User Interaktionen (Live)</h6>
+                    <div class="d-flex align-items-center gap-2">
+                         <span class="badge bg-secondary">{{ user_interaction_logs|length }} Einträge</span>
+                         <form action="/bot-settings/clear-logs/user" method="POST">
+                             <button type="submit" class="btn btn-outline-danger btn-sm border-0 p-1" title="Logs löschen" onclick="return confirm('Wirklich alle User-Logs löschen?');"><i class="bi bi-trash"></i></button>
+                         </form>
+                    </div>
+                </div>
+                <div class="card-body bg-black p-0">
+                    <div class="log-display rounded-0 border-0" style="max-height: 400px; overflow-y: auto;">
+                        {% if user_interaction_logs %}
+                            {% for line in user_interaction_logs %}
+                                <div class="border-bottom border-white border-opacity-10 py-1 px-2" style="font-size: 0.8rem;">
+                                    {{ line }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-muted p-4 text-center">Keine aktuellen Interaktionen.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6>System Logs (Technisch)</h6>
+                     <form action="/bot-settings/clear-logs/system" method="POST">
+                         <button type="submit" class="btn btn-outline-danger btn-sm border-0 p-1" title="Logs löschen" onclick="return confirm('Wirklich alle System-Logs löschen?');"><i class="bi bi-trash"></i></button>
+                     </form>
+                </div>
+                <div class="card-body bg-black p-0">
+                    <div class="log-display rounded-0 border-0" style="max-height: 300px; overflow-y: auto;">
+                        {% if invite_bot_logs %}
+                            {% for line in invite_bot_logs %}
+                                <div class="py-1 px-2 text-wrap" style="font-size: 0.75rem;">{{ line }}</div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-muted p-4 text-center">Keine Logs verfügbar.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -159,9 +209,21 @@
                     <div class="mb-3"><label class="form-label small">Emoji (z.B. 👤)</label><input type="text" class="form-control" name="emoji" placeholder="🔹"></div>
                     <div class="mb-3"><label class="form-label small">Anzeigename im Post (z.B. Name)</label><input type="text" class="form-control" name="display_name" required></div>
                     <div class="mb-3"><label class="form-label small">Bot-Frage an den User</label><textarea class="form-control" name="label" rows="2" required></textarea></div>
-                    <div class="row">
+                    <div class="row mb-3">
                         <div class="col-6"><label class="form-label small">Typ</label><select class="form-select" name="type"><option value="text">Text</option><option value="number">Zahl</option><option value="photo">Foto</option></select></div>
                         <div class="col-6 d-flex align-items-end"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="required" id="new_req" checked><label class="form-check-label small" for="new_req">Pflichtfeld</label></div></div>
+                    </div>
+                    
+                    <div class="border-top border-secondary pt-3 mt-3">
+                        <div class="small text-secondary fw-bold mb-2">ALTERSPRÜFUNG (Nur für Typ 'Zahl')</div>
+                        <div class="mb-2">
+                            <label class="form-label small">Mindestalter</label>
+                            <input type="number" class="form-control" name="min_age" placeholder="z.B. 12">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Fehlermeldung bei zu jung</label>
+                            <input type="text" class="form-control" name="min_age_error_msg" placeholder="⚠️ Du musst mindestens X Jahre alt sein.">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button><button type="submit" class="btn btn-success">Hinzufügen</button></div>
@@ -181,11 +243,23 @@
                     <div class="mb-3"><label class="form-label small">Emoji</label><input type="text" class="form-control" name="emoji" id="edit_emoji"></div>
                     <div class="mb-3"><label class="form-label small">Anzeigename im Post</label><input type="text" class="form-control" name="display_name" id="edit_display_name"></div>
                     <div class="mb-3"><label class="form-label small">Bot-Frage</label><textarea class="form-control" name="label" id="edit_label" rows="2" required></textarea></div>
-                    <div class="row">
+                    <div class="row mb-3">
                         <div class="col-6"><label class="form-label small">Typ</label><select class="form-select" name="type" id="edit_type_select"><option value="text">Text</option><option value="number">Zahl</option><option value="photo">Foto</option></select></div>
                         <div class="col-6 d-flex flex-column justify-content-center gap-2 mt-3">
                             <div class="form-check"><input class="form-check-input" type="checkbox" name="required" id="edit_required"><label class="form-check-label small" for="edit_required">Pflichtfeld</label></div>
                             <div class="form-check"><input class="form-check-input" type="checkbox" name="enabled" id="edit_enabled"><label class="form-check-label small" for="edit_enabled">Aktiviert</label></div>
+                        </div>
+                    </div>
+
+                    <div class="border-top border-secondary pt-3 mt-3">
+                        <div class="small text-secondary fw-bold mb-2">ALTERSPRÜFUNG (Nur für Typ 'Zahl')</div>
+                        <div class="mb-2">
+                            <label class="form-label small">Mindestalter</label>
+                            <input type="number" class="form-control" name="min_age" id="edit_min_age" placeholder="z.B. 12">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Fehlermeldung bei zu jung</label>
+                            <input type="text" class="form-control" name="min_age_error_msg" id="edit_min_age_error_msg" placeholder="⚠️ Du musst mindestens X Jahre alt sein.">
                         </div>
                     </div>
                 </div>
@@ -196,7 +270,7 @@
 </div>
 
 <script>
-function openEditModal(id, label, type, required, enabled, emoji, display_name) {
+function openEditModal(id, label, type, required, enabled, emoji, display_name, min_age, min_age_error_msg) {
     document.getElementById('edit_id').value = id;
     document.getElementById('edit_label').value = label;
     document.getElementById('edit_type_select').value = type;
@@ -204,6 +278,8 @@ function openEditModal(id, label, type, required, enabled, emoji, display_name) 
     document.getElementById('edit_enabled').checked = enabled;
     document.getElementById('edit_emoji').value = emoji;
     document.getElementById('edit_display_name').value = display_name;
+    document.getElementById('edit_min_age').value = min_age;
+    document.getElementById('edit_min_age_error_msg').value = min_age_error_msg;
     new bootstrap.Modal(document.getElementById('editFieldModal')).show();
 }
 </script>

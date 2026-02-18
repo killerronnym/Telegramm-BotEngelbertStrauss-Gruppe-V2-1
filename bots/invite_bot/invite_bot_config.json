@@ -15,8 +15,10 @@
             "type": "text",
             "required": true,
             "enabled": true,
-            "emoji": "🔹",
-            "display_name": "Name :"
+            "emoji": "👤",
+            "display_name": "Name ",
+            "min_age": null,
+            "min_age_error_msg": ""
         },
         {
             "id": "age",
@@ -27,7 +29,9 @@
             "min_value": 12,
             "max_value": 99,
             "emoji": "🎂",
-            "display_name": "🎂 Alter"
+            "display_name": "Alter",
+            "min_age": 12,
+            "min_age_error_msg": "⚠️ Du musst mindestens 12 Jahre alt sein."
         },
         {
             "id": "state",
@@ -36,7 +40,9 @@
             "required": true,
             "enabled": true,
             "emoji": "📍",
-            "display_name": "📍Bundesland "
+            "display_name": "Bundesland ",
+            "min_age": null,
+            "min_age_error_msg": ""
         },
         {
             "id": "photo",
@@ -52,7 +58,9 @@
             "required": false,
             "enabled": true,
             "emoji": "🎯",
-            "display_name": "🎯 Hobbys"
+            "display_name": "Hobbys",
+            "min_age": null,
+            "min_age_error_msg": ""
         },
         {
             "id": "instagram",
@@ -60,8 +68,10 @@
             "type": "text",
             "required": false,
             "enabled": true,
-            "emoji": "🔹",
-            "display_name": "📱 Social Media"
+            "emoji": "📱",
+            "display_name": "Social Media",
+            "min_age": null,
+            "min_age_error_msg": ""
         },
         {
             "id": "other",
@@ -69,8 +79,10 @@
             "type": "text",
             "required": false,
             "enabled": true,
-            "emoji": "🔹",
-            "display_name": "💬 Möchtest"
+            "emoji": "💬",
+            "display_name": " Möchtest",
+            "min_age": null,
+            "min_age_error_msg": ""
         },
         {
             "id": "sexuality",
@@ -78,8 +90,10 @@
             "type": "text",
             "required": false,
             "enabled": true,
-            "emoji": "🔹",
-            "display_name": "🏳️‍🌈 Sexualität"
+            "emoji": "🏳️‍🌈",
+            "display_name": "Sexualität",
+            "min_age": null,
+            "min_age_error_msg": ""
         }
     ]
 }

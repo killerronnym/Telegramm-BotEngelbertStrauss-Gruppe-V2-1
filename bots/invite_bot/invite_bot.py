@@ -188,6 +188,18 @@ async def handle_field_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         text = update.message.text.strip() if update.message.text else ""
         if text.isdigit():
             user_input = text
+            # --- Min Age Check (Per Field Configuration) ---
+            if field.get("min_age"):
+                try:
+                    min_age = int(field["min_age"])
+                    age_val = int(text)
+                    if age_val < min_age:
+                        error_msg = field.get("min_age_error_msg", f"⚠️ Du musst mindestens {min_age} Jahre alt sein.")
+                        log_user_interaction(update.effective_user.id, update.effective_user.username, "Altersprüfung fehlgeschlagen", f"Eingabe: {age_val}, Min: {min_age}")
+                        await update.message.reply_text(error_msg)
+                        return FILLING_FORM
+                except ValueError:
+                    pass # Invalid config for min_age, ignore
         elif not field.get("required") and text.lower() == "nein":
             user_input = None
         else:
@@ -207,6 +219,10 @@ async def handle_field_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # --- Save Answer ---
     context.user_data["answers"][field["id"]] = user_input
     context.user_data["form_idx"] = idx + 1
+    
+    # Log valid answer
+    log_val = "Foto" if field["type"] == "photo" else user_input
+    log_user_interaction(update.effective_user.id, update.effective_user.username, "Antwort erhalten", f"Feld: {field['id']}, Wert: {log_val}")
     
     return await ask_next_field(update, context, config)
 
@@ -237,13 +253,16 @@ async def rules_confirmed(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"_Ein Admin oder Bot wird deine Anfrage gleich bestätigen\\._",
             parse_mode=ParseMode.MARKDOWN_V2
         )
+        log_user_interaction(update.effective_user.id, update.effective_user.username, "Abgeschlossen", "Einladungslink gesendet")
     except Exception as e:
         logger.error(f"Link Creation Error: {e}")
+        log_user_interaction(update.effective_user.id, update.effective_user.username, "Fehler", f"Link Erstellung: {e}")
         await update.message.reply_text("⚠️ Fehler beim Erstellen des Einladungslinks. Bitte kontaktiere einen Admin.")
         
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    log_user_interaction(update.effective_user.id, update.effective_user.username, "Abbruch", "/cancel")
     await update.message.reply_text("Vorgang abgebrochen. Tippe /letsgo um neu zu starten.")
     return ConversationHandler.END
 
@@ -312,6 +331,7 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
     chat_id = req.chat.id
     
     logger.info(f"Join request from {user_id} in {chat_id}")
+    log_user_interaction(user_id, req.from_user.username, "Join Request", f"Chat: {chat_id}")
     
     config = load_config()
     
@@ -324,6 +344,7 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
         # 1. Approve
         await context.bot.approve_chat_join_request(chat_id=chat_id, user_id=user_id)
         logger.info(f"Approved join request for {user_id}")
+        log_user_interaction(user_id, req.from_user.username, "Approved", "Request accepted")
         
         # 2. Post Profile
         profiles = _load_all_profiles()
@@ -339,9 +360,12 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
             
     except Exception as e:
         logger.error(f"Join request approval failed: {e}")
+        log_user_interaction(user_id, req.from_user.username, "Error Approval", str(e))
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error(msg="Exception while handling an update:", exc_info=context.error)
+    if update and hasattr(update, 'effective_user') and update.effective_user:
+         log_user_interaction(update.effective_user.id, update.effective_user.username, "System Error", str(context.error))
 
 def main():
     config = load_config()

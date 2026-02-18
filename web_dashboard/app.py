@@ -428,7 +428,16 @@ def bot_settings():
         elif action == "stop_invite_bot":
             success, msg = stop_bot_process_by_name("invite"); flash(msg, "info")
         elif action == "save_base_config":
-            cfg = load_json(INVITE_BOT_CONFIG_FILE); cfg.update({"bot_token": request.form.get("bot_token"), "main_chat_id": request.form.get("main_chat_id"), "topic_id": request.form.get("topic_id"), "link_ttl_minutes": int(request.form.get("link_ttl_minutes", 15)), "is_enabled": "is_enabled" in request.form}); save_json(INVITE_BOT_CONFIG_FILE, cfg); flash("Konfiguration gespeichert.", "success")
+            cfg = load_json(INVITE_BOT_CONFIG_FILE)
+            cfg.update({
+                "bot_token": request.form.get("bot_token"),
+                "main_chat_id": request.form.get("main_chat_id"),
+                "topic_id": request.form.get("topic_id"),
+                "link_ttl_minutes": int(request.form.get("link_ttl_minutes", 15)),
+                "is_enabled": "is_enabled" in request.form
+            })
+            save_json(INVITE_BOT_CONFIG_FILE, cfg)
+            flash("Konfiguration gespeichert.", "success")
         return redirect(url_for("bot_settings"))
     return render_template("bot_settings.html", config=load_json(INVITE_BOT_CONFIG_FILE), is_invite_running=is_bot_running("invite"), invite_bot_logs=get_bot_logs(INVITE_BOT_LOG), user_interaction_logs=get_bot_logs(INVITE_BOT_USER_LOG), bot_status=build_bot_status())
 
@@ -441,7 +450,24 @@ def save_invite_bot_content():
 @app.route("/bot-settings/add-field", methods=["POST"])
 @login_required
 def add_invite_bot_field():
-    cfg = load_json(INVITE_BOT_CONFIG_FILE, {"form_fields": []}); cfg["form_fields"].append({"id": request.form.get("field_id"), "label": request.form.get("label"), "emoji": request.form.get("emoji"), "display_name": request.form.get("display_name"), "type": request.form.get("type"), "required": "required" in request.form, "enabled": True}); save_json(INVITE_BOT_CONFIG_FILE, cfg); flash("Feld hinzugefügt.", "success")
+    cfg = load_json(INVITE_BOT_CONFIG_FILE, {"form_fields": []})
+    min_age = None
+    if request.form.get("min_age"):
+        try: min_age = int(request.form.get("min_age"))
+        except: pass
+        
+    cfg["form_fields"].append({
+        "id": request.form.get("field_id"), 
+        "label": request.form.get("label"), 
+        "emoji": request.form.get("emoji"), 
+        "display_name": request.form.get("display_name"), 
+        "type": request.form.get("type"), 
+        "required": "required" in request.form, 
+        "enabled": True,
+        "min_age": min_age,
+        "min_age_error_msg": request.form.get("min_age_error_msg")
+    })
+    save_json(INVITE_BOT_CONFIG_FILE, cfg); flash("Feld hinzugefügt.", "success")
     return redirect(url_for("bot_settings"))
 
 @app.route("/bot-settings/edit-field", methods=["POST"])
@@ -449,7 +475,23 @@ def add_invite_bot_field():
 def edit_invite_bot_field():
     cfg = load_json(INVITE_BOT_CONFIG_FILE, {"form_fields": []}); fid = request.form.get("field_id")
     for f in cfg["form_fields"]:
-        if f["id"] == fid: f.update({"label": request.form.get("label"), "emoji": request.form.get("emoji"), "display_name": request.form.get("display_name"), "type": request.form.get("type"), "required": "required" in request.form, "enabled": "enabled" in request.form}); break
+        if f["id"] == fid:
+            min_age = None
+            if request.form.get("min_age"):
+                try: min_age = int(request.form.get("min_age"))
+                except: pass
+                
+            f.update({
+                "label": request.form.get("label"), 
+                "emoji": request.form.get("emoji"), 
+                "display_name": request.form.get("display_name"), 
+                "type": request.form.get("type"), 
+                "required": "required" in request.form, 
+                "enabled": "enabled" in request.form,
+                "min_age": min_age,
+                "min_age_error_msg": request.form.get("min_age_error_msg")
+            })
+            break
     save_json(INVITE_BOT_CONFIG_FILE, cfg); flash("Feld aktualisiert.", "success")
     return redirect(url_for("bot_settings"))
 
@@ -468,6 +510,17 @@ def invite_bot_move_field(field_id, direction):
     if direction == "up" and i > 0: f[i], f[i-1] = f[i-1], f[i]
     elif direction == "down" and i < len(f)-1: f[i], f[i+1] = f[i+1], f[i]
     save_json(INVITE_BOT_CONFIG_FILE, cfg); return redirect(url_for("bot_settings"))
+
+@app.route("/bot-settings/clear-logs/<log_type>", methods=["POST"])
+@login_required
+def clear_invite_bot_logs(log_type):
+    if log_type == "user":
+        with open(INVITE_BOT_USER_LOG, "w") as f: f.write("")
+        flash("User Logs gelöscht.", "info")
+    elif log_type == "system":
+        with open(INVITE_BOT_LOG, "w") as f: f.write("")
+        flash("System Logs gelöscht.", "info")
+    return redirect(url_for("bot_settings"))
 
 # --- 📢 NACHRICHT PLANER ---
 @app.route("/broadcast")
