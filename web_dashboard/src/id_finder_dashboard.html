@@ -226,7 +226,7 @@
                                 </td>
                                 <td class="fw-bold text-white">{{ u.full_name or 'Unbekannt' }}</td>
                                 <td>
-                                    <div class="small text-rose-300">{{ u.last_seen or '—' }}</div>
+                                    <div class="small text-rose-300">{{ u.last_seen | datetimeformat or '—' }}</div>
                                 </td>
                                 <td>
                                     <code class="text-rose-300 small">

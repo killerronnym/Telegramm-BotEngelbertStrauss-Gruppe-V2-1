@@ -99,14 +99,14 @@
                                 <i class="bi bi-calendar-plus text-primary"></i>
                                 <div>
                                     <label class="form-label-small m-0">First Seen:</label>
-                                    <div class="text-white">{{ user.first_seen or '—' }}</div>
+                                    <div class="text-white">{{ user.first_seen | datetimeformat or '—' }}</div>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-3">
                                 <i class="bi bi-clock-history text-primary"></i>
                                 <div>
                                     <label class="form-label-small m-0">Last Seen:</label>
-                                    <div class="text-white">{{ user.last_seen or '—' }}</div>
+                                    <div class="text-white">{{ user.last_seen | datetimeformat or '—' }}</div>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-3">
@@ -170,7 +170,7 @@
                         {% if messages %}
                             {% for m in messages %}
                             <tr>
-                                <td class="text-rose-300 small">{{ m.ts }}</td>
+                                <td class="text-rose-300 small">{{ m.ts | datetimeformat }}</td>
                                 <td class="fw-bold">{{ m.type or 'text' }}</td>
                                 <td class="msg-content">
                                     {% if m.text %}{{ m.text }}{% endif %}

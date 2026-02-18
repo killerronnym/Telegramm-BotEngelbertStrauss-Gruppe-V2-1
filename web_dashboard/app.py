@@ -50,6 +50,29 @@ app = Flask(__name__, template_folder="src")
 app.secret_key = "b13f172933b9a1274adb024d47fc7552d2e85864693cb9a2"
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
+# --- Format Filter ---
+def format_datetime(value, format="%d.%m.%Y %H:%M:%S"):
+    if value is None: return ""
+    if isinstance(value, str):
+        if not value.strip(): return ""
+        try:
+            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return value
+    else:
+        dt = value
+    
+    # Convert to Berlin time
+    if ZoneInfo:
+        dt = dt.astimezone(ZoneInfo("Europe/Berlin"))
+    else:
+        # Fallback if ZoneInfo is not available (though it is imported)
+        dt = dt + timedelta(hours=1) # Approximate if simple offset
+    
+    return dt.strftime(format)
+
+app.jinja_env.filters['datetimeformat'] = format_datetime
+
 # --- Globale Variablen & Dateipfade ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
