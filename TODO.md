@@ -6,21 +6,17 @@
 
 ### Allgemein
 *   [ ] **Datenbank statt JSON:** Langfristig die Datenhaltung von JSON-Dateien auf eine robustere Lösung wie SQLite oder eine kleine Datenbank umstellen, um die Leistung und Zuverlässigkeit zu erhöhen.
-*   [x] **Logging verbessern:** Detailliertere Log-Ausgaben implementieren, um Fehler schneller identifizieren zu können.
-    *   [x] **Zentrale Logging-Konfiguration:** Eine zentrale Konfiguration für das Logging einrichten, die das Log-Level, das Ausgabeformat und die Rotationsstrategie für alle Module festlegt.
-*   [x] **Code-Refactoring:** Den Code auf Lesbarkeit, Wartbarkeit und Performance optimieren. (Alte Skripte im `archive`-Ordner wurden entfernt.)
-*   [x] **Dokumentation erweitern:** Die `README.md` und andere Dokumentationsdateien aktualisieren, um alle neuen Funktionen und Änderungen zu beschreiben.
-*   [x] **Benachrichtigungen bei Fehlern:** Ein System einrichten, das den Admin (z.B. per Telegram-Nachricht) informiert, wenn ein kritischer Fehler auftritt. (Implementiert als Dashboard-Ansicht für Kritische Logs)
+
 
 ### Web-Dashboard (`web_dashboard/app.py`)
-*   [x] **Spezifischere Fehlerbehandlung:** Allgemeine `try...except`-Blöcke durch spezifische Fehlerbehandlung ersetzen und detaillierte Fehlermeldungen loggen.
-*   [x] **Effizienteres Log-Handling:** Das Einlesen von Log-Dateien optimieren, um den Speicherverbrauch bei großen Dateien zu reduzieren (z.B. durch zeilenweises Lesen oder Buffering).
-*   [x] **Code-Duplizierung reduzieren:** Wiederholte Code-Blöcke in den Flask-Routen (z.B. für die Bot-Verwaltung) identifizieren und in wiederverwendbare Funktionen auslagern.
-*   [x] **Caching für Konfigurationsdateien:** Eine Caching-Strategie für häufig gelesene JSON-Dateien implementieren, um die Anzahl der Festplattenzugriffe zu minimieren und die Performance zu verbessern.
+
 
 ### ID Finder Bot (`bots/id_finder_bot/id_finder_bot.py`)
-*   [x] **Optimierte Broadcast-Engine:** Die Broadcast-Engine so umbauen, dass sie nicht alle 10 Sekunden alle Nachrichten prüft, sondern gezielt den nächsten Sendezeitpunkt mit `job_queue.run_once()` ansteuert.
-*   [x] **Datenredundanz prüfen:** Überprüfen, ob die in `activity_log.jsonl` und der `user_messages`-History gespeicherten Daten zusammengefasst oder besser strukturiert werden können. (Anmerkung zur aktuellen Strategie hinzugefügt)
+
+
+### Quiz & Umfrage Bots
+*   [ ] **Datum und Uhrzeit:** ❔ Quiz Bot & 📊 Umfrage Bot Datum und Uhrzeit Funktionalitäten (z.B. flexiblere Zeitsteuerung, Zeitstempel in Nachrichten).
+
 
 ---
 
@@ -36,3 +32,14 @@
     *   [x] **Quiz Bot:** Persistenz für `last_sent_date` eingebaut, API-Limits validiert.
     *   [x] **Umfrage Bot:** Persistenz für `last_sent_date` eingebaut, API-Limits validiert.
 *   [x] **Web-Dashboard Stabilität:** Prüfen, ob das Dashboard auch bei vielen Anfragen stabil läuft und keine Sessions verliert. (Erledigt: Prozess-Abfrage optimiert, Session-Key ausgelagert)
+*   [x] **Logging verbessern:** Detailliertere Log-Ausgaben implementieren, um Fehler schneller identifizieren zu können.
+    *   [x] **Zentrale Logging-Konfiguration:** Eine zentrale Konfiguration für das Logging einrichten, die das Log-Level, das Ausgabeformat und die Rotationsstrategie für alle Module festlegt.
+*   [x] **Code-Refactoring:** Den Code auf Lesbarkeit, Wartbarkeit und Performance optimieren. (Alte Skripte im `archive`-Ordner wurden entfernt.)
+*   [x] **Dokumentation erweitern:** Die `README.md` und andere Dokumentationsdateien aktualisieren, um alle neuen Funktionen und Änderungen zu beschreiben.
+*   [x] **Benachrichtigungen bei Fehlern:** Ein System einrichten, das den Admin (z.B. per Telegram-Nachricht) informiert, wenn ein kritischer Fehler auftritt. (Implementiert als Dashboard-Ansicht für Kritische Logs)
+*   [x] **Optimierte Broadcast-Engine:** Die Broadcast-Engine so umbauen, dass sie nicht alle 10 Sekunden alle Nachrichten prüft, sondern gezielt den nächsten Sendezeitpunkt mit `job_queue.run_once()` ansteuert.
+*   [x] **Datenredundanz prüfen:** Überprüfen, ob die in `activity_log.jsonl` und der `user_messages`-History gespeicherten Daten zusammengefasst oder besser structured werden können. (Anmerkung zur aktuellen Strategie hinzugefügt)
+*   [x] **Spezifischere Fehlerbehandlung:** Allgemeine `try...except`-Blöcke durch spezifische Fehlerbehandlung ersetzen und detaillierte Fehlermeldungen loggen.
+*   [x] **Effizienteres Log-Handling:** Das Einlesen von Log-Dateien optimieren, um den Speicherverbrauch bei großen Dateien zu reduzieren (z.B. durch zeilenweises Lesen oder Buffering).
+*   [x] **Code-Duplizierung reduzieren:** Wiederholte Code-Blöcke in den Flask-Routen (z.B. für die Bot-Verwaltung) identifizieren und in wiederverwendbare Funktionen auslagern.
+*   [x] **Caching für Konfigurationsdateien:** Eine Caching-Strategie für häufig gelesene JSON-Dateien implementieren, um die Anzahl der Festplattenzugriffe zu minimieren und die Performance zu verbessern.
