@@ -139,6 +139,14 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# --- Delayed Message Deletion ---
+def delete_message_after_delay(chat_id, message_id, delay):
+    if delay <= 0: return
+    def _delayed_delete():
+        time.sleep(delay)
+        tg_api_call("deleteMessage", {"chat_id": chat_id, "message_id": message_id})
+    threading.Thread(target=_delayed_delete, daemon=True).start()
+
 # --- ROUTES ---
 
 @app.route("/")
@@ -161,7 +169,12 @@ def live_moderation():
                 if custom_topic:
                     chat_data["topics"][topic_id] = f"{custom_topic['emoji']} {custom_topic['name']}"
 
-    mod_config = load_json(MODERATION_CONFIG_FILE, {'max_warnings': 3, 'warning_text': 'Hallo {user}, deine Nachricht in der Gruppe {group} wurde entfernt. Grund: {reason}. Dies ist deine {warn_count} von {max_warnings} Verwarnungen.'})
+    mod_config = load_json(MODERATION_CONFIG_FILE, {
+        'max_warnings': 3, 
+        'warning_text': 'Hallo {user}, deine Nachricht in der Gruppe {group} wurde entfernt. Grund: {reason}. Dies ist deine {warn_count} von {max_warnings} Verwarnungen.',
+        'public_delete_notice_text': 'Die Nachricht von {user} wurde gelöscht. Grund: {reason}',
+        'public_delete_notice_duration': 60
+    })
     selected_chat_id = request.args.get("chat_id")
     selected_topic_id = request.args.get("topic_id")
     messages = []
@@ -194,7 +207,9 @@ def live_moderation():
 def live_moderation_config():
     mod_config = {
         'max_warnings': int(request.form.get('max_warnings', 3)),
-        'warning_text': request.form.get('warning_text', 'Hallo {user}, deine Nachricht in der Gruppe {group} wurde entfernt. Grund: {reason}. Dies ist deine {warn_count} von {max_warnings} Verwarnungen.')
+        'warning_text': request.form.get('warning_text', 'Hallo {user}, deine Nachricht in der Gruppe {group} wurde entfernt. Grund: {reason}. Dies ist deine {warn_count} von {max_warnings} Verwarnungen.'),
+        'public_delete_notice_text': request.form.get('public_delete_notice_text', 'Die Nachricht von {user} wurde gelöscht. Grund: {reason}'),
+        'public_delete_notice_duration': int(request.form.get('public_delete_notice_duration', 60))
     }
     save_json(MODERATION_CONFIG_FILE, mod_config)
     flash('Die Moderations-Einstellungen wurden gespeichert.', 'success')
@@ -206,11 +221,19 @@ def live_moderation_delete():
     user_id_str = request.form.get("user_id")
     chat_id = request.form.get("chat_id")
     message_id = request.form.get("message_id")
+    topic_id = request.form.get("topic_id")
     action = request.form.get("action")
     user_name = request.form.get("user_name")
     chat_name = request.form.get("chat_name")
 
-    # Log deletion before calling API
+    # Get reason
+    reason_preset = request.form.get("reason_preset")
+    if reason_preset == 'other':
+        reason = request.form.get("reason_custom", "Kein Grund angegeben.")
+    else:
+        reason = reason_preset or "Kein Grund angegeben."
+
+    # Log deletion
     mod_data = load_json(MODERATION_DATA_FILE, {})
     deleted_ids = mod_data.get("deleted_messages", [])
     msg_uid = f"{chat_id}_{message_id}"
@@ -219,15 +242,26 @@ def live_moderation_delete():
     mod_data["deleted_messages"] = deleted_ids
     save_json(MODERATION_DATA_FILE, mod_data)
 
+    # 1. Delete original message
     tg_api_call("deleteMessage", {"chat_id": chat_id, "message_id": message_id})
 
-    if action == "warn":
-        reason_preset = request.form.get("reason_preset")
-        if reason_preset == 'other':
-            reason = request.form.get("reason_custom", "Kein Grund angegeben.")
-        else:
-            reason = reason_preset
+    mod_config = load_json(MODERATION_CONFIG_FILE)
+    
+    # 2. Public Notice in Topic
+    public_text_template = mod_config.get("public_delete_notice_text", "Die Nachricht von {user} wurde gelöscht. Grund: {reason}")
+    public_text = public_text_template.format(user=user_name, group=chat_name, reason=reason)
+    
+    send_params = {"chat_id": chat_id, "text": public_text}
+    if topic_id: send_params["message_thread_id"] = topic_id
+    
+    resp = tg_api_call("sendMessage", send_params)
+    if resp and resp.get("ok"):
+        new_msg_id = resp["result"]["message_id"]
+        duration = int(mod_config.get("public_delete_notice_duration", 60))
+        if duration > 0:
+            delete_message_after_delay(chat_id, new_msg_id, duration)
 
+    if action == "warn":
         user_warnings = mod_data.get("users", {}).get(user_id_str, {"warnings": []})
         warning_entry = {
             "reason": reason, "timestamp": datetime.now().isoformat(), "chat_id": chat_id,
@@ -238,7 +272,6 @@ def live_moderation_delete():
         mod_data["users"][user_id_str] = user_warnings
         save_json(MODERATION_DATA_FILE, mod_data)
 
-        mod_config = load_json(MODERATION_CONFIG_FILE)
         max_warnings = mod_config.get("max_warnings", 3)
         warn_count = len(user_warnings["warnings"])
 

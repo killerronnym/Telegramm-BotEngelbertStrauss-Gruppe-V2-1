@@ -60,6 +60,28 @@
         ]
     },
     "deleted_messages": [
-        "-1002206300882_18007"
-    ]
+        "-1002206300882_18007",
+        "-1002206300882_18010",
+        "-1002206300882_18013"
+    ],
+    "users": {
+        "5544098336": {
+            "warnings": [
+                {
+                    "reason": "TesGrund",
+                    "timestamp": "2026-02-19T21:18:28.497167",
+                    "chat_id": "-1002206300882",
+                    "chat_name": "Workwear Strauss",
+                    "message_id": "18010"
+                },
+                {
+                    "reason": "dd",
+                    "timestamp": "2026-02-19T21:41:52.648184",
+                    "chat_id": "-1002206300882",
+                    "chat_name": "Workwear Strauss",
+                    "message_id": "18013"
+                }
+            ]
+        }
+    }
 }

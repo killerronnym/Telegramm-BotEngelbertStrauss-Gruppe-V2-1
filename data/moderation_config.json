@@ -1,4 +1,6 @@
 {
     "max_warnings": 3,
-    "warning_text": "Hallo {user}, deine Nachricht in der Gruppe {group} wurde entfernt. Grund: {reason}. Dies ist deine {warn_count} von {max_warnings} Verwarnungen."
+    "warning_text": "Hallo {user}, deine Nachricht in der Gruppe {group} wurde entfernt. Grund: {reason}. Dies ist deine {warn_count} von {max_warnings} Verwarnungen.",
+    "public_delete_notice_text": "Die Nachricht von {user} wurde gelöscht. Grund: {reason}",
+    "public_delete_notice_duration": 60
 }

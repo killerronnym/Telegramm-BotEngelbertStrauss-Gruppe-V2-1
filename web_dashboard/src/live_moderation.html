@@ -116,7 +116,7 @@
                         <i class="bi bi-person-fill"></i> Details
                     </a>
                     <button class="btn btn-sm btn-danger"
-                            onclick="openDeleteModal('{{ msg.user_id }}', '{{ msg.chat_id }}', '{{ msg.msg_id or msg.message_id }}', '{{ (msg.full_name or msg.username)|escape }}', '{{ (topics.get(msg.chat_id|string, {}).get('name', 'Unbekannte Gruppe'))|escape }}', '{{ msg.topic_id or '' }}')">
+                            onclick="openDeleteModal('{{ msg.user_id }}', '{{ msg.chat_id }}', '{{ msg.msg_id or msg.message_id }}', '{{ (msg.full_name or msg.username)|escape }}', '{{ (topics.get(msg.chat_id|string, {}).get('name', 'Unbekannte Gruppe'))|escape }}', '{{ msg.thread_id or '' }}')">
                         <i class="bi bi-trash-fill"></i> Löschen
                     </button>
                 </div>
@@ -127,7 +127,6 @@
 </div>
 
 <!-- Config & Delete Modals -->
-<!-- ... (rest of the modals remain unchanged) ... -->
 <div class="modal fade" id="configModal" tabindex="-1" aria-labelledby="configModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -145,11 +144,26 @@
                     <hr class="my-4">
                     <div class="mb-3">
                         <label for="warning_text" class="form-label">Verwarnungstext (DM an Nutzer)</label>
-                        <textarea class="form-control" id="warning_text" name="warning_text" rows="5" placeholder="Beispiel: Hallo {user}, deine Nachricht in der Gruppe {group} wurde entfernt. Grund: {reason}. Dies ist deine {warn_count} von {max_warnings} Verwarnungen.">{{ mod_config.warning_text }}</textarea>
+                        <textarea class="form-control" id="warning_text" name="warning_text" rows="3" placeholder="Beispiel: Hallo {user}, deine Nachricht in der Gruppe {group} wurde entfernt. Grund: {reason}. Dies ist deine {warn_count} von {max_warnings} Verwarnungen.">{{ mod_config.warning_text }}</textarea>
                         <div class="form-text">
                             Verfügbare Platzhalter: 
                             <code>{user}</code>, <code>{group}</code>, <code>{reason}</code>, <code>{warn_count}</code>, <code>{max_warnings}</code>
                         </div>
+                    </div>
+                    <hr class="my-4">
+                    <h6 class="fw-bold">Öffentlicher Löschhinweis (im Topic)</h6>
+                    <div class="mb-3">
+                        <label for="public_delete_notice_text" class="form-label">Hinweistext</label>
+                        <textarea class="form-control" id="public_delete_notice_text" name="public_delete_notice_text" rows="3">{{ mod_config.public_delete_notice_text | default('Die Nachricht von {user} wurde gelöscht. Grund: {reason}') }}</textarea>
+                        <div class="form-text">
+                            Verfügbare Platzhalter: 
+                            <code>{user}</code>, <code>{reason}</code>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="public_delete_notice_duration" class="form-label">Anzeigedauer (Sekunden)</label>
+                        <input type="number" class="form-control" id="public_delete_notice_duration" name="public_delete_notice_duration" value="{{ mod_config.public_delete_notice_duration | default(60) }}" min="0">
+                        <div class="form-text">0 bedeutet, dass die Nachricht dauerhaft stehen bleibt.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -180,16 +194,16 @@
                     <p>Wähle eine Aktion aus:</p>
                     
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="action" id="action_delete" value="delete" checked onchange="toggleReasonVisibility(false)">
-                        <label class="form-check-label" for="action_delete">Nur Nachricht löschen</label>
+                        <input class="form-check-input" type="radio" name="action" id="action_delete" value="delete" checked onchange="toggleReasonVisibility(true)">
+                        <label class="form-check-label" for="action_delete">Nur Nachricht löschen (mit Grund)</label>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="action" id="action_warn" value="warn" onchange="toggleReasonVisibility(true)">
                         <label class="form-check-label" for="action_warn">Nachricht löschen und Nutzer verwarnen</label>
                     </div>
 
-                    <div id="reason_container" style="display: none; margin-top: 1.5rem;">
-                        <label for="reason_preset" class="form-label">Grund für die Verwarnung</label>
+                    <div id="reason_container" style="display: block; margin-top: 1.5rem;">
+                        <label for="reason_preset" class="form-label">Grund</label>
                         <select class="form-select" name="reason_preset" id="reason_preset" onchange="toggleCustomReason(this.value)">
                             <option value="Spam">Spam</option>
                             <option value="Off-Topic">Off-Topic</option>
@@ -226,7 +240,8 @@
     }
 
     function toggleReasonVisibility(show) {
-        document.getElementById('reason_container').style.display = show ? 'block' : 'none';
+        // Reason container is now always visible since we need a reason for the public notice too
+        document.getElementById('reason_container').style.display = 'block';
     }
 
     function toggleCustomReason(selectedValue) {
