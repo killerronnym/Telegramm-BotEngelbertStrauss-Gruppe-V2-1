@@ -1,0 +1,6 @@
+{
+    "default_reason": "Verstoß gegen die Gruppenregeln",
+    "dm_template": "Hallo {user}, deine Nachricht in {group} wurde von einem Moderator gelöscht.\n\nGrund: {reason}\n\nBitte halte dich in Zukunft an die Regeln.",
+    "public_template": "⚠️ Verwarnung für {user}.\nGrund: {reason}\n(Diese Nachricht wird in {time} automatisch gelöscht.)",
+    "public_delete_delay_minutes": 120
+}

@@ -1,3 +1,14 @@
+# 🚀 Neue Projekte
+
+*   [ ] **Web-Oberfläche zur Telegram-Moderation:** Eine neue Seite im Dashboard erstellen, um Telegram-Gruppen zu moderieren.
+    *   [ ] Anzeige aller Gruppen und deren Topics.
+    *   [ ] Anzeige aller Nachrichten (inkl. Bilder und Usernamen) pro Topic.
+    *   [ ] Funktion zum Löschen von Nachrichten.
+    *   [ ] Option, beim Löschen eine Verwarnung an den User zu senden.
+    *   [ ] Option, Nachrichten kommentarlos zu löschen.
+
+# 🎯 Offene Aufgaben
+
 *   [ ] **Test-Suite erstellen:** Automatisierte Tests für die Kernfunktionen der Bots entwickeln, um zukünftige Änderungen abzusichern. (Langfristiges Ziel)
 
 ---

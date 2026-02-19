@@ -1,4 +1,22 @@
 {
-    "1": "Vorstellungsrunde",
-    "275": "Chattind"
+    "1": {
+        "name": "Vorstellungsrunde",
+        "topics": {
+            "1": "Vorstellungsrunde"
+        }
+    },
+    "275": {
+        "name": "Chattind",
+        "topics": {
+            "275": "Chattind"
+        }
+    },
+    "-1002206300882": {
+        "name": "Workwear Strauss",
+        "topics": {
+            "2081": "Topic-2081",
+            "275": "Topic-275",
+            "1780": "Topic-1780"
+        }
+    }
 }
