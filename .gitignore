@@ -1,22 +1,39 @@
-# Private Daten und Datenbanken
+# --- PRIVATSphäre & DATENSCHUTZ ---
 data/
 bots/data/
+logs/
+bots_archive/
+*.log
+*.jsonl
+*.db
+nohup.out
+
+# --- KONFIGURATIONEN (SENSibel) ---
+# Wir ignorieren alle JSON-Dateien, die Passwörter oder Tokens enthalten könnten
 web_dashboard/users.json
 web_dashboard/admins.json
 web_dashboard/sessions.json
 web_dashboard/config.json
+web_dashboard/topic_config.json
+bots/*/*_config.json
 bots/*/config.json
-bots/*/*.log
-bots/*/*.jsonl
+outfit_bot_config.json
 bots/*/*.tmp
-*.log
-*.jsonl
+bots/*/*.bak*
 
-# Python Environment
+# --- ENTWICKLER-BALLAST ---
+.idx/
+.firebase/
 .venv/
 __pycache__/
 *.py[cod]
-
-# System-Dateien
+TODO.md
+devserver.sh
 .DS_Store
-nohup.out
+
+# --- WAS WIR BEHALTEN ---
+# requirements.txt
+# version.json
+# Alle .py Dateien (außer __init__.py in manchen Fällen)
+# web_dashboard/src/ (Die Web-Oberflächen)
+# scripts/
