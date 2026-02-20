@@ -1,6 +1,0 @@
-{
-    "ronnym": {
-        "password": "scrypt:32768:8:1$7if9QGfJ0imm36FR$5cb9f4b1026c026ee72a52eed7620154213a853af4f30db7d02a20aa2f3ab099baffc01f07bd071c85690a57f6c257fb1cbf1f5bea92e86a146d3de517abfad0",
-        "role": "admin"
-    }
-}
