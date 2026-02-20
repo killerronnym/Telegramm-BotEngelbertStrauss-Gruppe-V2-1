@@ -1,0 +1,13 @@
+{
+    "BOT_TOKEN": "8508220461:AAFLKm2ffyaXs5rmlR2yIGs0FgFq4ASUN-s",
+    "CHAT_ID": "-1003405727637",
+    "TOPIC_ID": "4",
+    "POST_TIME": "15:22",
+    "WINNER_TIME": "15:24",
+    "AUTO_POST_ENABLED": false,
+    "ADMIN_USER_IDS": [],
+    "DUEL_MODE": true,
+    "DUEL_TYPE": "tie_breaker",
+    "DUEL_DURATION_MINUTES": 60,
+    "TEMPORARY_MESSAGE_DURATION_SECONDS": 30
+}

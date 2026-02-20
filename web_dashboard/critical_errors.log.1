@@ -1,0 +1,72 @@
+2026-02-19 17:40:15,945 - app - ERROR - log_exception:875 - Exception on /live_moderation [GET]
+Traceback (most recent call last):
+  File "/home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/telegramm-bot-es/web_dashboard/app.py", line 153, in decorated_function
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/user/telegramm-bot-es/web_dashboard/app.py", line 432, in live_moderation
+    return render_template('live_moderation.html', topics=cleaned_topics)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/user/telegramm-bot-es/web_dashboard/src/live_moderation.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "/home/user/telegramm-bot-es/web_dashboard/src/base.html", line 100, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/telegramm-bot-es/web_dashboard/src/live_moderation.html", line 157, in block 'content'
+    <li class="list-group-item {% if loop.first and loop.parent.loop.first %}active{% endif %}">#{{ topic_name }}</li>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/telegramm-bot-es/.venv/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
+    return getattr(obj, attribute)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'jinja2.runtime.LoopContext object' has no attribute 'parent'
+2026-02-19 17:53:51,429 - __main__ - ERROR - tg_media_proxy:1435 - HTTP Error fetching media from Telegram: 400 Bad Request
+2026-02-19 17:54:09,211 - __main__ - ERROR - tg_media_proxy:1435 - HTTP Error fetching media from Telegram: 400 Bad Request
+2026-02-19 18:00:04,468 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 5581260783: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:04,495 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 8132089064: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:04,565 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 866865585: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:04,631 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 901190371: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:04,704 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 8283399624: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:04,787 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 430531261: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:04,832 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 8341845733: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:04,903 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 1118061457: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:04,943 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 7490942595: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:05,001 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 6005935333: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:05,074 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 729751184: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:05,053 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 5102132293: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:05,123 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 1529861639: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:05,207 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 7652175901: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:05,314 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 5040527583: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:20,743 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 5581260783: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:20,799 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 866865585: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:20,812 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 8132089064: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:20,841 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 8283399624: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:20,873 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 901190371: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:20,925 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 8341845733: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:21,007 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 430531261: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:21,020 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 7490942595: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:21,065 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 1118061457: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:21,075 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 6005935333: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:21,175 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 729751184: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:21,190 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 1529861639: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
+2026-02-19 18:00:21,202 - __main__ - ERROR - tg_avatar_proxy:1440 - Error serving avatar for user 5102132293: 404 Not Found: The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.
