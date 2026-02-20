@@ -22,6 +22,9 @@ import urllib.parse
 import urllib.request
 import urllib.error
 
+# ✅ Updater Integration
+from updater import Updater
+
 try:
     from zoneinfo import ZoneInfo
 except Exception:
@@ -48,6 +51,21 @@ app = Flask(__name__, template_folder="src")
 app.secret_key = "b13f172933b9a1274adb024d47fc7552d2e85864693cb9a2"
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
+# --- Pfade ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+BOTS_DIR = os.path.join(PROJECT_ROOT, "bots")
+VERSION_FILE = os.path.join(PROJECT_ROOT, "version.json")
+
+# --- Updater Initialisierung ---
+updater = Updater(
+    repo_owner="killerronnym",
+    repo_name="Telegramm-BotEngelbertStrauss-Gruppe-V2-1",
+    current_version_file=VERSION_FILE,
+    project_root=PROJECT_ROOT
+)
+
 # --- Format Filter ---
 def format_datetime(value, format="%d.%m.%Y %H:%M:%S"):
     if value is None: return ""
@@ -59,12 +77,6 @@ def format_datetime(value, format="%d.%m.%Y %H:%M:%S"):
     if ZoneInfo: dt = dt.astimezone(ZoneInfo("Europe/Berlin"))
     return dt.strftime(format)
 app.jinja_env.filters['datetimeformat'] = format_datetime
-
-# --- Pfade ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(BASE_DIR)
-DATA_DIR = os.path.join(PROJECT_ROOT, "data")
-BOTS_DIR = os.path.join(PROJECT_ROOT, "bots")
 
 VENV_PYTHON = os.path.join(PROJECT_ROOT, ".venv", "bin", "python3")
 if not os.path.exists(VENV_PYTHON): VENV_PYTHON = sys.executable
@@ -152,7 +164,34 @@ def delete_message_after_delay(chat_id, message_id, delay):
 @app.route("/")
 @login_required
 def index():
-    return render_template("index.html")
+    local_ver = updater.get_local_version()
+    return render_template("index.html", version=local_ver)
+
+@app.route("/api/update/check")
+@login_required
+def update_check():
+    info = updater.check_for_update()
+    if info: return jsonify(info)
+    return jsonify({"error": "Konnte GitHub API nicht erreichen"}), 500
+
+@app.route("/api/update/install", methods=["POST"])
+@login_required
+def update_install():
+    data = request.json
+    zip_url = data.get("zipball_url")
+    new_version = data.get("latest_version")
+    published_at = data.get("published_at")
+    
+    if not zip_url or not new_version:
+        return jsonify({"error": "Ungültige Update-Daten"}), 400
+    
+    updater.install_update(zip_url, new_version, published_at)
+    return jsonify({"status": "started"})
+
+@app.route("/api/update/status")
+@login_required
+def update_status():
+    return jsonify(updater.get_status())
 
 @app.route('/live_moderation')
 @login_required

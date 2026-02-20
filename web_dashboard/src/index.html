@@ -16,6 +16,11 @@
     .action-header { border-bottom: 1px solid var(--border-muted); margin-bottom: 2rem; padding-bottom: 1.5rem; }
     .btn-logout { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); font-weight: 600; }
     .btn-logout:hover { background: #ef4444; color: white; }
+    
+    /* Update Card Styles */
+    .update-card { background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #3b82f644; }
+    .version-tag { background: #3b82f622; color: #60a5fa; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; border: 1px solid #3b82f633; }
+    #updateChangelog { max-height: 150px; overflow-y: auto; background: #00000044; padding: 10px; border-radius: 8px; font-size: 0.85rem; color: #94a3b8; }
 </style>
 
 <div class="dashboard-container">
@@ -27,6 +32,67 @@
         <div>
             <span class="text-secondary me-3 small"><i class="bi bi-person-circle"></i> {{ session.get('user') }}</span>
             <a href="{{ url_for('logout') }}" class="btn btn-logout btn-sm px-3">Abmelden</a>
+        </div>
+    </div>
+
+    <!-- 🚀 UPDATE CARD (Hidden by default, shown if update available) -->
+    <div id="updateSection" style="display: none;" class="mb-5">
+        <div class="card update-card shadow-lg">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="text-white fw-bold mb-1"><i class="bi bi-arrow-up-circle-fill text-primary me-2"></i> Update Verfügbar!</h5>
+                        <p class="small text-secondary mb-0">Eine neue Version deiner Bot-Software wurde veröffentlicht.</p>
+                    </div>
+                    <span class="badge bg-primary px-3 py-2" id="updateStatusBadge">UPDATE VERFÜGBAR</span>
+                </div>
+
+                <div class="row g-4 mb-3">
+                    <div class="col-md-3">
+                        <div class="p-3 bg-dark rounded-3 border border-secondary border-opacity-25">
+                            <div class="text-secondary small mb-1">Deine Version</div>
+                            <div class="fw-bold text-white"><span class="version-tag">{{ version.version }}</span></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 bg-dark rounded-3 border border-primary border-opacity-25">
+                            <div class="text-secondary small mb-1">Neueste Version</div>
+                            <div class="fw-bold text-white"><span class="version-tag" id="latestVersionText">-</span></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 bg-dark rounded-3 border border-secondary border-opacity-25">
+                            <div class="text-secondary small mb-1">Veröffentlicht am</div>
+                            <div class="fw-bold text-white" id="releaseDateText">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="text-white small fw-bold mb-2">WAS IST NEU?</h6>
+                    <div id="updateChangelog">Lädt...</div>
+                </div>
+
+                <div id="updateActionArea">
+                    <button id="btnStartUpdate" class="btn btn-primary fw-bold w-100 py-3" style="border-radius: 12px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);">
+                        JETZT AKTUALISIEREN
+                    </button>
+                </div>
+
+                <div id="updateProgressArea" style="display: none;">
+                    <div class="d-flex justify-content-between mb-2 small text-white">
+                        <span id="progressText">Installation wird vorbereitet...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress" style="height: 10px; background-color: #334155; border-radius: 5px;">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 0%"></div>
+                    </div>
+                    <p class="text-warning small mt-3 text-center mb-0">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> 
+                        Bitte die Seite nicht schließen. Die App startet nach dem Update automatisch neu.
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -254,4 +320,89 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+    let updateInfo = null;
+
+    async function checkUpdate() {
+        try {
+            const resp = await fetch('/api/update/check');
+            const data = await resp.json();
+            
+            if (data.update_available) {
+                updateInfo = data;
+                document.getElementById('updateSection').style.display = 'block';
+                document.getElementById('latestVersionText').innerText = 'v' + data.latest_version;
+                document.getElementById('releaseDateText').innerText = new Date(data.published_at).toLocaleString('de-DE');
+                document.getElementById('updateChangelog').innerText = data.changelog || 'Keine Beschreibung verfügbar.';
+            }
+        } catch (e) {
+            console.error("Update-Check fehlgeschlagen", e);
+        }
+    }
+
+    document.getElementById('btnStartUpdate').onclick = async () => {
+        if (!updateInfo) return;
+        
+        if (!confirm("Bist du sicher, dass du das Update jetzt installieren möchtest? Die App wird dabei neu gestartet.")) return;
+
+        document.getElementById('updateActionArea').style.display = 'none';
+        document.getElementById('updateProgressArea').style.display = 'block';
+
+        const resp = await fetch('/api/update/install', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(updateInfo)
+        });
+
+        if (resp.ok) {
+            pollUpdateStatus();
+        } else {
+            alert("Fehler beim Starten des Updates.");
+            location.reload();
+        }
+    };
+
+    async function pollUpdateStatus() {
+        const interval = setInterval(async () => {
+            const resp = await fetch('/api/update/status');
+            const data = await resp.json();
+
+            document.getElementById('progressBar').style.width = data.progress + '%';
+            document.getElementById('progressPercent').innerText = data.progress + '%';
+            
+            if (data.status === 'downloading') document.getElementById('progressText').innerText = 'Lade Dateien von GitHub herunter...';
+            if (data.status === 'extracting') document.getElementById('progressText').innerText = 'Entpacke Firmware-Paket...';
+            if (data.status === 'applying') document.getElementById('progressText').innerText = 'Dateien werden ersetzt...';
+            if (data.status === 'finished') {
+                document.getElementById('progressText').innerText = 'Update erfolgreich! App startet neu...';
+                clearInterval(interval);
+                setTimeout(() => {
+                    checkAppBackOnline();
+                }, 5000);
+            }
+            if (data.status === 'error') {
+                document.getElementById('progressText').innerText = 'Fehler: ' + data.error;
+                document.getElementById('progressBar').classList.add('bg-danger');
+                clearInterval(interval);
+            }
+        }, 1000);
+    }
+
+    async function checkAppBackOnline() {
+        document.getElementById('progressText').innerText = 'Warte auf Neustart...';
+        const timer = setInterval(async () => {
+            try {
+                const resp = await fetch('/');
+                if (resp.ok) {
+                    clearInterval(timer);
+                    location.reload();
+                }
+            } catch (e) {}
+        }, 2000);
+    }
+
+    // Beim Laden prüfen
+    checkUpdate();
+</script>
 {% endblock %}
