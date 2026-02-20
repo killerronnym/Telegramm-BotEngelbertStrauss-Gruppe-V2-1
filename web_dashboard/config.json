@@ -13,5 +13,6 @@
         "time": "14:53",
         "topic_id": "1312"
     },
-    "secret_key": "dd8d32a5bd12cef234f0e3ff6aec9344a239ee3c42fd7c16"
+    "secret_key": "dd8d32a5bd12cef234f0e3ff6aec9344a239ee3c42fd7c16",
+    "github_token": "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"
 }

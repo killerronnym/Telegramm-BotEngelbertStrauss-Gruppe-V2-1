@@ -57,13 +57,44 @@ PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 BOTS_DIR = os.path.join(PROJECT_ROOT, "bots")
 VERSION_FILE = os.path.join(PROJECT_ROOT, "version.json")
+TOPIC_CONFIG_FILE = os.path.join(BASE_DIR, "topic_config.json")
+ACTIVITY_LOG_FILE = os.path.join(DATA_DIR, "activity_log.jsonl")
+ID_FINDER_CONFIG_FILE = os.path.join(BOTS_DIR, "id_finder_bot", "id_finder_config.json")
+MODERATION_CONFIG_FILE = os.path.join(DATA_DIR, "moderation_config.json")
+MODERATION_DATA_FILE = os.path.join(DATA_DIR, "moderation_data.json") 
+ADMINS_FILE = os.path.join(BASE_DIR, "admins.json")
+USERS_FILE = os.path.join(BASE_DIR, "users.json")
+BROADCAST_DATA_FILE = os.path.join(DATA_DIR, "scheduled_broadcasts.json")
+USER_REGISTRY_FILE = os.path.join(DATA_DIR, "user_registry.json")
+MINECRAFT_STATUS_CONFIG_FILE = os.path.join(DATA_DIR, "minecraft_status_config.json")
+MINECRAFT_STATUS_CACHE_FILE = os.path.join(DATA_DIR, "minecraft_status_cache.json")
+QUIZ_BOT_CONFIG_FILE = os.path.join(BOTS_DIR, "quiz_bot", "quiz_bot_config.json")
+UMFRAGE_BOT_CONFIG_FILE = os.path.join(BOTS_DIR, "umfrage_bot", "umfrage_bot_config.json")
+INVITE_BOT_CONFIG_FILE = os.path.join(BOTS_DIR, "invite_bot", "invite_bot_config.json")
+OUTFIT_BOT_CONFIG_FILE = os.path.join(BOTS_DIR, "outfit_bot", "outfit_bot_config.json")
+OUTFIT_BOT_DATA_FILE = os.path.join(BOTS_DIR, "outfit_bot", "outfit_bot_data.json")
+OUTFIT_BOT_LOG_FILE = os.path.join(BOTS_DIR, "outfit_bot", "outfit_bot.log")
+DASHBOARD_CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
+
+# --- Helpers ---
+def load_json(path, default=None):
+    if not os.path.exists(path): return default if default is not None else {}
+    try:
+        with open(path, "r", encoding="utf-8") as f: return json.load(f)
+    except: return default if default is not None else {}
+
+def save_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f: json.dump(data, f, indent=4, ensure_ascii=False)
 
 # --- Updater Initialisierung ---
+dash_cfg = load_json(DASHBOARD_CONFIG_FILE)
 updater = Updater(
     repo_owner="killerronnym",
     repo_name="Telegramm-BotEngelbertStrauss-Gruppe-V2-1",
     current_version_file=VERSION_FILE,
-    project_root=PROJECT_ROOT
+    project_root=PROJECT_ROOT,
+    github_token=dash_cfg.get("github_token")
 )
 
 # --- Format Filter ---
@@ -81,27 +112,6 @@ app.jinja_env.filters['datetimeformat'] = format_datetime
 VENV_PYTHON = os.path.join(PROJECT_ROOT, ".venv", "bin", "python3")
 if not os.path.exists(VENV_PYTHON): VENV_PYTHON = sys.executable
 
-TOPIC_REGISTRY_FILE = os.path.join(DATA_DIR, "topic_registry.json")
-ACTIVITY_LOG_FILE = os.path.join(DATA_DIR, "activity_log.jsonl")
-USER_MESSAGE_DIR = os.path.join(DATA_DIR, "user_messages")
-ID_FINDER_CONFIG_FILE = os.path.join(BOTS_DIR, "id_finder_bot", "id_finder_config.json")
-MODERATION_CONFIG_FILE = os.path.join(DATA_DIR, "moderation_config.json")
-MODERATION_DATA_FILE = os.path.join(DATA_DIR, "moderation_data.json") # For warnings
-PENDING_DELETIONS_FILE = os.path.join(DATA_DIR, "pending_deletions.json")
-ADMINS_FILE = os.path.join(BASE_DIR, "admins.json")
-USERS_FILE = os.path.join(BASE_DIR, "users.json")
-BROADCAST_DATA_FILE = os.path.join(DATA_DIR, "scheduled_broadcasts.json")
-USER_REGISTRY_FILE = os.path.join(DATA_DIR, "user_registry.json")
-TOPIC_CONFIG_FILE = os.path.join(BASE_DIR, "topic_config.json")
-MINECRAFT_STATUS_CONFIG_FILE = os.path.join(DATA_DIR, "minecraft_status_config.json")
-MINECRAFT_STATUS_CACHE_FILE = os.path.join(DATA_DIR, "minecraft_status_cache.json")
-QUIZ_BOT_CONFIG_FILE = os.path.join(BOTS_DIR, "quiz_bot", "quiz_bot_config.json")
-UMFRAGE_BOT_CONFIG_FILE = os.path.join(BOTS_DIR, "umfrage_bot", "umfrage_bot_config.json")
-INVITE_BOT_CONFIG_FILE = os.path.join(BOTS_DIR, "invite_bot", "invite_bot_config.json")
-OUTFIT_BOT_CONFIG_FILE = os.path.join(BOTS_DIR, "outfit_bot", "outfit_bot_config.json")
-OUTFIT_BOT_DATA_FILE = os.path.join(BOTS_DIR, "outfit_bot", "outfit_bot_data.json")
-OUTFIT_BOT_LOG_FILE = os.path.join(BOTS_DIR, "outfit_bot", "outfit_bot.log")
-
 MATCH_CONFIG = {
     "quiz": {"pattern": "quiz_bot.py", "script": os.path.join(BOTS_DIR, "quiz_bot", "quiz_bot.py"), "log": os.path.join(BOTS_DIR, "quiz_bot", "quiz_bot.log")},
     "umfrage": {"pattern": "umfrage_bot.py", "script": os.path.join(BOTS_DIR, "umfrage_bot", "umfrage_bot.py"), "log": os.path.join(BOTS_DIR, "umfrage_bot", "umfrage_bot.log")},
@@ -118,17 +128,6 @@ def get_bot_status():
 @app.context_processor
 def inject_globals():
     return {"bot_status": get_bot_status()}
-
-# --- Helpers ---
-def load_json(path, default=None):
-    if not os.path.exists(path): return default if default is not None else {}
-    try:
-        with open(path, "r", encoding="utf-8") as f: return json.load(f)
-    except: return default if default is not None else {}
-
-def save_json(path, data):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f: json.dump(data, f, indent=4, ensure_ascii=False)
 
 def tg_api_call(method, params):
     cfg = load_json(ID_FINDER_CONFIG_FILE)
@@ -197,7 +196,7 @@ def update_status():
 @login_required
 def live_moderation():
     topic_config = load_json(TOPIC_CONFIG_FILE, {}).get("topics", {})
-    topics_data = load_json(TOPIC_REGISTRY_FILE)
+    topics_data = load_json(os.path.join(DATA_DIR, "topic_registry.json"))
     mod_data = load_json(MODERATION_DATA_FILE, {})
     deleted_message_ids = set(mod_data.get("deleted_messages", []))
 
@@ -399,7 +398,7 @@ def id_finder_dashboard():
 @app.route("/broadcast")
 @login_required
 def broadcast_manager():
-    return render_template("broadcast_manager.html", broadcasts=load_json(BROADCAST_DATA_FILE, []), known_topics=load_json(TOPIC_REGISTRY_FILE, {}))
+    return render_template("broadcast_manager.html", broadcasts=load_json(BROADCAST_DATA_FILE, []), known_topics=load_json(os.path.join(DATA_DIR, "topic_registry.json"), {}))
 
 @app.route("/bot-settings")
 @login_required
