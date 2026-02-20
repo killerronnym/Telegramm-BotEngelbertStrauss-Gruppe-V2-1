@@ -1,0 +1,48 @@
+{
+    "is_enabled": true,
+    "bot_token": "7926468677:AAFpQ0frZo_KcMyVefw7JfEkewzwBEHYYLE",
+    "admin_group_id": -1003372573784,
+    "main_group_id": -1002206300882,
+    "log_topic_id": null,
+    "warn_limit": 3,
+    "warn_action": "none",
+    "antispam_enabled": false,
+    "flood_control": {
+        "messages": 5,
+        "seconds": 10
+    },
+    "flood_limit": 5,
+    "flood_window_seconds": 10,
+    "caps_limit_percent": 70,
+    "link_policy": "allow",
+    "link_whitelist": [],
+    "link_mode": "allow",
+    "locks": {
+        "links": false,
+        "media": false,
+        "stickers": false
+    },
+    "raid_mode_enabled": false,
+    "welcome_enabled": false,
+    "welcome_text": "Willkommen {user} in {group}! 👋",
+    "rules_text": "Es wurden noch keine Regeln gesetzt.",
+    "verify_enabled": false,
+    "debug_enabled": false,
+    "delete_commands": true,
+    "bot_message_cleanup_seconds": 10,
+    "filters": {},
+    "blacklist": [],
+    "roles": {},
+    "role_permissions": {
+        "mod": [
+            "warn",
+            "mute",
+            "del"
+        ]
+    },
+    "admin_log_topic_id": null,
+    "message_logging_enabled": true,
+    "message_logging_groups_only": true,
+    "message_logging_ignore_commands": true,
+    "message_logging_ignore_bots": true
+}
