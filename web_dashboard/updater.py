@@ -41,15 +41,12 @@ class Updater:
             response = requests.get(url, headers=self._get_headers(), timeout=10)
             if response.status_code == 200:
                 releases = response.json()
-                if not releases:
-                    return {"update_available": False}
+                if not releases: return {"update_available": False}
                 
                 data = releases[0]
                 latest_version = data["tag_name"].lstrip("v")
                 local_data = self.get_local_version()
                 local_version = local_data["version"].lstrip("v")
-                
-                log.info(f"Checking versions: Local={local_version}, GitHub={latest_version}")
                 
                 if latest_version != local_version:
                     return {
@@ -62,7 +59,7 @@ class Updater:
                         "zipball_url": data.get("zipball_url")
                     }
             else:
-                log.error(f"GitHub API returned status {response.status_code}: {response.text}")
+                log.error(f"GitHub API returned status {response.status_code}")
         except Exception as e:
             log.error(f"Error checking GitHub for updates: {e}")
         return {"update_available": False}
@@ -72,11 +69,10 @@ class Updater:
             try:
                 self.update_status = {"status": "downloading", "progress": 10, "error": None}
                 tmp_dir = os.path.join(self.project_root, "data", "tmp_update")
-                if os.path.exists(tmp_dir):
-                    shutil.rmtree(tmp_dir)
+                if os.path.exists(tmp_dir): shutil.rmtree(tmp_dir)
                 os.makedirs(tmp_dir, exist_ok=True)
 
-                # Download with Token
+                # Download
                 zip_path = os.path.join(tmp_dir, "update.zip")
                 r = requests.get(zipball_url, headers=self._get_headers(), stream=True)
                 with open(zip_path, "wb") as f:
@@ -85,7 +81,6 @@ class Updater:
                 
                 self.update_status["status"] = "extracting"
                 self.update_status["progress"] = 40
-                
                 with zipfile.ZipFile(zip_path, "r") as zip_ref:
                     zip_ref.extractall(tmp_dir)
                 
@@ -95,14 +90,17 @@ class Updater:
                 self.update_status["status"] = "applying"
                 self.update_status["progress"] = 70
 
-                ignore_list = ["data", ".venv", "version.json", "app.log", "critical_errors.log", "web_dashboard/config.json"]
-                
+                # --- SCHUTZLOGIK FÜR DEINE DATEN ---
                 def should_ignore(rel_path):
-                    if any(rel_path == ignored or rel_path.startswith(ignored + "/") for ignored in ignore_list):
-                        return True
-                    # Spezifische Configs schützen
-                    if rel_path.endswith(".json") and ("config" in rel_path or "sessions" in rel_path or "users" in rel_path or "admins" in rel_path):
-                        return True
+                    # 1. Kompletter Daten-Ordner (Dort liegen deine Quizfragen, Logs, Avatare!)
+                    if rel_path.startswith("data/") or rel_path == "data": return True
+                    # 2. Python Environment & Logs
+                    if rel_path.startswith(".venv/") or rel_path == ".venv": return True
+                    if rel_path.endswith(".log") or rel_path.endswith(".jsonl"): return True
+                    # 3. ALLE Konfigurationsdateien (.json) schützen, damit User-Settings bleiben
+                    if rel_path.endswith(".json"): return True
+                    # 4. Git-Dateien
+                    if rel_path.startswith(".git/"): return True
                     return False
 
                 for root, dirs, files in os.walk(source_dir):
@@ -120,7 +118,7 @@ class Updater:
                         if not should_ignore(rel_file):
                             shutil.copy2(source_file, target_file)
 
-                # Version speichern
+                # Version lokal aktualisieren
                 with open(self.current_version_file, "w") as f:
                     json.dump({"version": new_version, "release_date": published_at}, f, indent=4)
 
@@ -128,7 +126,7 @@ class Updater:
                 self.update_status["progress"] = 100
                 time.sleep(2)
                 
-                # Neustart auslösen
+                # Neustart
                 os.kill(os.getpid(), signal.SIGTERM)
 
             except Exception as e:

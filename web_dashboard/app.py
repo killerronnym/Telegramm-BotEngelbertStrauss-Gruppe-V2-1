@@ -15,6 +15,9 @@ from datetime import datetime, timedelta
 from collections import defaultdict, deque
 import io
 
+# ✅ Pfad-Fix für Module im gleichen Verzeichnis
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 # ✅ Telegram Proxy Cache
 import hashlib
 import mimetypes
@@ -57,13 +60,14 @@ PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 BOTS_DIR = os.path.join(PROJECT_ROOT, "bots")
 VERSION_FILE = os.path.join(PROJECT_ROOT, "version.json")
+DASHBOARD_CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
+USERS_FILE = os.path.join(BASE_DIR, "users.json")
+ADMINS_FILE = os.path.join(BASE_DIR, "admins.json")
 TOPIC_CONFIG_FILE = os.path.join(BASE_DIR, "topic_config.json")
 ACTIVITY_LOG_FILE = os.path.join(DATA_DIR, "activity_log.jsonl")
 ID_FINDER_CONFIG_FILE = os.path.join(BOTS_DIR, "id_finder_bot", "id_finder_config.json")
 MODERATION_CONFIG_FILE = os.path.join(DATA_DIR, "moderation_config.json")
 MODERATION_DATA_FILE = os.path.join(DATA_DIR, "moderation_data.json") 
-ADMINS_FILE = os.path.join(BASE_DIR, "admins.json")
-USERS_FILE = os.path.join(BASE_DIR, "users.json")
 BROADCAST_DATA_FILE = os.path.join(DATA_DIR, "scheduled_broadcasts.json")
 USER_REGISTRY_FILE = os.path.join(DATA_DIR, "user_registry.json")
 MINECRAFT_STATUS_CONFIG_FILE = os.path.join(DATA_DIR, "minecraft_status_config.json")
@@ -74,7 +78,6 @@ INVITE_BOT_CONFIG_FILE = os.path.join(BOTS_DIR, "invite_bot", "invite_bot_config
 OUTFIT_BOT_CONFIG_FILE = os.path.join(BOTS_DIR, "outfit_bot", "outfit_bot_config.json")
 OUTFIT_BOT_DATA_FILE = os.path.join(BOTS_DIR, "outfit_bot", "outfit_bot_data.json")
 OUTFIT_BOT_LOG_FILE = os.path.join(BOTS_DIR, "outfit_bot", "outfit_bot.log")
-DASHBOARD_CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 
 # --- Helpers ---
 def load_json(path, default=None):
@@ -129,6 +132,34 @@ def get_bot_status():
 def inject_globals():
     return {"bot_status": get_bot_status()}
 
+# --- AUTH ---
+def login_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        users = load_json(USERS_FILE, {})
+        if username in users and check_password_hash(users[username]["password"], password):
+            session["user"] = username
+            session["role"] = users[username].get("role", "user")
+            return redirect(url_for("index"))
+        flash("Ungültige Zugangsdaten.", "danger")
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
 def tg_api_call(method, params):
     cfg = load_json(ID_FINDER_CONFIG_FILE)
     token = cfg.get("bot_token")
@@ -141,14 +172,6 @@ def tg_api_call(method, params):
     except Exception as e:
         log.error(f"TG API Error: {e}")
         return None
-
-def login_required(f):
-    from functools import wraps
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "user" not in session: session["user"], session["role"] = "admin", "admin"
-        return f(*args, **kwargs)
-    return decorated_function
 
 # --- Delayed Message Deletion ---
 def delete_message_after_delay(chat_id, message_id, delay):
@@ -695,11 +718,6 @@ def id_finder_admin_panel():
 @login_required
 def id_finder_commands():
     return render_template("id_finder_commands.html")
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("index"))
 
 # Add missing dummy routes to prevent BuildError
 @app.route("/broadcast/save", methods=["POST"])
