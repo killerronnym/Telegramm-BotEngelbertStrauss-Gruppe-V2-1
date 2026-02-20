@@ -4,6 +4,10 @@
 
 # 🎯 Offene Aufgaben
 
+*   [ ] **BUG FIX: ID-Finder Admin-Panel & Analytics:** Die Seiten `/id-finder/admin-panel` und `/id-finder/analytics` werfen aktuell `Jinja2 UndefinedError`.
+    *   `analytics`: `stats` und `activity` Variablen fehlen im `render_template` Call.
+    *   `admin-panel`: `available_permissions` und `available_permission_groups` fehlen.
+    *   Lösung: Logik in `web_dashboard/app.py` implementieren, um diese Daten aus den Logs (`activity_log.jsonl`, `reactions_log.jsonl`) und der Registry zu aggregieren.
 *   [ ] **Datenbank statt JSON:** Langfristig die Datenhaltung von JSON-Dateien auf eine robustere Lösung wie SQLite oder eine kleine Datenbank umstellen, um die Leistung und Zuverlässigkeit zu erhöhen.
 
 ---
@@ -22,7 +26,7 @@
 *   [x] **Minecraft Status Integration:** Live-Anzeige des Minecraft-Server-Status und Steuerung des Status-Bots über das Web-Interface.
 *   [x] **Kritische Fehler-Ansicht:** Zentrale Ansicht im Dashboard für kritische Fehler (`critical_errors.log`), um Probleme schnell zu identifizieren.
 *   [x] **Robuste Fehlerbehandlung in `track_activity`:** Sichergestellt, dass bei Fehlern im globalen Activity-Log (`activity_log.jsonl`) die Verarbeitung abbricht, um Inkonsistenzen zu vermeiden.
-*   [x] **Asynchrone Dateizugriffe:** Die synchronen Dateizugriffe in `bots/id_finder_bot/id_finder_bot.py` in asynchrone Operationen umgewandelt.
+*   [x] **Asynchrone Dateizugriffe:** Die synchronen Dateizugriffe in `bots/id_finder_bot/id_finder_bot.py` in asyncorone Operationen umgewandelt.
 *   [x] **Bot-Startprozess optimieren:** Startprozess robuster gemacht und Prozessabfrage im Dashboard optimiert.
 *   [x] **API-Endpunkte prüfen:** Alle externen API-Abfragen (z.B. Minecraft-Server-Status) auf Robustheit und korrekte Fehlerbehandlung getestet.
 *   [x] **Funktionalität aller Bots testen & fixen:** Jeden Bot einzeln auf seine Kernfunktionen geprüft, Fehler behoben und Robustheit erhöht.
