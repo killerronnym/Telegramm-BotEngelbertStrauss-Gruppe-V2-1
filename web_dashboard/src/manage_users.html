@@ -28,7 +28,7 @@
             <h5 class="mb-0">Neuen Benutzer anlegen</h5>
         </div>
         <div class="card-body">
-            <form action="{{ url_for('add_user') }}" method="POST" class="row g-3">
+            <form action="{{ url_for('dashboard.add_user') }}" method="POST" class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label small">Benutzername</label>
                     <input type="text" name="username" class="form-control bg-dark text-white border-secondary" placeholder="z.B. max_mustermann" required>
@@ -88,7 +88,7 @@
                                 </button>
 
                                 {% if username != session.get('user') %}
-                                <form action="{{ url_for('delete_user', username=username) }}" method="POST" class="d-inline" onsubmit="return confirm('Benutzer {{ username }} wirklich löschen?')">
+                                <form action="{{ url_for('dashboard.delete_user', username=username) }}" method="POST" class="d-inline" onsubmit="return confirm('Benutzer {{ username }} wirklich löschen?')">
                                     <button type="submit" class="btn btn-sm btn-outline-danger ms-1">
                                         <i class="bi bi-trash"></i> Löschen
                                     </button>
@@ -103,7 +103,7 @@
                                                 <h5 class="modal-title">Benutzer bearbeiten: {{ username }}</h5>
                                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                             </div>
-                                            <form action="{{ url_for('edit_user', username=username) }}" method="POST">
+                                            <form action="{{ url_for('dashboard.edit_user', username=username) }}" method="POST">
                                                 <div class="modal-body text-start">
                                                     <div class="mb-3">
                                                         <label class="form-label">Neuer Benutzername (optional)</label>

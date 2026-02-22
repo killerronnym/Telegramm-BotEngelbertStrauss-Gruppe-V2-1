@@ -30,3 +30,21 @@ class AuditLog(db.Model):
     action = db.Column(db.String(100), nullable=False)
     details = db.Column(db.Text, nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Broadcast(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Text)
+    topic_id = db.Column(db.String(50)) 
+    send_mode = db.Column(db.String(20), default='standard')
+    media_path = db.Column(db.String(255))
+    media_type = db.Column(db.String(20)) # image, video
+    scheduled_at = db.Column(db.DateTime)
+    status = db.Column(db.String(20), default='pending') # pending, sent, failed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    pin_message = db.Column(db.Boolean, default=False)
+    silent_send = db.Column(db.Boolean, default=False)
+
+class TopicMapping(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    topic_id = db.Column(db.String(50), unique=True, nullable=False)
+    topic_name = db.Column(db.String(100), nullable=False)

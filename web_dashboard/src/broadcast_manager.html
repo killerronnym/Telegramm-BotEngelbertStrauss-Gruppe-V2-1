@@ -29,7 +29,7 @@
             <div class="card mb-4">
                 <div class="card-header"><h6>📢 Nachricht senden / planen</h6></div>
                 <div class="card-body">
-                    <form action="{{ url_for('save_broadcast') }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ url_for('dashboard.save_broadcast') }}" method="POST" enctype="multipart/form-data">
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">NACHRICHTENTEXT / CAPTION</label>
                             <textarea class="form-control" name="text" rows="5" placeholder="Schreibe hier deine Nachricht..."></textarea>
@@ -95,7 +95,7 @@
             <div class="card mb-4">
                 <div class="card-header"><h6>🏷️ Topics verwalten</h6></div>
                 <div class="card-body">
-                    <form action="{{ url_for('save_topic_mapping') }}" method="POST">
+                    <form action="{{ url_for('dashboard.save_topic_mapping') }}" method="POST">
                         <div class="mb-2"><input type="text" name="topic_id" id="input_topic_id" class="form-control form-control-sm" placeholder="ID (z.B. 1234)" required></div>
                         <div class="mb-2"><input type="text" name="topic_name" id="input_topic_name" class="form-control form-control-sm" placeholder="Name (z.B. Gear-Talk)" required></div>
                         <button type="submit" class="btn btn-blue-action btn-sm w-100 fw-bold">SPEICHERN</button>
@@ -108,7 +108,7 @@
                                 <div class="text-truncate text-white"><b>{{ name }}</b> <code class="ms-1 text-dim">({{ tid }})</code></div>
                                 <div class="d-flex gap-2">
                                     <button type="button" class="btn btn-sm text-blue p-0" onclick="editTopic('{{ tid }}', '{{ name }}')"><i class="bi bi-pencil-square"></i></button>
-                                    <form action="{{ url_for('delete_topic_mapping', topic_id=tid) }}" method="POST" class="m-0"><button type="submit" class="btn btn-sm text-danger p-0" onclick="return confirm('Löschen?')"><i class="bi bi-trash3"></i></button></form>
+                                    <form action="{{ url_for('dashboard.delete_topic_mapping', topic_id=tid) }}" method="POST" class="m-0"><button type="submit" class="btn btn-sm text-danger p-0" onclick="return confirm('Löschen?')"><i class="bi bi-trash3"></i></button></form>
                                 </div>
                             </li>
                             {% endfor %}
@@ -146,7 +146,7 @@
                                 <td><small class="text-dim">{{ b.scheduled_at or 'Sofort' }}</small></td>
                                 <td class="text-end pe-4">
                                     {% if b.status == 'pending' %}
-                                        <form action="{{ url_for('delete_broadcast', broadcast_id=b.id) }}" method="POST" class="d-inline">
+                                        <form action="{{ url_for('dashboard.delete_broadcast', broadcast_id=b.id) }}" method="POST" class="d-inline">
                                             <button class="btn btn-outline-danger btn-sm border-0"><i class="bi bi-trash3"></i></button>
                                         </form>
                                     {% endif %}
