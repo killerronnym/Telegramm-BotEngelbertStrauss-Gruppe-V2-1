@@ -1,251 +1,297 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, send_file, abort
-from ..models import db, BotSettings, User
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 import os
 import json
 import subprocess
 import sys
+import signal
 from datetime import datetime
+from ..models import db, BotSettings
 
 bp = Blueprint('dashboard', __name__)
 
-# Pfade für Logs
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-PROJECT_ROOT = os.path.dirname(BASE_DIR)
-CRITICAL_ERRORS_LOG_FILE = os.path.join(BASE_DIR, "critical_errors.log")
+# Fixed PROJECT_ROOT to point to the actual project root, not the web_dashboard directory
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+BASE_DIR = os.path.join(PROJECT_ROOT, 'web_dashboard')
+INVITE_BOT_PID_FILE = os.path.join(BASE_DIR, "invite_bot.pid")
+INVITE_BOT_ERROR_LOG = os.path.join(BASE_DIR, "invite_bot_error.log")
+USER_INTERACTION_LOG_FILE = os.path.join(PROJECT_ROOT, "user_interactions.log")
+INVITE_BOT_LOG_FILE = os.path.join(BASE_DIR, "invite_bot.log")
+START_DEBUG_LOG_FILE = os.path.join(BASE_DIR, "start_debug.log")
+DIRECT_START_OUTPUT_LOG = os.path.join(BASE_DIR, "direct_start_output.log") # New debug log
+
+def is_process_running(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
 
 def get_bot_status_simple():
-    # Minimale Status-Logik, um Abstürze zu vermeiden
-    return {
-        "invite": {"running": False},
-        "quiz": {"running": False},
-        "umfrage": {"running": False},
-        "outfit": {"running": False},
-        "id_finder": {"running": False}
-    }
+    invite_running = False
+    if os.path.exists(INVITE_BOT_PID_FILE):
+        try:
+            with open(INVITE_BOT_PID_FILE, 'r') as f:
+                pid = int(f.read().strip())
+            if is_process_running(pid):
+                invite_running = True
+            else:
+                os.remove(INVITE_BOT_PID_FILE)
+        except (IOError, ValueError):
+            if os.path.exists(INVITE_BOT_PID_FILE):
+                os.remove(INVITE_BOT_PID_FILE)
+    return {"invite": {"running": invite_running}}
 
 @bp.context_processor
 def inject_globals():
-    return {"bot_status": get_bot_status_simple(), "session": {"user": "Admin", "role": "admin"}}
-
-# --- Zentrale Routen ---
+    return {"bot_status": get_bot_status_simple()}
 
 @bp.route('/')
 @bp.route('/dashboard')
 def index():
     return render_template('index.html', version={"version": "3.0.0"})
 
+def get_invite_bot_settings():
+    settings = BotSettings.query.filter_by(bot_name='invite').first()
+    if not settings:
+        initial_config = {
+            'is_enabled': False, 'bot_token': '', 'main_chat_id': '', 'topic_id': '',
+            'link_ttl_minutes': 15,
+            'start_message': 'Willkommen!', 'rules_message': 'Bitte beachte die Regeln.',
+            'blocked_message': 'Du bist gesperrt.', 'privacy_policy': 'Datenschutz...',
+            'form_fields': [], 'whitelist_enabled': False, 'whitelist_approval_chat_id': '',
+            'whitelist_approval_topic_id': '', 'whitelist_pending_message': 'Dein Antrag wird geprüft.',
+            'whitelist_rejection_message': 'Dein Antrag wurde abgelehnt.'
+        }
+        settings = BotSettings(bot_name='invite', config_json=json.dumps(initial_config))
+        db.session.add(settings)
+        db.session.commit()
+    return settings
+
 @bp.route('/bot-settings', methods=["GET", "POST"])
 def bot_settings():
-    invite_bot_settings = BotSettings.query.filter_by(bot_name='invite').first()
-    if not invite_bot_settings:
-        initial_config = {'is_enabled': False, 'profile_fields': []}
-        invite_bot_settings = BotSettings(bot_name='invite', config_json=json.dumps(initial_config))
-        db.session.add(invite_bot_settings)
-        db.session.commit()
+    # Aggressive Debugging: Logge alles, was als POST-Anfrage ankommt
+    if request.method == 'POST':
+        os.makedirs(os.path.dirname(START_DEBUG_LOG_FILE), exist_ok=True)
+        with open(START_DEBUG_LOG_FILE, 'a') as f:
+            f.write(f"{datetime.now()}: DEBUG: POST request received. Form data: {request.form}\n")
 
+    invite_bot_settings = get_invite_bot_settings()
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'start_invite_bot':
-            invite_bot_settings.is_active = True
-            db.session.commit()
-            flash('Invite bot started successfully.', 'success')
+            if os.path.exists(INVITE_BOT_PID_FILE):
+                flash('Bot läuft bereits.', 'warning')
+            else:
+                try:
+                    python_exe = sys.executable
+                    bot_script = os.path.join(PROJECT_ROOT, "bots", "invite_bot", "invite_bot.py")
+                    
+                    # Logge den Startversuch
+                    os.makedirs(os.path.dirname(DIRECT_START_OUTPUT_LOG), exist_ok=True)
+                    with open(DIRECT_START_OUTPUT_LOG, 'a') as log_output_file:
+                         log_output_file.write(f"{datetime.now()}: Attempting to start bot in background.\n")
+                         log_output_file.write(f"Script path: {bot_script}\n")
+                    
+                    # Starte den Bot im Hintergrund
+                    with open(INVITE_BOT_ERROR_LOG, 'a') as log_file:
+                        process = subprocess.Popen(
+                            [python_exe, bot_script], start_new_session=True,
+                            stdout=log_file, stderr=log_file
+                        )
+                    
+                    with open(INVITE_BOT_PID_FILE, 'w') as f:
+                        f.write(str(process.pid))
+                    
+                    flash('Invite Bot wurde gestartet.', 'success')
+
+                except Exception as e:
+                    flash(f'Fehler beim Starten: {e}', 'danger')
+                    os.makedirs(os.path.dirname(START_DEBUG_LOG_FILE), exist_ok=True)
+                    with open(START_DEBUG_LOG_FILE, 'a') as f:
+                        f.write(f"{datetime.now()}: Error starting bot: {e}\n")
         elif action == 'stop_invite_bot':
-            invite_bot_settings.is_active = False
+            if os.path.exists(INVITE_BOT_PID_FILE):
+                try:
+                    with open(INVITE_BOT_PID_FILE, 'r') as f:
+                        pid = int(f.read().strip())
+                    os.kill(pid, signal.SIGTERM)
+                    os.remove(INVITE_BOT_PID_FILE)
+                    flash('Invite Bot wurde gestoppt.', 'success')
+                except Exception as e:
+                    flash(f'Fehler beim Stoppen: {e}', 'danger')
+            else:
+                flash('Bot läuft nicht.', 'info')
+        elif action == 'save_base_config':
+            config = json.loads(invite_bot_settings.config_json)
+            config.update({
+                'is_enabled': 'is_enabled' in request.form,
+                'bot_token': request.form.get('bot_token', ''),
+                'main_chat_id': request.form.get('main_chat_id', ''),
+                'topic_id': request.form.get('topic_id', ''),
+                'link_ttl_minutes': request.form.get('link_ttl_minutes', 15, type=int),
+                'whitelist_enabled': 'whitelist_enabled' in request.form,
+                'whitelist_approval_chat_id': request.form.get('whitelist_approval_chat_id', ''),
+                'whitelist_approval_topic_id': request.form.get('whitelist_approval_topic_id', '')
+            })
+            invite_bot_settings.config_json = json.dumps(config)
             db.session.commit()
-            flash('Invite bot stopped successfully.', 'success')
+            flash('Konfiguration gespeichert.', 'success')
         return redirect(url_for('dashboard.bot_settings'))
-
-    config = json.loads(invite_bot_settings.config_json)
-    config.setdefault('profile_fields', []) # Ensure profile_fields exist
-    is_invite_running = invite_bot_settings.is_active
-    # Dummy values for user_interaction_logs, invite_bot_logs for now
-    return render_template("bot_settings.html", config=config, is_invite_running=is_invite_running, user_interaction_logs=[], invite_bot_logs=[])
-
-@bp.route('/save_base_config', methods=['POST'])
-def save_base_config():
-    invite_bot_settings = BotSettings.query.filter_by(bot_name='invite').first()
-    if not invite_bot_settings:
-        flash('Bot settings not found.', 'danger')
-        return redirect(url_for('dashboard.bot_settings'))
-
-    config = json.loads(invite_bot_settings.config_json)
-    config['is_enabled'] = 'is_enabled' in request.form
-    config['bot_token'] = request.form.get('bot_token', '')
-    config['main_chat_id'] = request.form.get('main_chat_id', '')
-    config['topic_id'] = request.form.get('topic_id', '')
-    config['link_ttl_minutes'] = request.form.get('link_ttl_minutes', type=int, default=15)
     
-    invite_bot_settings.config_json = json.dumps(config)
-    db.session.commit()
-    flash('Base configuration saved successfully.', 'success')
-    return redirect(url_for('dashboard.bot_settings'))
+    config = json.loads(invite_bot_settings.config_json)
+    status = get_bot_status_simple()
+    
+    user_interaction_logs = []
+    if os.path.exists(USER_INTERACTION_LOG_FILE):
+        with open(USER_INTERACTION_LOG_FILE, 'r', encoding='utf-8') as f:
+            user_interaction_logs = f.readlines()[-50:]
+            
+    invite_bot_logs = []
+    if os.path.exists(INVITE_BOT_LOG_FILE):
+        with open(INVITE_BOT_LOG_FILE, 'r', encoding='utf-8') as f:
+            invite_bot_logs = f.readlines()[-50:]
+    # Check if there are errors in the error log as well and append them if needed
+    if os.path.exists(INVITE_BOT_ERROR_LOG):
+         with open(INVITE_BOT_ERROR_LOG, 'r', encoding='utf-8') as f:
+            error_logs = f.readlines()[-20:]
+            if error_logs:
+                invite_bot_logs.extend(["--- ERROR LOGS ---"] + error_logs)
 
-@bp.route('/save_invite_content', methods=['POST'])
+
+    return render_template(
+        "bot_settings.html", config=config,
+        is_invite_running=status['invite']['running'],
+        user_interaction_logs=user_interaction_logs,
+        invite_bot_logs=invite_bot_logs
+    )
+
+@bp.route('/bot-settings/save-content', methods=['POST'])
 def save_invite_content():
-    invite_bot_settings = BotSettings.query.filter_by(bot_name='invite').first()
-    if not invite_bot_settings:
-        flash('Bot settings not found.', 'danger')
-        return redirect(url_for('dashboard.bot_settings'))
-
-    config = json.loads(invite_bot_settings.config_json)
-    config['start_message'] = request.form.get('start_message', '')
-    config['rules_message'] = request.form.get('rules_message', '')
-    config['blocked_message'] = request.form.get('blocked_message', '')
-    config['privacy_policy'] = request.form.get('privacy_policy', '')
-
-    invite_bot_settings.config_json = json.dumps(config)
+    settings = get_invite_bot_settings()
+    config = json.loads(settings.config_json)
+    config.update({
+        'start_message': request.form.get('start_message', ''),
+        'rules_message': request.form.get('rules_message', ''),
+        'blocked_message': request.form.get('blocked_message', ''),
+        'privacy_policy': request.form.get('privacy_policy', ''),
+        'whitelist_pending_message': request.form.get('whitelist_pending_message', ''),
+        'whitelist_rejection_message': request.form.get('whitelist_rejection_message', '')
+    })
+    settings.config_json = json.dumps(config)
     db.session.commit()
-    flash('Einladungsbot-Inhalt gespeichert.', 'success')
+    flash('Texte gespeichert.', 'success')
     return redirect(url_for('dashboard.bot_settings'))
 
-@bp.route('/add_profile_field', methods=['POST'])
-def add_profile_field():
-    invite_bot_settings = BotSettings.query.filter_by(bot_name='invite').first()
-    if not invite_bot_settings:
-        flash('Bot settings not found.', 'danger')
+@bp.route('/bot-settings/add-field', methods=['POST'])
+def add_field():
+    settings = get_invite_bot_settings()
+    config = json.loads(settings.config_json)
+    fields = config.setdefault('form_fields', [])
+    field_id = request.form.get('field_id')
+    if any(f['id'] == field_id for f in fields):
+        flash('Feld-ID existiert bereits.', 'danger')
         return redirect(url_for('dashboard.bot_settings'))
-
-    config = json.loads(invite_bot_settings.config_json)
-    if 'profile_fields' not in config:
-        config['profile_fields'] = []
-
-    field_name = request.form.get('name')
-    field_type = request.form.get('type', 'text')
-    field_required = 'required' in request.form
-
-    if not field_name:
-        flash('Feldname darf nicht leer sein.', 'danger')
-        return redirect(url_for('dashboard.bot_settings'))
-
-    new_field = {'name': field_name, 'type': field_type, 'required': field_required}
-    config['profile_fields'].append(new_field)
-
-    invite_bot_settings.config_json = json.dumps(config)
-    db.session.commit()
-    flash('Profilfeld erfolgreich hinzugefügt.', 'success')
-    return redirect(url_for('dashboard.bot_settings'))
-
-@bp.route('/edit_profile_field', methods=['POST'])
-def edit_profile_field():
-    invite_bot_settings = BotSettings.query.filter_by(bot_name='invite').first()
-    if not invite_bot_settings:
-        flash('Bot settings not found.', 'danger')
-        return redirect(url_for('dashboard.bot_settings'))
-
-    config = json.loads(invite_bot_settings.config_json)
-    field_index = request.form.get('field_index', type=int)
-
-    if field_index is None or not (0 <= field_index < len(config.get('profile_fields', []))):
-        flash('Ungültiger Feldindex.', 'danger')
-        return redirect(url_for('dashboard.bot_settings'))
-
-    field_name = request.form.get('name')
-    field_type = request.form.get('type', 'text')
-    field_required = 'required' in request.form
-
-    if not field_name:
-        flash('Feldname darf nicht leer sein.', 'danger')
-        return redirect(url_for('dashboard.bot_settings'))
-
-    config['profile_fields'][field_index] = {'name': field_name, 'type': field_type, 'required': field_required}
     
-    invite_bot_settings.config_json = json.dumps(config)
+    new_field = {
+        'id': field_id, 'emoji': request.form.get('emoji', '🔹'),
+        'display_name': request.form.get('display_name', ''),
+        'label': request.form.get('label', ''), 'type': request.form.get('type', 'text'),
+        'required': 'required' in request.form, 'enabled': True
+    }
+    if new_field['type'] == 'number':
+        new_field['min_age'] = request.form.get('min_age', type=int)
+        new_field['min_age_error_msg'] = request.form.get('min_age_error_msg', '')
+    
+    fields.append(new_field)
+    settings.config_json = json.dumps(config)
     db.session.commit()
-    flash('Profilfeld erfolgreich aktualisiert.', 'success')
+    flash('Feld hinzugefügt.', 'success')
     return redirect(url_for('dashboard.bot_settings'))
 
-@bp.route('/delete_profile_field', methods=['POST'])
-def delete_profile_field():
-    invite_bot_settings = BotSettings.query.filter_by(bot_name='invite').first()
-    if not invite_bot_settings:
-        flash('Bot settings not found.', 'danger')
-        return redirect(url_for('dashboard.bot_settings'))
+@bp.route('/bot-settings/edit-field', methods=['POST'])
+def edit_field():
+    settings = get_invite_bot_settings()
+    config = json.loads(settings.config_json)
+    field_id = request.form.get('field_id')
 
-    config = json.loads(invite_bot_settings.config_json)
-    field_index = request.form.get('field_index', type=int)
+    for field in config.get('form_fields', []):
+        if field['id'] == field_id:
+            field['emoji'] = request.form.get('emoji', '🔹')
+            field['display_name'] = request.form.get('display_name', '')
+            field['label'] = request.form.get('label', '')
+            field['type'] = request.form.get('type', 'text')
+            field['required'] = 'required' in request.form
+            field['enabled'] = 'enabled' in request.form
+            if field['type'] == 'number':
+                field['min_age'] = request.form.get('min_age', type=int)
+                field['min_age_error_msg'] = request.form.get('min_age_error_msg', '')
+            break
 
-    if field_index is None or not (0 <= field_index < len(config.get('profile_fields', []))):
-        flash('Ungültiger Feldindex.', 'danger')
-        return redirect(url_for('dashboard.bot_settings'))
-
-    del config['profile_fields'][field_index]
-    
-    invite_bot_settings.config_json = json.dumps(config)
+    settings.config_json = json.dumps(config)
     db.session.commit()
-    flash('Profilfeld erfolgreich gelöscht.', 'success')
+    flash('Feld aktualisiert.', 'success')
+    return redirect(url_for('dashboard.bot_settings'))
+
+@bp.route('/bot-settings/delete-field', methods=['POST'])
+def delete_field():
+    settings = get_invite_bot_settings()
+    config = json.loads(settings.config_json)
+    field_id = request.form.get('field_id')
+    config['form_fields'] = [f for f in config.get('form_fields', []) if f['id'] != field_id]
+    settings.config_json = json.dumps(config)
+    db.session.commit()
+    flash('Feld gelöscht.', 'success')
+    return redirect(url_for('dashboard.bot_settings'))
+
+@bp.route('/bot-settings/move-field/<string:field_id>/<string:direction>', methods=['POST'])
+def invite_bot_move_field(field_id, direction):
+    settings = get_invite_bot_settings()
+    config = json.loads(settings.config_json)
+    form_fields = config.get('form_fields', [])
+    idx = next((i for i, f in enumerate(form_fields) if f['id'] == field_id), -1)
+    if idx != -1:
+        if direction == 'up' and idx > 0:
+            form_fields[idx], form_fields[idx-1] = form_fields[idx-1], form_fields[idx]
+        elif direction == 'down' and idx < len(form_fields)-1:
+            form_fields[idx], form_fields[idx+1] = form_fields[idx+1], form_fields[idx]
+    config['form_fields'] = form_fields
+    settings.config_json = json.dumps(config)
+    db.session.commit()
+    flash('Feld verschoben.', 'success')
+    return redirect(url_for('dashboard.bot_settings'))
+
+@bp.route('/bot-settings/clear-logs/user', methods=['POST'])
+def clear_user_logs():
+    if os.path.exists(USER_INTERACTION_LOG_FILE):
+        try:
+            with open(USER_INTERACTION_LOG_FILE, 'w') as f: f.write('')
+            flash('User Interaktionen Logs gelöscht.', 'success')
+        except Exception as e:
+            flash(f'Fehler beim Löschen der Logs: {e}', 'danger')
+    return redirect(url_for('dashboard.bot_settings'))
+
+@bp.route('/bot-settings/clear-logs/system', methods=['POST'])
+def clear_system_logs():
+    if os.path.exists(INVITE_BOT_LOG_FILE):
+        with open(INVITE_BOT_LOG_FILE, 'w') as f: f.write('')
+    if os.path.exists(INVITE_BOT_ERROR_LOG):
+        with open(INVITE_BOT_ERROR_LOG, 'w') as f: f.write('')
+    flash('System Logs gelöscht.', 'success')
     return redirect(url_for('dashboard.bot_settings'))
 
 @bp.route('/live_moderation')
 def live_moderation():
-    return render_template('live_moderation.html', topics={}, messages=[], selected_chat_id=None, selected_topic_id=None, mod_config={})
-
-@bp.route('/live_moderation_config', methods=['POST'])
-def live_moderation_config():
-    # Here you would typically save the configuration
-    flash('Moderations-Einstellungen wurden gespeichert.', 'success')
-    return redirect(url_for('dashboard.live_moderation'))
-
-@bp.route('/live_moderation_delete', methods=['POST'])
-def live_moderation_delete():
-    # Here you would typically handle the deletion logic
-    flash('Nachricht wurde gelöscht.', 'success')
-    return redirect(url_for('dashboard.live_moderation'))
-
-@bp.route('/broadcast')
-def broadcast_manager():
-    return render_template("broadcast_manager.html", broadcasts=[], known_topics={})
-
-@bp.route('/minecraft')
-def minecraft_status_page():
-    return render_template("minecraft.html", cfg={}, status={}, is_running=False, server_online=False, pi={}, log_tail="")
-
-@bp.route("/id-finder")
-def id_finder_dashboard(): 
-    return render_template("id_finder_dashboard.html", config={})
-
-@bp.route("/quiz-settings")
-def quiz_settings():
-    return render_template("quiz_settings.html", config={}, schedule={}, stats={}, questions_json="[]", asked_questions_json="[]", logs=[])
-
-@bp.route("/umfrage-settings")
-def umfrage_settings():
-    return render_template("umfrage_settings.html", config={}, schedule={}, stats={}, umfragen_json="[]", asked_umfragen_json="[]", logs=[])
-
-@bp.route("/outfit-bot/dashboard")
-def outfit_bot_dashboard():
-    return render_template("outfit_bot_dashboard.html", config={}, is_running=False, logs=[], duel_status={"active": False})
-
-@bp.route("/admin/users")
-def manage_users():
-    return render_template("manage_users.html", users={})
+    return render_template('live_moderation.html')
 
 @bp.route('/critical-errors')
 def critical_errors():
     logs = []
-    if os.path.exists(CRITICAL_ERRORS_LOG_FILE):
+    if os.path.exists(os.path.join(BASE_DIR, "critical_errors.log")):
         try:
-            with open(CRITICAL_ERRORS_LOG_FILE, 'r') as f:
-                logs = f.readlines()
+            with open(os.path.join(BASE_DIR, "critical_errors.log"), 'r') as f: logs = f.readlines()
         except: pass
     return render_template("critical_errors.html", critical_logs=logs)
 
-@bp.route('/clear-critical-errors', methods=['POST'])
-def clear_critical_errors():
-    if os.path.exists(CRITICAL_ERRORS_LOG_FILE):
-        try:
-            os.remove(CRITICAL_ERRORS_LOG_FILE)
-            flash('Kritische Fehlerprotokolle erfolgreich gelöscht.', 'success')
-        except Exception as e:
-            flash(f'Fehler beim Löschen der Protokolle: {e}', 'danger')
-    else:
-        flash('Keine Protokolldatei zum Löschen gefunden.', 'info')
-    return redirect(url_for('dashboard.critical_errors'))
-
-# --- API Endpunkte ---
 @bp.route('/api/bot-status')
 def bot_status_api():
     return jsonify(get_bot_status_simple())
-
-@bp.route('/api/update/check')
-def update_check():
-    return jsonify({"update_available": False})

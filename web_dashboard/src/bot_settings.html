@@ -12,43 +12,13 @@
     .move-arrow { color: var(--text-dim); cursor: pointer; padding: 2px; }
     .move-arrow:hover { color: var(--blue-accent); }
     code { background: rgba(59, 130, 246, 0.08); color: var(--blue-accent); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.85rem; }
-
-    .profile-field-item {
-        background: var(--sidebar-bg);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .profile-field-item:last-child { margin-bottom: 0; }
-    .profile-field-item .field-info {
-        display: flex;
-        flex-direction: column;
-    }
-    .profile-field-item .field-name {
-        font-weight: bold;
-        color: var(--text-bright);
-    }
-    .profile-field-item .field-details {
-        font-size: 0.85rem;
-        color: var(--text-muted);
-    }
-    .profile-field-item .field-actions button {
-        background: none;
-        border: none;
-        color: var(--text-muted);
-        font-size: 1.1rem;
-        margin-left: 0.5rem;
-        transition: color 0.2s;
-    }
-    .profile-field-item .field-actions button:hover {
-        color: var(--accent-color);
-    }
-    .profile-field-item .field-actions .btn-danger:hover {
-        color: var(--deleted-color);
+    .whitelist-section {
+        display: none;
+        background-color: rgba(30, 41, 59, 0.5);
+        border-left: 3px solid var(--blue-accent);
+        padding: 1.2rem;
+        margin-top: 1rem;
+        border-radius: 0 8px 8px 0;
     }
 </style>
 
@@ -70,21 +40,10 @@
         </div>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
     <div class="row g-4">
         <div class="col-lg-4">
             <div class="card mb-4">
-                <div class="card-header"><h6>Steuerung</h6></div>
+                <div class="card-header"><h6>Steuerung & Basis-Konfiguration</h6></div>
                 <div class="card-body">
                     <div class="d-flex gap-2 mb-4 pb-4 border-bottom border-white border-opacity-5">
                         <form action="{{ url_for('dashboard.bot_settings') }}" method="POST" class="flex-grow-1">
@@ -97,7 +56,7 @@
                         </form>
                     </div>
 
-                    <form action="{{ url_for('dashboard.save_base_config') }}" method="POST">
+                    <form action="{{ url_for('dashboard.bot_settings') }}" method="POST">
                         <input type="hidden" name="action" value="save_base_config">
                         <div class="form-check form-switch mb-4 p-2 ps-5 rounded border border-white border-opacity-5" style="background: rgba(255,255,255,0.01);">
                             <input class="form-check-input" type="checkbox" id="is_enabled" name="is_enabled" {% if config.is_enabled %}checked{% endif %}>
@@ -108,14 +67,33 @@
                             <input type="password" class="form-control form-control-sm" name="bot_token" value="{{ config.bot_token or '' }}">
                         </div>
                         <div class="mb-3">
-                            <label class="small text-secondary fw-bold mb-1">GRUPPEN-ID</label>
+                            <label class="small text-secondary fw-bold mb-1">HAUPTGRUPPEN-ID</label>
                             <input type="text" class="form-control form-control-sm" name="main_chat_id" value="{{ config.main_chat_id or '' }}">
                         </div>
                         <div class="row g-2 mb-4">
-                            <div class="col-6"><label class="small text-secondary fw-bold mb-1">TOPIC</label><input type="text" class="form-control form-control-sm" name="topic_id" value="{{ config.topic_id or '' }}"></div>
-                            <div class="col-6"><label class="small text-secondary fw-bold mb-1">TTL (MIN)</label><input type="number" class="form-control form-control-sm" name="link_ttl_minutes" value="{{ config.link_ttl_minutes or 15 }}"></div>
+                            <div class="col-6"><label class="small text-secondary fw-bold mb-1">TOPIC-ID (Optional)</label><input type="text" class="form-control form-control-sm" name="topic_id" value="{{ config.topic_id or '' }}"></div>
+                            <div class="col-6"><label class="small text-secondary fw-bold mb-1">LINK TTL (MIN)</label><input type="number" class="form-control form-control-sm" name="link_ttl_minutes" value="{{ config.link_ttl_minutes or 15 }}"></div>
                         </div>
-                        <button type="submit" class="btn-blue-action w-100">KONFIGURATION SICHERN</button>
+
+                        <hr class="my-4 border-secondary">
+
+                        <div class="form-check form-switch mb-2 p-2 ps-5">
+                            <input class="form-check-input" type="checkbox" id="whitelist_enabled" name="whitelist_enabled" {% if config.whitelist_enabled %}checked{% endif %} onchange="toggleWhitelistSection()">
+                            <label class="form-check-label small fw-bold" for="whitelist_enabled">Whitelist-Modus für Beitritt</label>
+                        </div>
+
+                        <div id="whitelist_section" class="whitelist-section">
+                             <div class="mb-3">
+                                <label class="small text-warning fw-bold mb-1">ADMIN FREIGABE-GRUPPEN-ID</label>
+                                <input type="text" class="form-control form-control-sm" name="whitelist_approval_chat_id" value="{{ config.whitelist_approval_chat_id or '' }}">
+                             </div>
+                             <div class="mb-2">
+                                <label class="small text-secondary fw-bold mb-1">FREIGABE-TOPIC-ID (Optional)</label>
+                                <input type="text" class="form-control form-control-sm" name="whitelist_approval_topic_id" value="{{ config.whitelist_approval_topic_id or '' }}">
+                             </div>
+                        </div>
+
+                        <button type="submit" class="btn-blue-action w-100 mt-4">KONFIGURATION SICHERN</button>
                     </form>
                 </div>
             </div>
@@ -126,21 +104,35 @@
                     <form action="{{ url_for('dashboard.save_invite_content') }}" method="POST">
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">Begrüßung (/start)</label>
-                            <textarea class="form-control font-monospace" name="start_message" rows="4">{{ config.start_message or '' }}</textarea>
+                            <textarea class="form-control font-monospace" name="start_message" rows="3">{{ config.start_message or '' }}</textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="small text-secondary fw-bold mb-1">Regeln (Ende)</label>
-                            <textarea class="form-control font-monospace" name="rules_message" rows="4">{{ config.rules_message or '' }}</textarea>
+                            <label class="small text-secondary fw-bold mb-1">Regeln (vor Link/Whitelist)</label>
+                            <textarea class="form-control font-monospace" name="rules_message" rows="3">{{ config.rules_message or '' }}</textarea>
                         </div>
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">Nachricht bei Sperre</label>
-                            <textarea class="form-control font-monospace" name="blocked_message" rows="4">{{ config.blocked_message or '' }}</textarea>
+                            <textarea class="form-control font-monospace" name="blocked_message" rows="3">{{ config.blocked_message or '' }}</textarea>
+                        </div>
+                         <div class="mb-3">
+                            <label class="small text-secondary fw-bold mb-1">Datenschutz</label>
+                            <textarea class="form-control font-monospace" name="privacy_policy" rows="4">{{ config.privacy_policy or '' }}</textarea>
+                        </div>
+
+                        <hr class="my-4 border-secondary">
+                        <h6 class="text-info fw-bold mb-3">Texte für Whitelist-Modus</h6>
+                        <div class="mb-3">
+                             <label class="small text-secondary fw-bold mb-1">Warteschleifen-Nachricht</label>
+                             <textarea class="form-control font-monospace" name="whitelist_pending_message" rows="3">{{ config.whitelist_pending_message or '' }}</textarea>
+                             <div class="form-text small text-white-50">Wird an den User nach Ausfüllen des Steckbriefs gesendet.</div>
                         </div>
                         <div class="mb-3">
-                            <label class="small text-secondary fw-bold mb-1">Datenschutz</label>
-                            <textarea class="form-control font-monospace" name="privacy_policy" rows="5">{{ config.privacy_policy or '' }}</textarea>
+                             <label class="small text-secondary fw-bold mb-1">Ablehnungs-Nachricht</label>
+                             <textarea class="form-control font-monospace" name="whitelist_rejection_message" rows="3">{{ config.whitelist_rejection_message or '' }}</textarea>
+                             <div class="form-text small text-white-50">Wird an den User nach Klick auf "Ablehnen" gesendet.</div>
                         </div>
-                        <button type="submit" class="btn-blue-action w-100">TEXTE SPEICHERN</button>
+
+                        <button type="submit" class="btn-blue-action w-100 mt-4">TEXTE SPEICHERN</button>
                     </form>
                 </div>
             </div>
@@ -150,188 +142,121 @@
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6>Profil-Abfragen</h6>
-                    <button type="button" class="btn btn-success btn-sm fw-bold px-3 shadow-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#addFieldModal">+ NEUES FELD</button>
+                    <button class="btn btn-success btn-sm fw-bold px-3 shadow-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#addFieldModal">+ NEUES FELD</button>
                 </div>
-                <div class="card-body p-4">
-                    {% if config.profile_fields %}
-                        <div id="profile-fields-list">
-                            {% for field in config.profile_fields %}
-                                <div class="profile-field-item">
-                                    <div class="field-info">
-                                        <span class="field-name">{{ field.name }}</span>
-                                        <span class="field-details">{{ field.type }}{% if field.required %}, Pflichtfeld{% endif %}</span>
-                                    </div>
-                                    <div class="field-actions">
-                                        <button type="button" class="btn-edit-field" data-field-index="{{ loop.index0 }}"><i class="bi bi-pencil"></i></button>
-                                        <button type="button" class="btn-delete-field text-danger" data-field-index="{{ loop.index0 }}"><i class="bi bi-trash"></i></button>
-                                    </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover align-middle mb-0" style="--bs-table-bg: transparent;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 70px" class="text-center small text-secondary fw-bold">POS</th>
+                                    <th class="small text-secondary fw-bold">ID</th>
+                                    <th class="small text-secondary fw-bold">BOT-FRAGE / ANZEIGENAME</th>
+                                    <th class="small text-secondary fw-bold">TYP</th>
+                                    <th class="text-center small text-secondary fw-bold">REQR</th>
+                                    <th class="text-end pe-4 small text-secondary fw-bold">AKTION</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for field in config.get('form_fields', []) %}
+                                <tr class="{% if not field.get('enabled') %}opacity-25{% endif %}" style="border-bottom: 1px solid rgba(255,255,255,0.03) !important;">
+                                    <td class="text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            {% if not loop.first %}
+                                            <form action="{{ url_for('dashboard.invite_bot_move_field', field_id=field.id, direction='up') }}" method="POST" class="d-inline">
+                                                <button type="submit" class="move-arrow btn btn-sm p-0"><i class="bi bi-caret-up-fill"></i></button>
+                                            </form>
+                                            {% endif %}
+                                            <small class="fw-bold">{{ loop.index }}</small>
+                                            {% if not loop.last %}
+                                            <form action="{{ url_for('dashboard.invite_bot_move_field', field_id=field.id, direction='down') }}" method="POST" class="d-inline">
+                                                <button type="submit" class="move-arrow btn btn-sm p-0"><i class="bi bi-caret-down-fill"></i></button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td><code>{{ field.id }}</code></td>
+                                    <td>
+                                        <div class="small text-white-50 mb-1">{{ field.get('label', '')[:60] }}...</div>
+                                        <div class="fw-bold text-info">{{ field.get('emoji', '🔹') }} {{ field.get('display_name', field.id|capitalize) }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="small text-secondary fw-bold text-uppercase">{{ field.type }}</div>
+                                        {% if field.get('min_age') %}
+                                        <div class="small text-warning" style="font-size: 0.7em;">Min: {{ field.min_age }}J</div>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">{% if field.get('required') %}<i class="bi bi-check-lg text-success"></i>{% else %}<i class="bi bi-dash text-secondary opacity-50"></i>{% endif %}</td>
+                                    <td class="text-end pe-4">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <button class="btn btn-outline-light btn-sm border-0" onclick="openEditModal('{{ field.id }}', '{{ field.label|e }}', '{{ field.type }}', {{ 'true' if field.required else 'false' }}, {{ 'true' if field.enabled else 'false' }}, '{{ field.emoji or '🔹' }}', '{{ field.display_name or '' }}', '{{ field.min_age or '' }}', '{{ field.min_age_error_msg or ''|e }}')"><i class="bi bi-pencil-square"></i></button>
+                                            <form action="{{ url_for('dashboard.delete_field') }}" method="POST" style="display:inline;"><input type="hidden" name="field_id" value="{{ field.id }}"><button type="submit" class="btn btn-outline-danger btn-sm border-0" onclick="return confirm('Löschen?');"><i class="bi bi-trash3"></i></button></form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Section -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6>User Interaktionen (Live)</h6>
+                    <div class="d-flex align-items-center gap-2">
+                         <span class="badge bg-secondary">{{ user_interaction_logs|length }} Einträge</span>
+                         <form action="{{ url_for('dashboard.clear_user_logs') }}" method="POST">
+                             <button type="submit" class="btn btn-outline-danger btn-sm border-0 p-1" title="Logs löschen" onclick="return confirm('Wirklich alle User-Logs löschen?');"><i class="bi bi-trash"></i></button>
+                         </form>
+                    </div>
+                </div>
+                <div class="card-body bg-black p-0">
+                    <div class="log-display rounded-0 border-0" style="max-height: 400px; overflow-y: auto;">
+                        {% if user_interaction_logs %}
+                            {% for line in user_interaction_logs %}
+                                <div class="border-bottom border-white border-opacity-10 py-1 px-2" style="font-size: 0.8rem;">
+                                    {{ line }}
                                 </div>
                             {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="text-center text-muted p-4">
-                            <i class="bi bi-info-circle fs-1 d-block mb-2"></i>
-                            <p>Es sind noch keine Profilfelder definiert. Fügen Sie neue Felder hinzu, um Informationen von Benutzern abzufragen.</p>
-                        </div>
-                    {% endif %}
+                        {% else %}
+                            <div class="text-muted p-4 text-center">Keine aktuellen Interaktionen.</div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
 
-<!-- Add Field Modal -->
-<div class="modal fade" id="addFieldModal" tabindex="-1" aria-labelledby="addFieldModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addFieldModalLabel">Neues Profilfeld hinzufügen</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6>System Logs (Technisch)</h6>
+                     <form action="{{ url_for('dashboard.clear_system_logs') }}" method="POST">
+                         <button type="submit" class="btn btn-outline-danger btn-sm border-0 p-1" title="Logs löschen" onclick="return confirm('Wirklich alle System-Logs löschen?');"><i class="bi bi-trash"></i></button>
+                     </form>
+                </div>
+                <div class="card-body bg-black p-0">
+                    <div class="log-display rounded-0 border-0" style="max-height: 300px; overflow-y: auto;">
+                        {% if invite_bot_logs %}
+                            {% for line in invite_bot_logs %}
+                                <div class="py-1 px-2 text-wrap" style="font-size: 0.75rem;">{{ line }}</div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-muted p-4 text-center">Keine Logs verfügbar.</div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            <form id="addFieldForm" action="{{ url_for('dashboard.add_profile_field') }}" method="POST">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="fieldName" class="form-label">Feldname</label>
-                        <input type="text" class="form-control" id="fieldName" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="fieldType" class="form-label">Feldtyp</label>
-                        <select class="form-select" id="fieldType" name="type">
-                            <option value="text">Text</option>
-                            <option value="number">Zahl</option>
-                            <option value="boolean">Ja/Nein</option>
-                        </select>
-                    </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="fieldRequired" name="required">
-                        <label class="form-check-label" for="fieldRequired">Pflichtfeld</label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
-                    <button type="submit" class="btn btn-primary">Feld hinzufügen</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Field Modal (Placeholder for now) -->
-<div class="modal fade" id="editFieldModal" tabindex="-1" aria-labelledby="editFieldModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editFieldModalLabel">Profilfeld bearbeiten</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="editFieldForm" action="{{ url_for('dashboard.edit_profile_field') }}" method="POST">
-                <input type="hidden" name="field_index" id="editFieldIndex">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="editFieldName" class="form-label">Feldname</label>
-                        <input type="text" class="form-control" id="editFieldName" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="editFieldType" class="form-label">Feldtyp</label>
-                        <select class="form-select" id="editFieldType" name="type">
-                            <option value="text">Text</option>
-                            <option value="number">Zahl</option>
-                            <option value="boolean">Ja/Nein</option>
-                        </select>
-                    </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="editFieldRequired" name="required">
-                        <label class="form-check-label" for="editFieldRequired">Pflichtfeld</label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
-                    <button type="submit" class="btn btn-primary">Änderungen speichern</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Handle Edit button click
-        document.querySelectorAll('.btn-edit-field').forEach(button => {
-            button.addEventListener('click', function() {
-                const index = this.dataset.fieldIndex;
-                const field = {{ config.profile_fields | tojson }}[index];
-                
-                document.getElementById('editFieldIndex').value = index;
-                document.getElementById('editFieldName').value = field.name;
-                document.getElementById('editFieldType').value = field.type;
-                document.getElementById('editFieldRequired').checked = field.required;
-
-                var editFieldModal = new bootstrap.Modal(document.getElementById('editFieldModal'));
-                editFieldModal.show();
-            });
-        });
-
-        // Handle Delete button click
-        document.querySelectorAll('.btn-delete-field').forEach(button => {
-            button.addEventListener('click', function() {
-                const index = this.dataset.fieldIndex;
-                if (confirm('Möchten Sie dieses Profilfeld wirklich löschen?')) {
-                    fetch("{{ url_for('dashboard.delete_profile_field') }}", {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                        body: `field_index=${index}`
-                    }).then(response => {
-                        if (response.ok) {
-                            window.location.reload();
-                        } else {
-                            alert('Fehler beim Löschen des Feldes.');
-                        }
-                    }).catch(error => {
-                        console.error('Error:', error);
-                        alert('Fehler beim Löschen des Feldes.');
-                    });
-                }
-            });
-        });
-
-        // Add Field Form Submission
-        document.getElementById('addFieldForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const form = event.target;
-            fetch(form.action, {
-                method: form.method,
-                body: new URLSearchParams(new FormData(form))
-            }).then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    alert('Fehler beim Hinzufügen des Feldes.');
-                }
-            }).catch(error => {
-                console.error('Error:', error);
-                alert('Fehler beim Hinzufügen des Feldes.');
-            });
-        });
-
-        // Edit Field Form Submission
-        document.getElementById('editFieldForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const form = event.target;
-            fetch(form.action, {
-                method: form.method,
-                body: new URLSearchParams(new FormData(form))
-            }).then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    alert('Fehler beim Speichern der Änderungen.');
-                }
-            }).catch(error => {
-                console.error('Error:', error);
-                alert('Fehler beim Speichern der Änderungen.');
-            });
-        });
-
-    });
+    function toggleWhitelistSection() {
+        const checkbox = document.getElementById('whitelist_enabled');
+        const section = document.getElementById('whitelist_section');
+        section.style.display = checkbox.checked ? 'block' : 'none';
+    }
+    document.addEventListener('DOMContentLoaded', toggleWhitelistSection);
+    // ... andere modal-skripte ...
 </script>
 {% endblock %}
