@@ -215,26 +215,13 @@ async def handle_whitelist_callback(update: Update, context: ContextTypes.DEFAUL
     config = get_bot_config('invite')
 
     if user_id not in PENDING_WHITELIST and user_id not in PENDING_PROFILES:
-        # Check if already processed (not in PENDING_WHITELIST usually means done, but we keep PROFILES for accept)
-        # However, if we accept, we remove from WHITELIST but keep in PROFILES.
-        # So checking 'not in PENDING_WHITELIST' might be misleading if accepted but not joined yet.
-        # But this callback is from the ADMIN message. Once clicked, we edit the message.
-        # So subsequent clicks shouldn't happen on the same message ideally, or we handle it.
         pass
 
-    # We need user info. If not in WHITELIST, maybe in PROFILES? (unlikely as we add both together)
-    # But if we accepted, we removed from WHITELIST. So if admin clicks again? (Shouldn't happen as we edit message)
-    
-    # Let's rely on PENDING_PROFILES existence for "is this a valid pending/active request?"
     if user_id not in PENDING_PROFILES:
          await query.edit_message_text(f"Diese Anfrage ist nicht mehr verfügbar (vielleicht schon bearbeitet?).")
          return
 
     user_info = PENDING_WHITELIST.get(user_id, {'full_name': 'Unknown', 'username': 'Unknown'})
-    # If not in whitelist but in profiles, it means it was already accepted?
-    # But we want to process the click.
-    
-    # Wait, if we edit the message, the buttons are gone. So double click is impossible on the same message.
     
     if action == "accept":
         profile_data = PENDING_PROFILES.get(user_id)
@@ -245,7 +232,6 @@ async def handle_whitelist_callback(update: Update, context: ContextTypes.DEFAUL
             await query.edit_message_text(f"✅ Angenommen von {admin_user.full_name}. Der Nutzer hat den Link erhalten.")
             
             # WICHTIG: Profil NICHT löschen! Wir brauchen es für handle_new_member.
-            # Aber wir können es aus PENDING_WHITELIST löschen, da die Admin-Entscheidung gefallen ist.
             PENDING_WHITELIST.pop(user_id, None)
             
         else:
@@ -261,25 +247,17 @@ async def handle_whitelist_callback(update: Update, context: ContextTypes.DEFAUL
         PENDING_WHITELIST.pop(user_id, None)
 
 async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # Check if update has chat_member
-    if not update.chat_member or not update.chat_member.new_chat_member:
-        return
-        
-    # Check if status changed to member (joined)
-    if update.chat_member.new_chat_member.status != "member":
+    if not update.chat_member or not update.chat_member.new_chat_member or update.chat_member.new_chat_member.status != "member":
         return
 
     user_id = update.chat_member.new_chat_member.user.id
     
-    # Prüfen ob ein Steckbrief wartet
     if user_id in PENDING_PROFILES:
         profile_data = PENDING_PROFILES.pop(user_id)
         profile_data['text'] = profile_data['text'].replace("Steckbrief von", "Willkommen in der Gruppe!")
         
-        # Hier senden wir den Steckbrief in die Zielgruppe
         await post_profile(context.bot, profile_data)
         
-        # Clean up
         PENDING_WHITELIST.pop(user_id, None)
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -304,8 +282,10 @@ def run_bot():
             fallbacks=[CommandHandler("cancel", cancel), CommandHandler("start", start)],
         )
         application.add_handler(conv_handler)
+        # HIER: /start Befehl auch außerhalb des Dialogs verfügbar machen
+        application.add_handler(CommandHandler("start", start))
+        
         application.add_handler(CallbackQueryHandler(handle_whitelist_callback, pattern=r'^whitelist_'))
-        # Using ChatMemberHandler correctly
         application.add_handler(ChatMemberHandler(handle_new_member, ChatMemberHandler.CHAT_MEMBER))
         
         logger.info("Invite Bot gestartet und lauscht auf Updates...")
