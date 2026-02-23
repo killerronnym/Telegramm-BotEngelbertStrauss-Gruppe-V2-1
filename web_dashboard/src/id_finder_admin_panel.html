@@ -54,7 +54,7 @@
                                         <button class="btn btn-primary btn-sm me-2" data-bs-toggle="modal" data-bs-target="#editPermsModal{{ admin_id }}">
                                             ✏️ Rechte
                                         </button>
-                                        <form method="POST" action="{{ url_for('id_finder_delete_admin') }}" style="display:inline;">
+                                        <form method="POST" action="{{ url_for('dashboard.id_finder_delete_admin') }}" style="display:inline;">
                                             <input type="hidden" name="admin_id" value="{{ admin_id }}">
                                             <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Diesen Admin wirklich löschen?')">
                                                 🗑️ Löschen
@@ -71,7 +71,7 @@
                                                 <h5 class="modal-title">Rechte verwalten für: {{ admin_data.name }}</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                             </div>
-                                            <form method="POST" action="{{ url_for('id_finder_update_admin_permissions') }}">
+                                            <form method="POST" action="{{ url_for('dashboard.id_finder_update_admin_permissions') }}">
                                                 <div class="modal-body">
                                                     <input type="hidden" name="admin_id" value="{{ admin_id }}">
                                                     <p class="text-muted">
@@ -174,7 +174,7 @@
                 <h5 class="modal-title">Neuen Admin hinzufügen</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('id_finder_add_admin') }}">
+            <form method="POST" action="{{ url_for('dashboard.id_finder_add_admin') }}">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="admin_name" class="form-label">Name (Beschreibung)</label>

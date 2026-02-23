@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import json
 
 db = SQLAlchemy()
 
@@ -46,5 +47,53 @@ class Broadcast(db.Model):
 
 class TopicMapping(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    topic_id = db.Column(db.String(50), unique=True, nullable=False)
+    topic_id = db.Column(db.BigInteger, unique=True, nullable=False)
     topic_name = db.Column(db.String(100), nullable=False)
+
+# --- ID Finder Bot Models ---
+
+class IDFinderAdmin(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    telegram_id = db.Column(db.BigInteger, unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    permissions_json = db.Column(db.Text, default='{}') # JSON string of permissions
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def permissions(self):
+        try:
+            return json.loads(self.permissions_json)
+        except:
+            return {}
+
+    @permissions.setter
+    def permissions(self, value):
+        self.permissions_json = json.dumps(value)
+
+class IDFinderUser(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    telegram_id = db.Column(db.BigInteger, unique=True, nullable=False)
+    username = db.Column(db.String(100))
+    first_name = db.Column(db.String(100))
+    last_name = db.Column(db.String(100))
+    language_code = db.Column(db.String(10))
+    is_bot = db.Column(db.Boolean, default=False)
+    avatar_file_id = db.Column(db.String(255)) # Added for avatar support
+    first_contact = db.Column(db.DateTime, default=datetime.utcnow)
+    last_contact = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship to messages
+    messages = db.relationship('IDFinderMessage', backref='user', lazy=True, cascade="all, delete-orphan")
+
+class IDFinderMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    telegram_user_id = db.Column(db.BigInteger, db.ForeignKey('id_finder_user.telegram_id'), nullable=False)
+    message_id = db.Column(db.BigInteger)
+    chat_id = db.Column(db.BigInteger)
+    message_thread_id = db.Column(db.BigInteger)
+    chat_type = db.Column(db.String(50)) # private, group, supergroup, channel
+    text = db.Column(db.Text)
+    content_type = db.Column(db.String(50), default='text') # text, photo, video, etc.
+    file_id = db.Column(db.String(255)) # Added for media support
+    is_command = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)

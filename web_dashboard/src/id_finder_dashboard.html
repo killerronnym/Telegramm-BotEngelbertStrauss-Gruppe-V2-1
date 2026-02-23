@@ -103,7 +103,7 @@
             </h6>
             <div class="row g-4 mb-4">
                 <div class="col-md-6">
-                    <div class="form-check form-switch d-flex align-items-center gap-3">
+                    <div class="form-check form-switch d-flex align-items-center gap-3 mb-3">
                         <input class="form-check-input" type="checkbox" name="delete_commands" {% if config.delete_commands %}checked{% endif %}>
                         <div>
                             <label class="fw-bold text-white mb-0">Admin-Befehle automatisch löschen</label>
@@ -124,7 +124,7 @@
             <h6 class="mb-3 text-white d-flex align-items-center gap-2">
                 <i class="bi bi-file-earmark-text text-info"></i> Message-Logging
             </h6>
-            <p class="small text-secondary mb-4">Hier kannst du einstellen, ob der Bot Chatverläufe in <code class="text-rose-400">data/user_messages/*.jsonl</code> mitschreibt.</p>
+            <p class="small text-secondary mb-4">Hier kannst du einstellen, ob der Bot Chatverläufe in der Datenbank mitschreibt.</p>
             
             <div class="row g-4 mb-4">
                 <div class="col-md-6">
@@ -169,13 +169,13 @@
 
     <!-- ⚡ Schnellzugriff-Leiste -->
     <div class="d-flex flex-wrap gap-2 mb-5">
-        <a href="{{ url_for('id_finder_commands') }}" class="btn-quick-action btn-cyan">
+        <a href="{{ url_for('dashboard.id_finder_commands') }}" class="btn-quick-action btn-cyan">
             <i class="bi bi-terminal"></i> Zur Befehls-Dokumentation
         </a>
-        <a href="{{ url_for('id_finder_admin_panel') }}" class="btn-quick-action btn-amber">
+        <a href="{{ url_for('dashboard.id_finder_admin_panel') }}" class="btn-quick-action btn-amber">
             <i class="bi bi-shield-lock-fill"></i> Admin Panel öffnen
         </a>
-        <a href="{{ url_for('id_finder_analytics') }}" class="btn-quick-action btn-rose">
+        <a href="{{ url_for('dashboard.id_finder_analytics') }}" class="btn-quick-action btn-rose">
             <i class="bi bi-bar-chart-line-fill"></i> Analytics
         </a>
     </div>
@@ -205,17 +205,16 @@
                             <th>Username</th>
                             <th>Name</th>
                             <th>Last Seen</th>
-                            <th>Chats</th>
                             <th class="text-end pe-4">Aktion</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% if user_registry %}
                             {% for u in user_registry %}
-                            {% set uid = u.get('id') or u.get('user_id') %}
+                            {% set uid = u.telegram_id %}
                             <tr class="registry-row">
                                 <td class="ps-4">
-                                    <a href="{{ url_for('id_finder_user_detail', user_id=uid) }}" class="text-info text-decoration-none fw-mono">{{ uid }}</a>
+                                    <a href="{{ url_for('dashboard.id_finder_user_detail', user_id=uid) }}" class="text-info text-decoration-none fw-mono">{{ uid }}</a>
                                 </td>
                                 <td>
                                     {% if u.username %}
@@ -224,26 +223,15 @@
                                         <span class="text-muted">—</span>
                                     {% endif %}
                                 </td>
-                                <td class="fw-bold text-white">{{ u.full_name or 'Unbekannt' }}</td>
+                                <td class="fw-bold text-white">{{ u.first_name or '' }} {{ u.last_name or '' }}</td>
                                 <td>
-                                    <div class="small text-rose-300">{{ u.last_seen | datetimeformat or '—' }}</div>
-                                </td>
-                                <td>
-                                    <code class="text-rose-300 small">
-                                        {% if u.chat_ids %}
-                                            {{ u.chat_ids|join(', ') }}
-                                        {% elif u.groups_seen %}
-                                            {{ u.groups_seen|join(', ') }}
-                                        {% else %}
-                                            —
-                                        {% endif %}
-                                    </code>
+                                    <div class="small text-rose-300">{{ u.last_contact.strftime('%d.%m.%Y %H:%M') if u.last_contact else '—' }}</div>
                                 </td>
                                 <td class="text-end pe-4">
                                     <div class="d-flex justify-content-end gap-1">
                                         <button class="btn btn-outline-info btn-sm px-2" onclick="copyToClipboard('{{ uid }}')">Copy ID</button>
-                                        <a href="{{ url_for('id_finder_user_detail', user_id=uid) }}" class="btn btn-success btn-sm px-2"><i class="bi bi-file-earmark-text"></i> Verlauf</a>
-                                        <form action="{{ url_for('id_finder_delete_user', user_id=uid) }}" method="POST" class="m-0" onsubmit="return confirm('User wirklich aus der Registry löschen?')">
+                                        <a href="{{ url_for('dashboard.id_finder_user_detail', user_id=uid) }}" class="btn btn-success btn-sm px-2"><i class="bi bi-file-earmark-text"></i> Verlauf</a>
+                                        <form action="{{ url_for('dashboard.id_finder_delete_user', user_id=uid) }}" method="POST" class="m-0" onsubmit="return confirm('User wirklich aus der Registry löschen?')">
                                             <button type="submit" class="btn btn-outline-danger btn-sm px-2"><i class="bi bi-trash"></i> Registry</button>
                                         </form>
                                     </div>
@@ -251,7 +239,7 @@
                             </tr>
                             {% endfor %}
                         {% else %}
-                            <tr><td colspan="6" class="text-center py-5 text-muted">Keine Benutzerdaten vorhanden.</td></tr>
+                            <tr><td colspan="5" class="text-center py-5 text-muted">Keine Benutzerdaten vorhanden.</td></tr>
                         {% endif %}
                     </tbody>
                 </table>

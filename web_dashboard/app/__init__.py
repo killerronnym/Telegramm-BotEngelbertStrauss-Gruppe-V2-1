@@ -21,14 +21,10 @@ def create_app(test_config=None):
     app.jinja_env.filters['datetimeformat'] = datetimeformat
     
     # Blueprints registrieren
-    from .routes import dashboard, auth # Auth ist jetzt nur noch für Redirects da
+    from .routes import dashboard, auth, api
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
-    
-    # Die alte setup-Logik entfernen, da wir jetzt eine DB haben
-    # @app.before_request
-    # def check_for_setup():
-    #     ...
+    app.register_blueprint(api.bp)
     
     with app.app_context():
         try:

@@ -4,19 +4,26 @@ import json
 import subprocess
 import sys
 import signal
-from datetime import datetime
+from datetime import datetime, timedelta
+from sqlalchemy import func
 from werkzeug.utils import secure_filename
-from ..models import db, BotSettings, Broadcast, TopicMapping, User
+from ..models import db, BotSettings, Broadcast, TopicMapping, User, IDFinderAdmin, IDFinderUser, IDFinderMessage
 
 bp = Blueprint('dashboard', __name__)
 
 # Fixed PROJECT_ROOT to point to the actual project root, not the web_dashboard directory
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 BASE_DIR = os.path.join(PROJECT_ROOT, 'web_dashboard')
+
+# Bot PID Files
 INVITE_BOT_PID_FILE = os.path.join(BASE_DIR, "invite_bot.pid")
+ID_FINDER_BOT_PID_FILE = os.path.join(BASE_DIR, "id_finder_bot.pid")
+
+# Log Files
 INVITE_BOT_ERROR_LOG = os.path.join(BASE_DIR, "invite_bot_error.log")
 USER_INTERACTION_LOG_FILE = os.path.join(PROJECT_ROOT, "user_interactions.log")
 INVITE_BOT_LOG_FILE = os.path.join(BASE_DIR, "invite_bot.log")
+ID_FINDER_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "bots", "id_finder_bot", "id_finder_bot.log")
 START_DEBUG_LOG_FILE = os.path.join(BASE_DIR, "start_debug.log")
 DIRECT_START_OUTPUT_LOG = os.path.join(BASE_DIR, "direct_start_output.log") # New debug log
 
@@ -36,6 +43,7 @@ def get_bot_status_simple():
         "id_finder": {"running": False}
     }
     
+    # Invite Bot
     if os.path.exists(INVITE_BOT_PID_FILE):
         try:
             with open(INVITE_BOT_PID_FILE, 'r') as f:
@@ -47,6 +55,20 @@ def get_bot_status_simple():
         except (IOError, ValueError):
             if os.path.exists(INVITE_BOT_PID_FILE):
                 os.remove(INVITE_BOT_PID_FILE)
+
+    # ID Finder Bot
+    if os.path.exists(ID_FINDER_BOT_PID_FILE):
+        try:
+            with open(ID_FINDER_BOT_PID_FILE, 'r') as f:
+                pid = int(f.read().strip())
+            if is_process_running(pid):
+                status["id_finder"]["running"] = True
+            else:
+                os.remove(ID_FINDER_BOT_PID_FILE)
+        except (IOError, ValueError):
+            if os.path.exists(ID_FINDER_BOT_PID_FILE):
+                os.remove(ID_FINDER_BOT_PID_FILE)
+
     return status
 
 @bp.context_processor
@@ -464,9 +486,326 @@ def outfit_bot_actions(action):
     # Handle actions
     return redirect(url_for('dashboard.outfit_bot_dashboard'))
 
-@bp.route('/id-finder', methods=['GET', 'POST'])
+# --- ID Finder Bot Logic ---
+
+def get_id_finder_settings():
+    settings = BotSettings.query.filter_by(bot_name='id_finder').first()
+    if not settings:
+        initial_config = {
+            'bot_token': '',
+            'admin_group_id': 0,
+            'main_group_id': 0,
+            'admin_log_topic_id': None,
+            'delete_commands': True,
+            'bot_message_cleanup_seconds': 60,
+            'message_logging_enabled': True,
+            'message_logging_ignore_commands': True,
+            'message_logging_groups_only': False
+        }
+        settings = BotSettings(bot_name='id_finder', config_json=json.dumps(initial_config))
+        db.session.add(settings)
+        db.session.commit()
+    return settings
+
+@bp.route('/id-finder', methods=['GET'])
 def id_finder_dashboard():
-    return render_template('id_finder_dashboard.html', logs=[])
+    settings = get_id_finder_settings()
+    config = json.loads(settings.config_json)
+    users = IDFinderUser.query.order_by(IDFinderUser.last_contact.desc()).all()
+    status = get_bot_status_simple()
+    
+    logs = []
+    if os.path.exists(ID_FINDER_BOT_LOG_FILE):
+         try:
+            with open(ID_FINDER_BOT_LOG_FILE, 'r', encoding='utf-8') as f:
+                logs = f.readlines()[-50:]
+         except: pass
+
+    return render_template('id_finder_dashboard.html', 
+                           config=config, 
+                           user_registry=users, 
+                           is_running=status['id_finder']['running'],
+                           logs=logs)
+
+@bp.route('/id-finder/save-config', methods=['POST'])
+def id_finder_save_config():
+    settings = get_id_finder_settings()
+    config = json.loads(settings.config_json)
+    
+    config['bot_token'] = request.form.get('bot_token', config.get('bot_token', ''))
+    
+    try: config['admin_group_id'] = int(request.form.get('admin_group_id', 0))
+    except: pass
+    
+    try: config['main_group_id'] = int(request.form.get('main_group_id', 0))
+    except: pass
+    
+    try: config['admin_log_topic_id'] = int(request.form.get('admin_log_topic_id') or 0)
+    except: config['admin_log_topic_id'] = None
+    
+    config['delete_commands'] = 'delete_commands' in request.form
+    
+    try: config['bot_message_cleanup_seconds'] = int(request.form.get('bot_message_cleanup_seconds', 0))
+    except: pass
+    
+    config['message_logging_enabled'] = 'message_logging_enabled' in request.form
+    config['message_logging_ignore_commands'] = 'message_logging_ignore_commands' in request.form
+    config['message_logging_groups_only'] = 'message_logging_groups_only' in request.form
+    
+    settings.config_json = json.dumps(config)
+    db.session.commit()
+    flash('ID-Finder Konfiguration gespeichert.', 'success')
+    return redirect(url_for('dashboard.id_finder_dashboard'))
+
+@bp.route('/id-finder/commands')
+def id_finder_commands():
+    return render_template('id_finder_commands.html')
+
+@bp.route('/id-finder/admin-panel')
+def id_finder_admin_panel():
+    admins = IDFinderAdmin.query.all()
+    
+    # Define available permissions (you can expand this)
+    available_permission_groups = {
+        "Basis-Moderation": {
+            "can_warn": "Nutzer warnen",
+            "can_mute": "Nutzer stummschalten",
+            "can_ban": "Nutzer bannen"
+        },
+        "Nachrichten-Management": {
+            "can_delete": "Nachrichten löschen",
+            "can_purge": "Chat leeren (Purge)"
+        },
+        "System": {
+            "can_broadcast": "Broadcasts senden",
+            "can_manage_admins": "Admins verwalten"
+        }
+    }
+    
+    return render_template('id_finder_admin_panel.html', 
+                           admins=admins, 
+                           available_permission_groups=available_permission_groups)
+
+@bp.route('/id-finder/admin-panel/add', methods=['POST'])
+def id_finder_add_admin():
+    admin_id = request.form.get('admin_id')
+    admin_name = request.form.get('admin_name')
+    
+    if not admin_id or not admin_name:
+        flash('ID und Name sind erforderlich.', 'danger')
+        return redirect(url_for('dashboard.id_finder_admin_panel'))
+    
+    try:
+        telegram_id = int(admin_id)
+        existing = IDFinderAdmin.query.filter_by(telegram_id=telegram_id).first()
+        if existing:
+            flash('Admin mit dieser ID existiert bereits.', 'warning')
+        else:
+            new_admin = IDFinderAdmin(telegram_id=telegram_id, name=admin_name)
+            # Default permissions: empty or some basic ones?
+            db.session.add(new_admin)
+            db.session.commit()
+            flash('Admin erfolgreich hinzugefügt.', 'success')
+    except ValueError:
+        flash('Ungültige Telegram ID.', 'danger')
+        
+    return redirect(url_for('dashboard.id_finder_admin_panel'))
+
+@bp.route('/id-finder/admin-panel/delete', methods=['POST'])
+def id_finder_delete_admin():
+    admin_id = request.form.get('admin_id')
+    admin = IDFinderAdmin.query.filter_by(telegram_id=admin_id).first()
+    if admin:
+        db.session.delete(admin)
+        db.session.commit()
+        flash('Admin gelöscht.', 'success')
+    else:
+        flash('Admin nicht gefunden.', 'danger')
+    return redirect(url_for('dashboard.id_finder_admin_panel'))
+
+@bp.route('/id-finder/admin-panel/update', methods=['POST'])
+def id_finder_update_admin_permissions():
+    admin_id = request.form.get('admin_id')
+    admin = IDFinderAdmin.query.filter_by(telegram_id=admin_id).first()
+    if not admin:
+        flash('Admin nicht gefunden.', 'danger')
+        return redirect(url_for('dashboard.id_finder_admin_panel'))
+    
+    # Collect all permissions from form
+    permissions = {}
+    # We need to know which keys to look for. For now, we take all form keys except admin_id
+    for key in request.form.keys():
+        if key != 'admin_id':
+            permissions[key] = True
+            
+    admin.permissions = permissions
+    db.session.commit()
+    flash(f'Berechtigungen für {admin.name} aktualisiert.', 'success')
+    return redirect(url_for('dashboard.id_finder_admin_panel'))
+
+@bp.route('/id-finder/analytics')
+def id_finder_analytics():
+    days = request.args.get('days', type=int)
+    month = request.args.get('month', 0, type=int)
+    year = request.args.get('year', 0, type=int)
+    
+    query = IDFinderMessage.query
+    
+    if days:
+        start_date = datetime.utcnow() - timedelta(days=days)
+        query = query.filter(IDFinderMessage.timestamp >= start_date)
+    
+    if month:
+        query = query.filter(func.strftime('%m', IDFinderMessage.timestamp) == f'{month:02d}')
+    if year:
+        query = query.filter(func.strftime('%Y', IDFinderMessage.timestamp) == str(year))
+
+    messages = query.all()
+    total_users = IDFinderUser.query.count()
+    total_messages = len(messages)
+    
+    # Hourly distribution
+    busiest_hours = [0] * 24
+    for m in messages:
+        busiest_hours[m.timestamp.hour] += 1
+        
+    # Weekday distribution (0=Monday, 6=Sunday)
+    busiest_days = [0] * 7
+    for m in messages:
+        busiest_days[m.timestamp.weekday()] += 1
+        
+    # Leaderboard & Activity Timeline
+    # Timeline is harder without more sophisticated grouping, let's do last 30 days for labels
+    labels = []
+    total_timeline = []
+    if days:
+        for i in range(days):
+            date = (datetime.utcnow() - timedelta(days=days-1-i)).date()
+            labels.append(date.strftime('%d.%m.'))
+            total_timeline.append(sum(1 for m in messages if m.timestamp.date() == date))
+    else:
+        # Default last 7 days
+        for i in range(7):
+            date = (datetime.utcnow() - timedelta(days=6-i)).date()
+            labels.append(date.strftime('%d.%m.'))
+            total_timeline.append(sum(1 for m in messages if m.timestamp.date() == date))
+
+    # Leaderboard
+    user_stats = {}
+    for m in messages:
+        uid = m.telegram_user_id
+        if uid not in user_stats:
+            user = IDFinderUser.query.filter_by(telegram_id=uid).first()
+            user_stats[uid] = {'uid': uid, 'name': user.first_name if user else str(uid), 'msgs': 0, 'media': 0, 'reacts': 0}
+        user_stats[uid]['msgs'] += 1
+        if m.content_type != 'text':
+            user_stats[uid]['media'] += 1
+            
+    leaderboard = sorted(user_stats.values(), key=lambda x: x['msgs'], reverse=True)[:20]
+
+    activity_data = {
+        'timeline': {'labels': labels, 'total': total_timeline},
+        'busiest_hours': busiest_hours,
+        'busiest_days': busiest_days,
+        'leaderboard': leaderboard
+    }
+    
+    stats = {
+        'total_users': total_users,
+        'total_messages': total_messages
+    }
+
+    return render_template('id_finder_analytics.html', stats=stats, activity=activity_data)
+
+@bp.route('/api/id-finder/user-activity/<int:uid>')
+def id_finder_user_activity_api(uid):
+    days = request.args.get('days', 7, type=int)
+    
+    timeline = []
+    for i in range(days):
+        date = (datetime.utcnow() - timedelta(days=days-1-i)).date()
+        count = IDFinderMessage.query.filter(
+            IDFinderMessage.telegram_user_id == uid,
+            func.date(IDFinderMessage.timestamp) == date
+        ).count()
+        timeline.append(count)
+        
+    return jsonify({'timeline': timeline})
+
+@bp.route('/id-finder/user/<int:user_id>')
+def id_finder_user_detail(user_id):
+    user = IDFinderUser.query.filter_by(telegram_id=user_id).first()
+    if not user:
+        flash(f'User {user_id} nicht gefunden.', 'danger')
+        return redirect(url_for('dashboard.id_finder_dashboard'))
+    
+    messages = IDFinderMessage.query.filter_by(telegram_user_id=user_id).order_by(IDFinderMessage.timestamp.desc()).limit(100).all()
+    
+    return render_template('id_finder_user_detail.html', user=user, messages=messages)
+
+@bp.route('/id-finder/delete-user/<int:user_id>', methods=['POST'])
+def id_finder_delete_user(user_id):
+    user = IDFinderUser.query.filter_by(telegram_id=user_id).first()
+    if user:
+        db.session.delete(user)
+        db.session.commit()
+        flash(f'User {user_id} und alle zugehörigen Nachrichten wurden gelöscht.', 'success')
+    else:
+        flash('User nicht gefunden.', 'warning')
+    
+    return redirect(url_for('dashboard.id_finder_dashboard'))
+
+@bp.route('/bot-action/<bot_name>/<action>', methods=['POST'])
+def bot_action_route(bot_name, action):
+    if bot_name == 'id_finder':
+        if action == 'start':
+            if os.path.exists(ID_FINDER_BOT_PID_FILE):
+                 try:
+                    pid_val = int(open(ID_FINDER_BOT_PID_FILE).read().strip())
+                    if is_process_running(pid_val):
+                        flash('ID-Finder läuft bereits.', 'warning')
+                        return redirect(url_for('dashboard.id_finder_dashboard'))
+                    else:
+                        os.remove(ID_FINDER_BOT_PID_FILE)
+                 except:
+                    os.remove(ID_FINDER_BOT_PID_FILE)
+
+            try:
+                python_exe = sys.executable
+                bot_script = os.path.join(PROJECT_ROOT, "bots", "id_finder_bot", "id_finder_bot.py")
+                
+                # Ensure log directory exists
+                os.makedirs(os.path.dirname(ID_FINDER_BOT_LOG_FILE), exist_ok=True)
+                
+                with open(ID_FINDER_BOT_LOG_FILE, 'a') as log_file:
+                    process = subprocess.Popen(
+                        [python_exe, bot_script], start_new_session=True,
+                        stdout=log_file, stderr=log_file
+                    )
+                
+                with open(ID_FINDER_BOT_PID_FILE, 'w') as f:
+                    f.write(str(process.pid))
+                
+                flash('ID-Finder Bot gestartet.', 'success')
+            except Exception as e:
+                flash(f'Fehler beim Starten: {e}', 'danger')
+
+        elif action == 'stop':
+            if os.path.exists(ID_FINDER_BOT_PID_FILE):
+                try:
+                    with open(ID_FINDER_BOT_PID_FILE, 'r') as f:
+                        pid = int(f.read().strip())
+                    os.kill(pid, signal.SIGTERM)
+                    os.remove(ID_FINDER_BOT_PID_FILE)
+                    flash('ID-Finder Bot gestoppt.', 'success')
+                except Exception as e:
+                     flash(f'Fehler beim Stoppen: {e}', 'danger')
+            else:
+                flash('ID-Finder läuft nicht.', 'warning')
+                
+    return redirect(url_for('dashboard.id_finder_dashboard'))
+
+# --- End ID Finder Bot Logic ---
 
 @bp.route('/minecraft', methods=['GET', 'POST'])
 def minecraft_status_page():
