@@ -1,0 +1,6 @@
+{
+    "RonnyM": {
+        "password": "scrypt:32768:8:1$hxZXB0IoHec1qiaG$d810625b9992efe12d5b1f04771d76524ac31346c482b2c472dd6572051ebb8787980e234cd6eeaa85c5d25439818e478af82896a89e00a0a185f48670b8020a",
+        "role": "admin"
+    }
+}

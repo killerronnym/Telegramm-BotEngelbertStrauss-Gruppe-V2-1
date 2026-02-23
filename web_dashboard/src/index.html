@@ -240,6 +240,37 @@
     const infoBox = document.getElementById('updateInfoBox');
     let updateData = null;
 
+    // Helper to safe reload page
+    function safeReload() {
+        notify.innerText = 'Server startet neu... Bitte warten...';
+        notify.style.background = 'rgba(255, 165, 0, 0.2)'; // Orange
+        notify.style.color = '#fbbf24';
+        
+        let attempts = 0;
+        const maxAttempts = 30; // 30 seconds timeout
+        
+        const interval = setInterval(async () => {
+            attempts++;
+            try {
+                // Try to fetch current page header to check if server is back
+                const res = await fetch('/', { method: 'HEAD' });
+                if (res.ok) {
+                    clearInterval(interval);
+                    location.reload();
+                }
+            } catch (e) {
+                // Server still down, keep waiting
+            }
+            
+            if (attempts >= maxAttempts) {
+                clearInterval(interval);
+                notify.innerText = 'Server antwortet nicht. Bitte Seite manuell neu laden.';
+                notify.style.background = 'rgba(239, 68, 68, 0.2)';
+                notify.style.color = '#ef4444';
+            }
+        }, 1000);
+    }
+
     if (scanBtn) {
         scanBtn.onclick = async () => {
             scanBtn.disabled = true;
@@ -282,22 +313,51 @@
     const installBtn = document.getElementById('btnInstallNow');
     if (installBtn) {
         installBtn.onclick = async () => {
-            if(!confirm("Update jetzt installieren?")) return;
+            if(!confirm("Update jetzt installieren? Der Server wird neu gestartet.")) return;
             document.getElementById('updateProgress').style.display = 'block';
             infoBox.style.display = 'none';
-            notify.innerText = 'Installation läuft...';
-            const res = await fetch('/api/update/install', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(updateData)
-            });
-            if(res.ok) {
-                setInterval(async () => {
-                    const sRes = await fetch('/api/update/status');
-                    const s = await sRes.json();
-                    document.querySelector('#updateProgress .progress-bar').style.width = s.progress + '%';
-                    if(s.status === 'finished') location.reload();
-                }, 1000);
+            notify.innerText = 'Installation wird vorbereitet...';
+            
+            try {
+                const res = await fetch('/api/update/install', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(updateData)
+                });
+                
+                if(res.ok) {
+                    const statusInterval = setInterval(async () => {
+                        try {
+                            const sRes = await fetch('/api/update/status');
+                            const s = await sRes.json();
+                            
+                            document.querySelector('#updateProgress .progress-bar').style.width = s.progress + '%';
+                            
+                            // Show detailed status text
+                            if (s.status === 'downloading') notify.innerText = 'Lade Update herunter... (' + s.progress + '%)';
+                            else if (s.status === 'extracting') notify.innerText = 'Entpacke Dateien... (' + s.progress + '%)';
+                            else if (s.status === 'applying') notify.innerText = 'Installiere Update... (' + s.progress + '%)';
+                            else if (s.status === 'finished') {
+                                clearInterval(statusInterval);
+                                notify.innerText = 'Update fertig! Server startet neu...';
+                                document.querySelector('#updateProgress .progress-bar').classList.remove('progress-bar-animated');
+                                safeReload();
+                            } else if (s.status === 'error') {
+                                clearInterval(statusInterval);
+                                notify.style.background = 'rgba(239, 68, 68, 0.2)';
+                                notify.style.color = '#ef4444';
+                                notify.innerText = 'Fehler: ' + (s.error || 'Unbekannter Fehler');
+                                alert('Update fehlgeschlagen: ' + s.error);
+                            }
+                        } catch (err) {
+                            // If status fetch fails, it might mean server is already restarting
+                            console.log("Status fetch failed, assuming restart...");
+                        }
+                    }, 1000);
+                }
+            } catch (e) {
+                notify.innerText = 'Fehler beim Starten des Updates.';
+                alert('Konnte Update nicht starten: ' + e);
             }
         };
     }

@@ -1,0 +1,33 @@
+# Docker Compose Datei für das Bot-System
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bot_system_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      # Datenbank und Konfiguration persistent machen
+      - ./instance:/app/instance
+      - ./bots/outfit_bot/outfit_bot_data.json:/app/bots/outfit_bot/outfit_bot_data.json
+      - ./bots/quiz_bot/quizfragen_gestellt.json:/app/bots/quiz_bot/quizfragen_gestellt.json
+      - ./bots/umfrage_bot/umfrage_bot_state.json:/app/bots/umfrage_bot/umfrage_bot_state.json
+      - ./bots/umfrage_bot/umfragen_gestellt.json:/app/bots/umfrage_bot/umfragen_gestellt.json
+      - ./web_dashboard/app/static/avatars:/app/web_dashboard/app/static/avatars
+      # Logs
+      - ./app.log:/app/app.log
+      - ./web_dashboard/critical_errors.log:/app/web_dashboard/critical_errors.log
+    environment:
+      - FLASK_ENV=production
+      - TZ=Europe/Berlin
+    entrypoint: ["./entrypoint.sh"]
+
+# Optional: Falls du eine separate Datenbank (z.B. PostgreSQL) verwenden möchtest
+# db:
+#   image: postgres:13
+#   ...

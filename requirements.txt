@@ -16,3 +16,4 @@ mcstatus
 gunicorn
 TikTokLive
 requests
+websockets

@@ -154,12 +154,23 @@ class Updater:
 
                 self.update_status["status"] = "finished"
                 self.update_status["progress"] = 100
-                log.info(f"Update to version {new_version} finished successfully. Restarting application...")
+                log.info(f"Update to version {new_version} finished successfully.")
                 time.sleep(2)
                 
-                # Neustart - Consider a more graceful shutdown mechanism for production environments.
-                # For example, signaling the main application to restart itself or using a process manager.
-                os.kill(os.getpid(), signal.SIGTERM)
+                # Attempt to gracefully restart the web server
+                pid_file_path = os.path.join(self.project_root, "web_server.pid")
+                if os.path.exists(pid_file_path):
+                    try:
+                        with open(pid_file_path, "r") as f:
+                            pid = int(f.read().strip())
+                        log.info(f"Sending SIGHUP to web server process with PID {pid} for graceful restart.")
+                        os.kill(pid, signal.SIGHUP)
+                    except Exception as e:
+                        log.error(f"Failed to signal web server for restart (PID file found): {e}")
+                        log.warning("Web server PID file found, but restart signal failed. Manual restart may be required.")
+                else:
+                    log.warning("Web server PID file not found. Attempting to kill current process. Manual restart of the main application may be required.")
+                    os.kill(os.getpid(), signal.SIGTERM)
 
             except Exception as e:
                 log.error(f"Update failed: {e}")
