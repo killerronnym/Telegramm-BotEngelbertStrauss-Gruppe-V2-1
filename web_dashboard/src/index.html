@@ -21,17 +21,37 @@
     .update-card { background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #3b82f644; margin-top: 3rem; }
     .version-tag { background: #3b82f622; color: #60a5fa; padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; border: 1px solid #3b82f633; }
     #updateChangelog { background: #00000044; padding: 15px; border-radius: 8px; font-size: 0.9rem; color: #94a3b8; line-height: 1.6; white-space: pre-wrap; }
+
+    /* Spin Animation */
+    .spin { animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* Status Pulse Animation */
+    .pulse-status { animation: pulse 2s infinite; }
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.6; }
+        100% { opacity: 1; }
+    }
+
+    /* Version Footer */
+    .version-footer {
+        margin-top: 5rem;
+        padding: 1.5rem 0;
+        border-top: 1px solid var(--border-muted);
+        color: var(--text-dim);
+        font-size: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
 </style>
 
 <div class="dashboard-container">
     <div class="d-flex justify-content-between align-items-center mb-5">
         <div>
             <h1 class="fw-bold mb-1 h3 text-white">Bot <span class="text-blue">Steuerung</span></h1>
-            <p class="text-secondary small">Zentrale Verwaltung aller Bot-Systeme</p>
-        </div>
-        <div>
-            <span class="text-secondary me-3 small"><i class="bi bi-person-circle"></i> {{ session.get('user', 'User') }}</span>
-            <a href="{{ url_for('auth.logout') }}" class="btn btn-logout btn-sm px-3">Abmelden</a>
+            <p class="text-secondary small">Zentrale Verwaltung aller Bot-Systeme (Modus: Gast-Admin)</p>
         </div>
     </div>
 
@@ -71,7 +91,10 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6>📢 Nachricht Planer</h6>
-                    <span class="small fw-bold text-danger">OFFLINE</span>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.id_finder.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.id_finder.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.id_finder.running else 'OFFLINE' }}
+                    </span>
                 </div>
                 <div class="card-body d-flex flex-column">
                     <p class="card-text small text-secondary mb-4">Nachrichten & Medien planen oder sofort über den ID-Finder senden.</p>
@@ -87,13 +110,20 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6>👋 Einladungs-Bot</h6>
-                    <span class="small fw-bold text-danger">OFFLINE</span>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.invite.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.invite.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.invite.running else 'OFFLINE' }}
+                    </span>
                 </div>
                 <div class="card-body d-flex flex-column">
                     <p class="card-text small text-secondary mb-4">Begrüßungstexte & automatische Beitrittskontrolle.</p>
                     <div class="mt-auto">
                         <div class="d-flex gap-2 mb-2">
-                             <form action="/bot-action/invite/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% if bot_status.invite.running %}
+                                <form action="/bot-action/invite/stop" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
+                            {% else %}
+                                <form action="/bot-action/invite/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% endif %}
                         </div>
                         <a href="{{ url_for('dashboard.bot_settings') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
@@ -106,13 +136,20 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6>❔ Quiz Bot</h6>
-                     <span class="small fw-bold text-danger">OFFLINE</span>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.quiz.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.quiz.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.quiz.running else 'OFFLINE' }}
+                    </span>
                 </div>
                 <div class="card-body d-flex flex-column">
                     <p class="card-text small text-secondary mb-4">Verwaltung der Quizfragen und automatischer Zeitplaner.</p>
                     <div class="mt-auto">
-                         <div class="d-flex gap-2 mb-2">
-                             <form action="/bot-action/quiz/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                        <div class="d-flex gap-2 mb-2">
+                            {% if bot_status.quiz.running %}
+                                <form action="/bot-action/quiz/stop" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
+                            {% else %}
+                                <form action="/bot-action/quiz/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% endif %}
                         </div>
                         <a href="{{ url_for('dashboard.quiz_settings') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
@@ -125,13 +162,20 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6>📊 Umfrage Bot</h6>
-                     <span class="small fw-bold text-danger">OFFLINE</span>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.umfrage.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.umfrage.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.umfrage.running else 'OFFLINE' }}
+                    </span>
                 </div>
                 <div class="card-body d-flex flex-column">
                     <p class="card-text small text-secondary mb-4">Verwaltung der Umfragen und automatischer Zeitplaner.</p>
                     <div class="mt-auto">
                         <div class="d-flex gap-2 mb-2">
-                             <form action="/bot-action/umfrage/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% if bot_status.umfrage.running %}
+                                <form action="/bot-action/umfrage/stop" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
+                            {% else %}
+                                <form action="/bot-action/umfrage/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% endif %}
                         </div>
                         <a href="{{ url_for('dashboard.umfrage_settings') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
@@ -144,13 +188,20 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6>👗 Outfit-Wettbewerb</h6>
-                     <span class="small fw-bold text-danger">OFFLINE</span>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.outfit.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.outfit.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.outfit.running else 'OFFLINE' }}
+                    </span>
                 </div>
                 <div class="card-body d-flex flex-column">
                     <p class="card-text small text-secondary mb-4">Steuerung für den täglichen Outfit-Contest.</p>
                     <div class="mt-auto">
                         <div class="d-flex gap-2 mb-2">
-                             <form action="/bot-action/outfit/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% if bot_status.outfit.running %}
+                                <form action="/bot-action/outfit/stop" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
+                            {% else %}
+                                <form action="/bot-action/outfit/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% endif %}
                         </div>
                         <a href="{{ url_for('dashboard.outfit_bot_dashboard') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
@@ -163,13 +214,20 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6>🔍 ID-Finder Bot</h6>
-                    <span class="small fw-bold text-danger">OFFLINE</span>
+                    <span class="small fw-bold {{ 'text-success' if bot_status.id_finder.running else 'text-danger' }}">
+                        <span class="status-badge {{ 'bg-success' if bot_status.id_finder.running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status.id_finder.running else 'OFFLINE' }}
+                    </span>
                 </div>
                 <div class="card-body d-flex flex-column">
                     <p class="card-text small text-secondary mb-4">Werkzeuge zum Ermitteln von Chat-IDs & Topic-IDs.</p>
                     <div class="mt-auto">
-                         <div class="d-flex gap-2 mb-2">
-                             <form action="/bot-action/id_finder/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                        <div class="d-flex gap-2 mb-2">
+                            {% if bot_status.id_finder.running %}
+                                <form action="/bot-action/id_finder/stop" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
+                            {% else %}
+                                <form action="/bot-action/id_finder/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
+                            {% endif %}
                         </div>
                         <a href="{{ url_for('dashboard.id_finder_dashboard') }}" class="btn-settings-big">EINSTELLUNGEN</a>
                     </div>
@@ -191,7 +249,6 @@
         </div>
 
         <!-- 👥 Benutzerverwaltung -->
-        {% if session.get('role') == 'admin' %}
         <div class="col">
             <div class="card">
                 <div class="card-header"><h6 class="text-info">👥 Benutzerverwaltung</h6></div>
@@ -203,10 +260,8 @@
                 </div>
             </div>
         </div>
-        {% endif %}
 
-        <!-- ⚠️ Kritische Logs (Neu) -->
-        {% if session.get('role') == 'admin' %}
+        <!-- ⚠️ Kritische Logs -->
         <div class="col">
             <div class="card">
                 <div class="card-header"><h6 class="text-danger">⚠️ Kritische Logs</h6></div>
@@ -218,10 +273,30 @@
                 </div>
             </div>
         </div>
-        {% endif %}
+
+        <!-- 🚀 Software Update Kachel -->
+        <div class="col">
+            <div class="card border-primary border-opacity-25">
+                <div class="card-header"><h6><i class="bi bi-cloud-arrow-down-fill text-primary me-2"></i>Software Update</h6></div>
+                <div class="card-body d-flex flex-column">
+                    <p class="card-text small text-secondary mb-4">Prüfen Sie manuell, ob eine neue Version der Bot-Software verfügbar ist.</p>
+                    
+                    <!-- Professional Status Display -->
+                    <div id="updateTileStatus" class="mb-3 p-2 rounded text-center small" style="display: none; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
+                        <span id="updateTileStatusText"></span>
+                    </div>
+
+                    <div class="mt-auto">
+                        <button id="btnManualUpdateCheck" class="btn-settings-big btn-primary w-100">
+                            <i class="bi bi-arrow-repeat me-1"></i> NACH UPDATES SCANNEN
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- 🚀 UPDATE CARD (Moved to bottom) -->
+    <!-- 🚀 UPDATE DETAILS -->
     <div id="updateSection" style="display: none;" class="mt-5 mb-5">
         <div class="card update-card shadow-lg">
             <div class="card-body">
@@ -237,7 +312,7 @@
                     <div class="col-md-3">
                         <div class="p-3 bg-dark rounded-3 border border-secondary border-opacity-25">
                             <div class="text-secondary small mb-1">Deine Version</div>
-                            <div class="fw-bold text-white"><span class="version-tag">{{ version.version }}</span></div>
+                            <div class="fw-bold text-white"><span class="version-tag">{{ version.version if version else '1.0.0' }}</span></div>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -273,7 +348,7 @@
                     <div class="progress" style="height: 10px; background-color: #334155; border-radius: 5px;">
                         <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 0%"></div>
                     </div>
-                    <p class="text-warning small mt-3 text-center mb-0">
+                    <p id="updateWarningText" class="text-warning small mt-3 text-center mb-0">
                         <i class="bi bi-exclamation-triangle-fill me-1"></i> 
                         Bitte die Seite nicht schließen. Die App startet nach dem Update automatisch neu.
                     </p>
@@ -281,12 +356,38 @@
             </div>
         </div>
     </div>
+
+    <!-- Footer inside container, no fixed position -->
+    <div class="version-footer">
+        <div>
+            <i class="bi bi-cpu-fill me-1"></i> System Online
+        </div>
+        <div>
+            Build Revision: <span class="text-white fw-bold" id="footerVersion">{{ version.version if version else '1.0.0' }}</span>
+        </div>
+        <div>
+            <i class="bi bi-shield-check-fill text-success me-1"></i> Verschlüsselt
+        </div>
+    </div>
 </div>
 
 <script>
     let updateInfo = null;
 
-    async function checkUpdate() {
+    async function checkUpdate(manual = false) {
+        const btn = document.getElementById('btnManualUpdateCheck');
+        const statusDiv = document.getElementById('updateTileStatus');
+        const statusText = document.getElementById('updateTileStatusText');
+
+        if (manual) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> SCANNE...';
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'mb-3 p-2 rounded text-center small pulse-status';
+            statusDiv.style.color = 'var(--text-secondary)';
+            statusText.innerHTML = '<i class="bi bi-search me-1"></i> Suche nach neuer Version...';
+        }
+
         try {
             const resp = await fetch('/api/update/check');
             const data = await resp.json();
@@ -297,74 +398,111 @@
                 document.getElementById('latestVersionText').innerText = 'v' + data.latest_version;
                 document.getElementById('releaseDateText').innerText = new Date(data.published_at).toLocaleString('de-DE');
                 document.getElementById('updateChangelog').innerText = data.changelog || 'Keine Beschreibung verfügbar.';
+                
+                if (manual) {
+                    statusDiv.className = 'mb-3 p-2 rounded text-center small bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25';
+                    statusText.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Neues Update verfügbar (v' + data.latest_version + ')';
+                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                }
+            } else {
+                if (manual) {
+                    statusDiv.className = 'mb-3 p-2 rounded text-center small bg-success bg-opacity-10 text-success border border-success border-opacity-25';
+                    statusText.innerHTML = '<i class="bi bi-shield-check me-1"></i> Software ist auf dem neuesten Stand.';
+                }
             }
         } catch (e) {
             console.error("Update-Check fehlgeschlagen", e);
+            if (manual) {
+                statusDiv.className = 'mb-3 p-2 rounded text-center small bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25';
+                statusText.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Verbindung zum Update-Server fehlgeschlagen.';
+            }
+        } finally {
+            if (manual) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> NACH UPDATES SCANNEN';
+            }
         }
     }
 
+    document.getElementById('btnManualUpdateCheck').onclick = () => checkUpdate(true);
+
     document.getElementById('btnStartUpdate').onclick = async () => {
         if (!updateInfo) return;
-        
-        if (!confirm("Bist du sicher, dass du das Update jetzt installieren möchtest? Die App wird dabei neu gestartet.")) return;
+        if (!confirm("Bist du sicher, dass du das Update jetzt installieren möchtest?")) return;
 
         document.getElementById('updateActionArea').style.display = 'none';
         document.getElementById('updateProgressArea').style.display = 'block';
 
-        const resp = await fetch('/api/update/install', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(updateInfo)
-        });
+        try {
+            const resp = await fetch('/api/update/install', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(updateInfo)
+            });
 
-        if (resp.ok) {
-            pollUpdateStatus();
-        } else {
-            alert("Fehler beim Starten des Updates.");
+            if (resp.ok) { 
+                pollUpdateStatus(); 
+            } else { 
+                alert("Fehler beim Starten des Updates."); 
+                location.reload(); 
+            }
+        } catch (e) {
+            alert("Verbindung zum Server unterbrochen.");
             location.reload();
         }
     };
 
     async function pollUpdateStatus() {
-        const interval = setInterval(async () => {
-            const resp = await fetch('/api/update/status');
-            const data = await resp.json();
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressText = document.getElementById('progressText');
+        const warningText = document.getElementById('updateWarningText');
 
-            document.getElementById('progressBar').style.width = data.progress + '%';
-            document.getElementById('progressPercent').innerText = data.progress + '%';
-            
-            if (data.status === 'downloading') document.getElementById('progressText').innerText = 'Lade Dateien von GitHub herunter...';
-            if (data.status === 'extracting') document.getElementById('progressText').innerText = 'Entpacke Firmware-Paket...';
-            if (data.status === 'applying') document.getElementById('progressText').innerText = 'Dateien werden ersetzt...';
-            if (data.status === 'finished') {
-                document.getElementById('progressText').innerText = 'Update erfolgreich! App startet neu...';
-                clearInterval(interval);
-                setTimeout(() => {
-                    checkAppBackOnline();
-                }, 5000);
-            }
-            if (data.status === 'error') {
-                document.getElementById('progressText').innerText = 'Fehler: ' + data.error;
-                document.getElementById('progressBar').classList.add('bg-danger');
-                clearInterval(interval);
-            }
+        const interval = setInterval(async () => {
+            try {
+                const resp = await fetch('/api/update/status');
+                if (!resp.ok) return; 
+                
+                const data = await resp.json();
+                progressBar.style.width = data.progress + '%';
+                progressPercent.innerText = data.progress + '%';
+
+                if (data.status === 'downloading') progressText.innerText = "Update wird heruntergeladen...";
+                else if (data.status === 'extracting') progressText.innerText = "Dateien werden entpackt...";
+                else if (data.status === 'applying') progressText.innerText = "Dateien werden kopiert...";
+                else if (data.status === 'finished') { 
+                    progressText.innerText = "Installation abgeschlossen! App wird neu gestartet...";
+                    progressBar.classList.remove('bg-primary');
+                    progressBar.classList.add('bg-success');
+                    warningText.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Update erfolgreich. Seite lädt gleich neu...';
+                    clearInterval(interval); 
+                    checkAppBackOnline(); 
+                }
+                else if (data.status === 'error') { 
+                    clearInterval(interval); 
+                    progressText.innerText = "Fehler!";
+                    progressBar.classList.add('bg-danger');
+                    alert("Fehler beim Update: " + data.error); 
+                    location.reload();
+                }
+            } catch (e) {}
         }, 1000);
     }
 
-    async function checkAppBackOnline() {
-        document.getElementById('progressText').innerText = 'Warte auf Neustart...';
-        const timer = setInterval(async () => {
-            try {
-                const resp = await fetch('/');
+    function checkAppBackOnline() {
+        let attempts = 0;
+        const checkInterval = setInterval(async () => {
+            try { 
+                const resp = await fetch('/'); 
                 if (resp.ok) {
-                    clearInterval(timer);
-                    location.reload();
+                    clearInterval(checkInterval);
+                    location.reload(); 
                 }
             } catch (e) {}
         }, 2000);
     }
 
-    // Beim Laden prüfen
+    // Initial check
     checkUpdate();
 </script>
 {% endblock %}

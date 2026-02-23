@@ -20,7 +20,7 @@
     .table thead th { background: rgba(0, 0, 0, 0.15); color: var(--text-dim); font-weight: 600; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.8rem 1.2rem; border-bottom: 1px solid var(--border-muted); }
     
     /* Action Buttons Style */
-    .btn-quick-action { font-weight: 600; border: none; padding: 0.6rem 1.25rem; border-radius: 8px; color: white; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; font-size: 0.85rem; }
+    .btn-quick-action { font-weight: 600; border: none; padding: 0.6rem 1.25rem; border-radius: 8px; color: white; display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; transition: all 0.2s; font-size: 0.85rem; cursor: pointer; }
     .btn-quick-action:hover { transform: translateY(-2px); color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
     .btn-cyan { background-color: #06b6d4; }
     .btn-cyan:hover { background-color: #0891b2; }
@@ -37,8 +37,6 @@
     .btn-save-only { background-color: #3b82f6; border: none; }
     .btn-stop-bot { background-color: #ef4444; border: none; }
     .btn-start-bot { background-color: #10b981; border: none; }
-
-    .log-display { background: #000; color: #a5b4fc; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; padding: 1rem; border-radius: 8px; border: 1px solid #1e293b; line-height: 1.5; }
 
     /* Registry Row Style */
     .registry-row:hover { background: rgba(255,255,255,0.02); }
@@ -108,6 +106,7 @@
                         <input class="form-check-input" type="checkbox" name="delete_commands" {% if config.delete_commands %}checked{% endif %}>
                         <div>
                             <label class="fw-bold text-white mb-0">Admin-Befehle automatisch löschen</label>
+                            <div class="small text-secondary">Löscht Nachrichten wie <code class="text-info">/warn</code> sofort.</div>
                         </div>
                     </div>
                 </div>
@@ -144,7 +143,7 @@
 
             <div class="d-flex justify-content-end gap-2 mt-4">
                 <button type="submit" class="btn btn-primary px-4 py-2 fw-bold btn-quick-action" style="background-color: #3b82f6;">
-                    <i class="bi bi-save"></i> Nur Speichern
+                    <i class="bi bi-save"></i> Konfiguration speichern
                 </button>
                 {% if is_running %}
                     <button type="submit" form="botActionFormStop" class="btn btn-danger px-4 py-2 fw-bold btn-quick-action" style="background-color: #ef4444;">
@@ -170,10 +169,9 @@
         <a href="{{ url_for('dashboard.id_finder_analytics') }}" class="btn-quick-action btn-rose">
             <i class="bi bi-bar-chart-line-fill"></i> Analytics
         </a>
-        <!-- NEUER BUTTON: Moderation-System Modal -->
         <button type="button" class="btn-quick-action btn-indigo" data-bs-toggle="modal" data-bs-target="#moderationSettingsModal">
             <i class="bi bi-shield-shaded"></i> Moderation Einstellungen
-        </a>
+        </button>
     </div>
 
     <!-- Moderation Settings Modal -->
@@ -216,7 +214,7 @@
                 </div>
                 <div class="modal-footer border-secondary">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
-                    <button type="submit" class="btn btn-primary">Speichern</button>
+                    <button type="submit" class="btn btn-primary">Einstellungen speichern</button>
                 </div>
             </div>
         </div>
