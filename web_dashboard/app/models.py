@@ -78,12 +78,14 @@ class IDFinderUser(db.Model):
     last_name = db.Column(db.String(100))
     language_code = db.Column(db.String(10))
     is_bot = db.Column(db.Boolean, default=False)
-    avatar_file_id = db.Column(db.String(255)) # Added for avatar support
+    avatar_file_id = db.Column(db.String(255))
     first_contact = db.Column(db.DateTime, default=datetime.utcnow)
     last_contact = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationship to messages
     messages = db.relationship('IDFinderMessage', backref='user', lazy=True, cascade="all, delete-orphan")
+    # Relationship to warnings
+    warnings = db.relationship('IDFinderWarning', backref='user', lazy=True, cascade="all, delete-orphan")
 
 class IDFinderMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -94,8 +96,23 @@ class IDFinderMessage(db.Model):
     chat_type = db.Column(db.String(50)) # private, group, supergroup, channel
     text = db.Column(db.Text)
     content_type = db.Column(db.String(50), default='text') # text, photo, video, etc.
-    file_id = db.Column(db.String(255)) # Added for media support
+    file_id = db.Column(db.String(255))
     is_command = db.Column(db.Boolean, default=False)
-    is_deleted = db.Column(db.Boolean, default=False) # Sync with DB
-    deletion_reason = db.Column(db.Text) # Sync with DB
+    is_deleted = db.Column(db.Boolean, default=False)
+    deletion_reason = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class IDFinderWarning(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    telegram_user_id = db.Column(db.BigInteger, db.ForeignKey('id_finder_user.telegram_id'), nullable=False)
+    reason = db.Column(db.Text, nullable=False)
+    admin_id = db.Column(db.BigInteger)
+    message_db_id = db.Column(db.Integer, db.ForeignKey('id_finder_message.id'))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class AutoCleanupTask(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    chat_id = db.Column(db.BigInteger, nullable=False)
+    message_id = db.Column(db.BigInteger, nullable=False)
+    cleanup_at = db.Column(db.DateTime, nullable=False)
+    status = db.Column(db.String(20), default='pending') # pending, done

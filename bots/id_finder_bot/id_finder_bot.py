@@ -12,7 +12,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(BOT_DIR))
 # Import models from web_dashboard.app.models
 sys.path.append(PROJECT_ROOT)
 
-from web_dashboard.app.models import db, BotSettings, IDFinderAdmin, IDFinderUser, IDFinderMessage, TopicMapping, Broadcast
+from web_dashboard.app.models import db, BotSettings, IDFinderAdmin, IDFinderUser, IDFinderMessage, TopicMapping, Broadcast, AutoCleanupTask
 from flask import Flask
 
 # --- Database Helper ---
@@ -54,6 +54,37 @@ def get_config_from_db():
         logger.error(f"Fehler beim Laden der Konfiguration aus DB: {e}")
     return None
 
+# --- Auto Cleanup Task ---
+async def process_cleanup_tasks(context: ContextTypes.DEFAULT_TYPE):
+    """
+    Sucht nach abgelaufenen Bot-Meldungen und löscht diese aus dem Chat.
+    """
+    try:
+        with flask_app.app_context():
+            now = datetime.utcnow()
+            tasks = AutoCleanupTask.query.filter(
+                AutoCleanupTask.status == 'pending',
+                AutoCleanupTask.cleanup_at <= now
+            ).all()
+
+            for task in tasks:
+                try:
+                    logger.info(f"Lösche alte Bot-Meldung: Chat {task.chat_id}, Msg {task.message_id}")
+                    await context.bot.delete_message(chat_id=task.chat_id, message_id=task.message_id)
+                except Exception as e:
+                    logger.debug(f"Konnte Nachricht nicht löschen (evtl. schon weg): {e}")
+                
+                task.status = 'done'
+            
+            db.session.commit()
+            
+            # Optional: Erledigte Aufgaben ganz löschen
+            AutoCleanupTask.query.filter_by(status='done').delete()
+            db.session.commit()
+            
+    except Exception as e:
+        logger.error(f"Fehler bei Auto-Cleanup: {e}")
+
 # --- Broadcast Engine ---
 async def check_and_send_broadcasts(context: ContextTypes.DEFAULT_TYPE):
     """
@@ -68,7 +99,6 @@ async def check_and_send_broadcasts(context: ContextTypes.DEFAULT_TYPE):
     try:
         with flask_app.app_context():
             now = datetime.utcnow()
-            # Fällige Broadcasts holen (geplant für jetzt oder früher, Status 'pending')
             pending_broadcasts = Broadcast.query.filter(
                 Broadcast.status == 'pending',
                 Broadcast.scheduled_at <= now
@@ -78,32 +108,34 @@ async def check_and_send_broadcasts(context: ContextTypes.DEFAULT_TYPE):
                 logger.info(f"Sende fälligen Broadcast: {b.id}")
                 try:
                     chat_id = main_group_id
-                    thread_id = int(b.topic_id) if b.topic_id and b.topic_id.isdigit() else None
+                    thread_id = int(b.topic_id) if b.topic_id and str(b.topic_id).isdigit() else None
                     
+                    msg = None
                     if b.media_path:
-                        # Medienversand (Bild/Video)
                         full_media_path = os.path.join(PROJECT_ROOT, 'web_dashboard', 'app', 'static', b.media_path)
                         if os.path.exists(full_media_path):
                             with open(full_media_path, 'rb') as f:
                                 if b.media_type == 'image':
                                     msg = await context.bot.send_photo(
                                         chat_id=chat_id, photo=f, caption=b.text,
-                                        message_thread_id=thread_id, disable_notification=b.silent_send
+                                        message_thread_id=thread_id, disable_notification=b.silent_send,
+                                        parse_mode=ParseMode.HTML
                                     )
                                 elif b.media_type == 'video':
                                     msg = await context.bot.send_video(
                                         chat_id=chat_id, video=f, caption=b.text,
-                                        message_thread_id=thread_id, disable_notification=b.silent_send
+                                        message_thread_id=thread_id, disable_notification=b.silent_send,
+                                        parse_mode=ParseMode.HTML
                                     )
                         else:
                             logger.error(f"Mediendatei nicht gefunden: {full_media_path}")
                             b.status = 'failed'
                             continue
                     else:
-                        # Nur Text
                         msg = await context.bot.send_message(
                             chat_id=chat_id, text=b.text,
-                            message_thread_id=thread_id, disable_notification=b.silent_send
+                            message_thread_id=thread_id, disable_notification=b.silent_send,
+                            parse_mode=ParseMode.HTML
                         )
                     
                     if b.pin_message and msg:
@@ -132,10 +164,6 @@ async def track_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
     now = datetime.utcnow()
     
     try:
-        # Get Avatar (Lazy update)
-        avatar_file_id = None
-        # Only check occasionally or if not set to save API calls
-        
         with flask_app.app_context():
             # Update User Registry
             db_user = IDFinderUser.query.filter_by(telegram_id=user.id).first()
@@ -216,10 +244,11 @@ def main():
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, track_activity))
     app.add_handler(CommandHandler("id", get_id))
 
-    # Broadcast Job (Alle 30 Sekunden prüfen)
+    # Jobs (Warteschlangen prüfen)
     app.job_queue.run_repeating(check_and_send_broadcasts, interval=30)
+    app.job_queue.run_repeating(process_cleanup_tasks, interval=10) # Alle 10 Sek nach abgelaufenen Meldungen suchen
 
-    logger.info("ID-Finder Bot startet (mit Broadcast Engine)...")
+    logger.info("ID-Finder Bot startet (mit Broadcast & Auto-Cleanup)...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":

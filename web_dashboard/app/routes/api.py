@@ -1,8 +1,8 @@
 from flask import Blueprint, jsonify, request, send_file, redirect
-from ..models import db, BotSettings, IDFinderMessage, IDFinderUser, TopicMapping
+from ..models import db, BotSettings, IDFinderMessage, IDFinderUser, TopicMapping, IDFinderWarning, AutoCleanupTask
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
 import json
 import io
@@ -37,6 +37,9 @@ def get_live_messages():
     for m in db_messages:
         user = IDFinderUser.query.filter_by(telegram_id=m.telegram_user_id).first()
         topic = TopicMapping.query.filter_by(topic_id=m.message_thread_id).first()
+        
+        warning_count = IDFinderWarning.query.filter_by(telegram_user_id=m.telegram_user_id).count()
+        
         messages.append({
             'id': m.id,
             'message_id': m.message_id,
@@ -52,7 +55,8 @@ def get_live_messages():
             'is_private_interaction': False,
             'avatar_url': f"/api/avatar/{m.telegram_user_id}",
             'is_deleted': m.is_deleted,
-            'deletion_reason': m.deletion_reason
+            'deletion_reason': m.deletion_reason,
+            'warning_count': warning_count
         })
     
     return jsonify(messages)
@@ -104,6 +108,8 @@ def delete_message():
     if not msg:
         return jsonify({'success': False, 'error': 'Nachricht nicht gefunden'}), 404
     
+    user = IDFinderUser.query.filter_by(telegram_id=msg.telegram_user_id).first()
+    
     settings = BotSettings.query.filter_by(bot_name='id_finder').first()
     config = json.loads(settings.config_json) if settings else {}
     bot_token = config.get('bot_token')
@@ -111,19 +117,45 @@ def delete_message():
     if not bot_token:
         return jsonify({'success': False, 'error': 'Bot Token fehlt'}), 500
 
+    # Verwarnung in DB speichern
+    new_warning = IDFinderWarning(
+        telegram_user_id=msg.telegram_user_id,
+        reason=reason,
+        message_db_id=msg.id
+    )
+    db.session.add(new_warning)
+    
+    warning_count = IDFinderWarning.query.filter_by(telegram_user_id=msg.telegram_user_id).count() + 1
+    max_warnings = config.get('max_warnings', 3)
+
     # 1. In Telegram löschen
-    delete_url = f"https://api.telegram.org/bot{bot_token}/deleteMessage"
-    requests.post(delete_url, json={'chat_id': msg.chat_id, 'message_id': msg.message_id})
+    requests.post(f"https://api.telegram.org/bot{bot_token}/deleteMessage", json={'chat_id': msg.chat_id, 'message_id': msg.message_id})
     
     # 2. Öffentliche Nachricht im Topic
     if send_public:
-        public_text = f"🚫 Nachricht gelöscht.\n👤 Nutzer: {msg.telegram_user_id}\n⚖️ Grund: {reason}"
-        send_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        requests.post(send_url, json={
+        user_mention = f"@{user.username}" if user and user.username else f"<b>{user.first_name if user else msg.telegram_user_id}</b>"
+        public_text = (
+            f"🚫 <b>Nachricht gelöscht</b>\n\n"
+            f"👤 Nutzer: {user_mention}\n"
+            f"⚖️ Grund: {reason}\n"
+            f"⚠️ Verwarnung: {warning_count}/{max_warnings}"
+        )
+        res = requests.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", json={
             'chat_id': msg.chat_id,
             'message_thread_id': msg.message_thread_id,
-            'text': public_text
-        })
+            'text': public_text,
+            'parse_mode': 'HTML'
+        }).json()
+        
+        # Cleanup Task planen, falls konfiguriert
+        cleanup_seconds = config.get('cleanup_notification_seconds', 60)
+        if cleanup_seconds > 0 and res.get('ok'):
+            cleanup_task = AutoCleanupTask(
+                chat_id=msg.chat_id,
+                message_id=res['result']['message_id'],
+                cleanup_at=datetime.utcnow() + timedelta(seconds=cleanup_seconds)
+            )
+            db.session.add(cleanup_task)
         
     # 3. Private Nachricht über gewählten Bot
     if send_private:
@@ -133,15 +165,32 @@ def delete_message():
             w_config = json.loads(warning_settings.config_json)
             w_token = w_config.get('bot_token')
             if w_token:
-                private_text = f"Hallo, deine Nachricht in der Gruppe wurde gelöscht.\n\nGrund: {reason}"
+                private_text = (
+                    f"Hallo, deine Nachricht in der Gruppe wurde gelöscht.\n\n"
+                    f"Grund: {reason}\n"
+                    f"Du hast nun {warning_count} von {max_warnings} Verwarnungen."
+                )
                 requests.post(f"https://api.telegram.org/bot{w_token}/sendMessage", json={
                     'chat_id': msg.telegram_user_id,
                     'text': private_text
                 })
 
-    # 4. In DB als gelöscht markieren (statt entfernen)
     msg.is_deleted = True
     msg.deletion_reason = reason
     db.session.commit()
     
     return jsonify({'success': True})
+
+@bp.route('/moderation/settings', methods=['POST'])
+def save_mod_settings():
+    data = request.json
+    settings = BotSettings.query.filter_by(bot_name='id_finder').first()
+    if settings:
+        config = json.loads(settings.config_json)
+        config['max_warnings'] = int(data.get('max_warnings', 3))
+        config['cleanup_notification_seconds'] = int(data.get('cleanup_notification_seconds', 60))
+        config['warning_bot_name'] = data.get('warning_bot_name', 'invite')
+        settings.config_json = json.dumps(config)
+        db.session.commit()
+        return jsonify({'success': True})
+    return jsonify({'success': False}), 404

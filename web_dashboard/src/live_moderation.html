@@ -36,6 +36,7 @@
     .message-header .user-name { font-weight: 700; }
     .message-header .timestamp { font-size: 0.75rem; color: var(--accent-color); }
     .message-header .topic-badge { font-size: 0.65rem; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); }
+    .message-header .warning-badge { font-size: 0.65rem; background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; color: #f59e0b; padding: 2px 6px; border-radius: 4px; }
     .message-text { color: var(--text-muted); white-space: pre-wrap; word-break: break-word; }
     .deletion-info { font-size: 0.7rem; color: #ef4444; font-weight: bold; margin-top: 0.2rem; text-transform: uppercase; }
     .message-actions { opacity: 0; margin-left: auto; transition: opacity 0.2s; display: flex; gap: 0.5rem; }
@@ -56,7 +57,12 @@
 
     <main class="chat-container">
         <header class="chat-header">
-            <h4>Live Bot Interaktionen</h4>
+            <div class="d-flex align-items-center gap-3">
+                <h4>Live Bot Interaktionen</h4>
+                <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                    <i class="bi bi-gear-fill"></i> Einstellungen
+                </button>
+            </div>
             <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-arrow-left"></i> Zurück
             </a>
@@ -69,6 +75,40 @@
             </div>
         </div>
     </main>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">⚙️ Moderations-Einstellungen</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label small text-muted">MAX. VERWARNUNGEN BIS BAN-HINWEIS</label>
+                    <input type="number" id="setMaxWarnings" class="form-control bg-dark text-white border-secondary" value="3">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-muted">LÖSCH-TIMER FÜR MELDUNGEN (SEKUNDEN)</label>
+                    <input type="number" id="setCleanupSeconds" class="form-control bg-dark text-white border-secondary" value="60">
+                    <div class="form-text small">Wie lange die "Nachricht gelöscht"-Meldung im Chat bleiben soll. 0 = Deaktiviert.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-muted">BOT FÜR PRIVATNACHRICHTEN</label>
+                    <select id="setWarningBot" class="form-select bg-dark text-white border-secondary">
+                        <option value="invite">Invite Bot (Standard)</option>
+                        <option value="id_finder">ID-Finder Bot</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="saveSettingsBtn">Speichern</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Moderation Modal -->
@@ -116,6 +156,7 @@
         const messageFeed = document.getElementById('message-feed');
         const topicList = document.getElementById('topic-list');
         const moderationModal = new bootstrap.Modal(document.getElementById('moderationModal'));
+        const settingsModal = new bootstrap.Modal(document.getElementById('settingsModal'));
         let currentTopic = 'all';
         let intervalId;
 
@@ -162,6 +203,7 @@
                         <div class="message-content flex-grow-1">
                             <div class="message-header">
                                 <span class="user-name text-white">${escapeHTML(msg.full_name || msg.username)}</span>
+                                <span class="warning-badge"><i class="bi bi-exclamation-triangle"></i> ${msg.warning_count}</span>
                                 <span class="timestamp">${formatTimestamp(msg.ts_str)}</span>
                                 <span class="topic-badge">${escapeHTML(msg.topic_name)}</span>
                                 ${!msg.is_deleted ? `
@@ -193,6 +235,19 @@
                 body: JSON.stringify({ id, reason, send_public: document.getElementById('modSendPublic').checked, send_private: document.getElementById('modSendPrivate').checked })
             });
             if (res.ok) { moderationModal.hide(); fetchMessages(); }
+        };
+
+        document.getElementById('saveSettingsBtn').onclick = async () => {
+            const res = await fetch('/api/moderation/settings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    max_warnings: document.getElementById('setMaxWarnings').value,
+                    cleanup_notification_seconds: document.getElementById('setCleanupSeconds').value,
+                    warning_bot_name: document.getElementById('setWarningBot').value
+                })
+            });
+            if (res.ok) { settingsModal.hide(); alert("Einstellungen gespeichert!"); }
         };
 
         function formatTimestamp(ts_str) { const d = new Date(ts_str); return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); }
