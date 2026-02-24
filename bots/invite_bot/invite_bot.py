@@ -34,8 +34,8 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(INVITE_BOT_LOG_FILE), # Bot's own log
-        logging.StreamHandler() # Output to console as well
+        logging.FileHandler(INVITE_BOT_LOG_FILE, encoding='utf-8'), # Bot's own log
+        logging.StreamHandler(sys.stdout) # Output to console as well
     ]
 )
 logger = logging.getLogger(__name__)

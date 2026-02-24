@@ -17,7 +17,25 @@ try:
 except ImportError:
     JavaServer = None
 
+from shared_bot_utils import get_bot_config, get_db_url
+from sqlalchemy import create_engine, text
+
 log = logging.getLogger(__name__)
+
+# --- Database Helper for saving ---
+def update_minecraft_config(cfg: Dict[str, Any]) -> bool:
+    try:
+        engine = create_engine(get_db_url())
+        with engine.connect() as conn:
+            conn.execute(
+                text("UPDATE bot_settings SET config_json = :cfg WHERE bot_name = 'minecraft'"),
+                {"cfg": json.dumps(cfg)}
+            )
+            conn.commit()
+        return True
+    except Exception as e:
+        log.error(f"Fehler beim Speichern der Minecraft-Config: {e}")
+        return False
 
 # ✅ Globaler Lock gegen doppelte Nachrichten / Parallelität
 _status_lock = asyncio.Lock()
@@ -86,16 +104,13 @@ DEFAULT_CFG: Dict[str, Any] = {
 
 def _load_cfg() -> Dict[str, Any]:
     cfg = dict(DEFAULT_CFG)
-    if not os.path.exists(CONFIG_PATH):
-        return cfg
     try:
-        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-        if isinstance(raw, dict):
-            cfg.update(raw)
+        db_cfg = get_bot_config("minecraft")
+        if db_cfg:
+            cfg.update(db_cfg)
         return cfg
     except Exception as e:
-        log.error("Could not read %s: %s", CONFIG_PATH, e)
+        log.error("Could not load config from DB: %s", e)
         return dict(DEFAULT_CFG)
 
 
@@ -114,10 +129,7 @@ def _atomic_write_json(path: str, data: Dict[str, Any]) -> None:
 
 
 def _save_cfg(cfg: Dict[str, Any]) -> None:
-    try:
-        _atomic_write_json(CONFIG_PATH, cfg)
-    except Exception as e:
-        log.error("Could not write %s: %s", CONFIG_PATH, e)
+    update_minecraft_config(cfg)
 
 
 # --- Helpers ------------------------------------------------------------------

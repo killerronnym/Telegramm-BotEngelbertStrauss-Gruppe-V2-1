@@ -12,14 +12,15 @@
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ 'success' if category == 'success' else ('danger' if category == 'danger' else 'info') }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else ('danger' if category == 'danger' else 'info') }} alert-dismissible fade show"
+        role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
     {% endwith %}
 
     <!-- NEUER BENUTZER -->
@@ -31,11 +32,13 @@
             <form action="{{ url_for('dashboard.add_user') }}" method="POST" class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label small">Benutzername</label>
-                    <input type="text" name="username" class="form-control bg-dark text-white border-secondary" placeholder="z.B. max_mustermann" required>
+                    <input type="text" name="username" class="form-control bg-dark text-white border-secondary"
+                        placeholder="z.B. max_mustermann" required>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label small">Passwort</label>
-                    <input type="password" name="password" class="form-control bg-dark text-white border-secondary" placeholder="Passwort vergeben" required>
+                    <input type="password" name="password" class="form-control bg-dark text-white border-secondary"
+                        placeholder="Passwort vergeben" required>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label small">Rolle</label>
@@ -72,23 +75,27 @@
                             <td class="ps-3">
                                 <i class="bi bi-person-fill text-secondary me-2"></i>
                                 <strong>{{ username }}</strong>
-                                {% if username == session.get('user') %}
+                                {% if username == current_user.username %}
                                 <span class="badge bg-success ms-2 small">Ich</span>
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge {% if data.role == 'admin' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                                <span
+                                    class="badge {% if data.role == 'admin' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
                                     {{ data.role|upper }}
                                 </span>
                             </td>
                             <td class="text-end pe-3">
                                 <!-- Bearbeiten Modal Trigger -->
-                                <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ loop.index }}">
+                                <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal"
+                                    data-bs-target="#editModal{{ loop.index }}">
                                     <i class="bi bi-pencil"></i> Bearbeiten
                                 </button>
 
-                                {% if username != session.get('user') %}
-                                <form action="{{ url_for('dashboard.delete_user', username=username) }}" method="POST" class="d-inline" onsubmit="return confirm('Benutzer {{ username }} wirklich löschen?')">
+                                {% if username != current_user.username %}
+                                <form action="{{ url_for('dashboard.delete_user', username=username) }}" method="POST"
+                                    class="d-inline"
+                                    onsubmit="return confirm('Benutzer {{ username }} wirklich löschen?')">
                                     <button type="submit" class="btn btn-sm btn-outline-danger ms-1">
                                         <i class="bi bi-trash"></i> Löschen
                                     </button>
@@ -101,29 +108,40 @@
                                         <div class="modal-content bg-dark border-warning">
                                             <div class="modal-header border-secondary">
                                                 <h5 class="modal-title">Benutzer bearbeiten: {{ username }}</h5>
-                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                <button type="button" class="btn-close btn-close-white"
+                                                    data-bs-dismiss="modal" aria-label="Close"></button>
                                             </div>
-                                            <form action="{{ url_for('dashboard.edit_user', username=username) }}" method="POST">
+                                            <form action="{{ url_for('dashboard.edit_user', username=username) }}"
+                                                method="POST">
                                                 <div class="modal-body text-start">
                                                     <div class="mb-3">
                                                         <label class="form-label">Neuer Benutzername (optional)</label>
-                                                        <input type="text" name="new_username" class="form-control bg-dark text-white border-secondary" placeholder="{{ username }}">
+                                                        <input type="text" name="new_username"
+                                                            class="form-control bg-dark text-white border-secondary"
+                                                            placeholder="{{ username }}">
                                                     </div>
                                                     <div class="mb-3">
-                                                        <label class="form-label">Neues Passwort (leer lassen für keine Änderung)</label>
-                                                        <input type="password" name="new_password" class="form-control bg-dark text-white border-secondary">
+                                                        <label class="form-label">Neues Passwort (leer lassen für keine
+                                                            Änderung)</label>
+                                                        <input type="password" name="new_password"
+                                                            class="form-control bg-dark text-white border-secondary">
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label">Rolle ändern</label>
-                                                        <select name="new_role" class="form-select bg-dark text-white border-secondary">
-                                                            <option value="user" {% if data.role == 'user' %}selected{% endif %}>User</option>
-                                                            <option value="admin" {% if data.role == 'admin' %}selected{% endif %}>Admin</option>
+                                                        <select name="new_role"
+                                                            class="form-select bg-dark text-white border-secondary">
+                                                            <option value="user" {% if data.role=='user' %}selected{%
+                                                                endif %}>User</option>
+                                                            <option value="admin" {% if data.role=='admin' %}selected{%
+                                                                endif %}>Admin</option>
                                                         </select>
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer border-secondary">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
-                                                    <button type="submit" class="btn btn-warning">Änderungen speichern</button>
+                                                    <button type="button" class="btn btn-secondary"
+                                                        data-bs-dismiss="modal">Abbrechen</button>
+                                                    <button type="submit" class="btn btn-warning">Änderungen
+                                                        speichern</button>
                                                 </div>
                                             </form>
                                         </div>

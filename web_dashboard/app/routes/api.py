@@ -183,3 +183,32 @@ def clear_all_warnings(user_id):
     try: IDFinderWarning.query.filter_by(telegram_user_id=user_id).delete(); db.session.commit(); return jsonify({'success': True})
     except: pass
     return jsonify({'success': False}), 500
+
+@bp.route('/system/settings')
+def get_system_settings():
+    try:
+        settings = BotSettings.query.filter_by(bot_name='system').first()
+        if settings:
+            return jsonify(json.loads(settings.config_json))
+    except: pass
+    return jsonify({'auto_update_enabled': False, 'last_check_at': None})
+
+@bp.route('/system/settings/save', methods=['POST'])
+def save_system_settings():
+    try:
+        data = request.json
+        settings = BotSettings.query.filter_by(bot_name='system').first()
+        if not settings:
+            settings = BotSettings(bot_name='system', config_json='{}')
+            db.session.add(settings)
+        
+        config = json.loads(settings.config_json) if settings.config_json else {}
+        
+        if 'auto_update_enabled' in data:
+            config['auto_update_enabled'] = bool(data['auto_update_enabled'])
+            
+        settings.config_json = json.dumps(config)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400

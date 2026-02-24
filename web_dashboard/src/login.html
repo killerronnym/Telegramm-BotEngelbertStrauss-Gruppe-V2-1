@@ -1,51 +1,144 @@
 <!DOCTYPE html>
 <html lang="de" data-bs-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Bot Dashboard</title>
+    <title>Anmeldung | Bot Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { 
-            background-color: #0b0c0d; 
-            display: flex; 
-            align-items: center; 
+        :root {
+            --bg-deep: #0b0c0d;
+            --bg-card: #151719;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --accent-blue: #3b82f6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             min-height: 100vh;
-            color: #e9ecef;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
         }
-        .login-card { 
-            max-width: 400px; 
-            width: 100%; 
-            margin: auto; 
-            padding: 30px; 
-            border-radius: 15px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
-            background: #1a1d20;
-            border: 1px solid #343a40;
+
+        .login-card {
+            max-width: 420px;
+            width: 90%;
+            padding: 2.5rem;
+            border-radius: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1;
         }
-        .spinner-border {
-            width: 3rem;
-            height: 3rem;
+
+        .brand-icon {
+            font-size: 3rem;
+            color: var(--accent-blue);
+            margin-bottom: 1.5rem;
+            display: inline-block;
+            filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.3));
+        }
+
+        .form-control {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+            color: white;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            border: none;
+            padding: 0.8rem;
+            border-radius: 12px;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
+            background: #2563eb;
+        }
+
+        .alert {
+            border-radius: 12px;
+            border: none;
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            font-size: 0.9rem;
+        }
+
+        /* Ambient background */
+        .ambient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(59, 130, 246, 0.03) 0%, transparent 40%);
+            z-index: 0;
         }
     </style>
-    <script>
-        window.onload = function() {
-            setTimeout(function() {
-                window.location.href = "{{ url_for('dashboard.index') }}";
-            }, 1500);
-        };
-    </script>
 </head>
+
 <body>
+    <div class="ambient-bg"></div>
     <div class="login-card text-center">
-        <div class="mb-4">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
+        <i class="bi bi-shield-lock brand-icon"></i>
+        <h2 class="mb-1 fw-bold">Willkommen zurück</h2>
+        <p class="text-muted mb-4">Bitte melde dich an, um fortzufahren.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ message }}
         </div>
-        <h2>Anmeldung erfolgt</h2>
-        <p class="text-muted">Du wirst automatisch weitergeleitet...</p>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST">
+            <div class="mb-3 text-start">
+                <label class="form-label small fw-medium text-muted">Benutzername</label>
+                <input type="text" name="username" class="form-control" placeholder="admin" required autofocus>
+            </div>
+            <div class="mb-4 text-start">
+                <label class="form-label small fw-medium text-muted">Passwort</label>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                Anmelden <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+        </form>
+
+        <p class="mt-4 small text-muted">
+            &copy; 2026 Unified Bot System
+        </p>
     </div>
 </body>
+
 </html>

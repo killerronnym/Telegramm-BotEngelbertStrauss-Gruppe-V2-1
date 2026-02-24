@@ -16,7 +16,7 @@ from web_dashboard.app.models import db, BotSettings, IDFinderAdmin, IDFinderUse
 from flask import Flask
 
 # Import the tiktok monitor function
-from bots.tiktok_bot.tiktok_bot import start_tiktok_monitor
+from bots.id_finder_bot.minecraft_bridge import register_minecraft
 
 # Import shared utils for DB URL resolution
 from shared_bot_utils import get_db_url
@@ -33,12 +33,22 @@ flask_app = get_db_session()
 
 # --- Logging ---
 LOG_FILE = os.path.join(BOT_DIR, "id_finder_bot.log")
+# Ensure logging uses UTF-8 even on Windows
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s",
     level=logging.INFO,
-    handlers=[logging.FileHandler(LOG_FILE, encoding='utf-8'), logging.StreamHandler(sys.stdout)]
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
 )
 logger = logging.getLogger(__name__)
+
+# Force UTF-8 for stdout/stderr if possible
+if sys.stdout.encoding != 'utf-8':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 try:
     from telegram import Update, ForumTopic
@@ -235,35 +245,26 @@ async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- Bot Lifecycle Callbacks ---
 async def post_init(app: Application) -> None:
-    logger.info("ID-Finder Bot: Post-init-Phase, starte TikTok Monitor...")
-    app.tiktok_monitor_task = asyncio.create_task(start_tiktok_monitor(app))
+    logger.info("ID-Finder Bot initialisiert.")
 
-async def pre_shutdown(app: Application) -> None:
-    logger.info("ID-Finder Bot: Pre-shutdown-Phase, beende TikTok Monitor...")
-    if hasattr(app, 'tiktok_monitor_task') and app.tiktok_monitor_task is not None:
-        app.tiktok_monitor_task.cancel()
-        try:
-            await app.tiktok_monitor_task
-        except asyncio.CancelledError:
-            logger.info("TikTok Monitor Task wurde abgebrochen.")
-        except Exception as e:
-            logger.error(f"Fehler beim Beenden des TikTok Monitor Tasks: {e}")
-
-async def shutdown(app: Application):
-    logger.info("ID-Finder Bot wird heruntergefahren...")
+async def post_shutdown(app: Application) -> None:
+    logger.info("ID-Finder Bot wurde beendet und heruntergefahren.")
 
 def main():
     config = get_config_from_db()
     if not config or not config.get("bot_token"):
-        logger.critical("Bot Token nicht in Datenbank gefunden!")
+        logger.critical("Bot Token nicht in Datenbank gefunden! Bitte im Dashboard unter 'ID-Finder Bot' einstellen.")
         sys.exit(1)
         
     app = ApplicationBuilder().token(config["bot_token"])
-    app = app.post_init(post_init).pre_shutdown(pre_shutdown).post_shutdown(shutdown).build()
+    app = app.post_init(post_init).post_shutdown(post_shutdown).build()
     
     # Handlers
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, track_activity))
     app.add_handler(CommandHandler("id", get_id))
+
+    # Minecraft Bridge
+    register_minecraft(app)
 
     # Jobs (Warteschlangen prüfen)
     app.job_queue.run_repeating(check_and_send_broadcasts, interval=30)

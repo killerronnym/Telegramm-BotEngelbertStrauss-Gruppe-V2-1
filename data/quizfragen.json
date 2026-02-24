@@ -1,0 +1,22 @@
+[
+    {
+        "frage": "Welches Tier ist das Logo von Engelbert Strauss?",
+        "optionen": [
+            "Adler",
+            "Strauß",
+            "Hase",
+            "Wolf"
+        ],
+        "antwort": 1
+    },
+    {
+        "frage": "In welcher Stadt hat Engelbert Strauss seinen Hauptsitz?",
+        "optionen": [
+            "Biebergemünd",
+            "Berlin",
+            "Frankfurt",
+            "München"
+        ],
+        "antwort": 0
+    }
+]

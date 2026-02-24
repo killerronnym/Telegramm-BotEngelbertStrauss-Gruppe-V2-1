@@ -158,19 +158,24 @@ class Updater:
                 time.sleep(2)
                 
                 # Attempt to gracefully restart the web server
-                pid_file_path = os.path.join(self.project_root, "web_server.pid")
-                if os.path.exists(pid_file_path):
-                    try:
-                        with open(pid_file_path, "r") as f:
-                            pid = int(f.read().strip())
-                        log.info(f"Sending SIGHUP to web server process with PID {pid} for graceful restart.")
-                        os.kill(pid, signal.SIGHUP)
-                    except Exception as e:
-                        log.error(f"Failed to signal web server for restart (PID file found): {e}")
-                        log.warning("Web server PID file found, but restart signal failed. Manual restart may be required.")
+                if os.name == 'nt':
+                    # Windows: Signals like SIGHUP are not available.
+                    # We terminate the process and rely on a wrapper script (like a loop in PowerShell) to restart us.
+                    log.info("Windows detected. Terminating process to allow wrapper script to restart.")
+                    os._exit(0) # Immediate exit to prevent further execution
                 else:
-                    log.warning("Web server PID file not found. Attempting to kill current process. Manual restart of the main application may be required.")
-                    os.kill(os.getpid(), signal.SIGTERM)
+                    pid_file_path = os.path.join(self.project_root, "web_server.pid")
+                    if os.path.exists(pid_file_path):
+                        try:
+                            with open(pid_file_path, "r") as f:
+                                pid = int(f.read().strip())
+                            log.info(f"Sending SIGHUP to web server process with PID {pid} for graceful restart.")
+                            os.kill(pid, signal.SIGHUP)
+                        except Exception as e:
+                            log.error(f"Failed to signal web server for restart: {e}")
+                    else:
+                        log.warning("Web server PID file not found. Terminating current process.")
+                        os.kill(os.getpid(), signal.SIGTERM)
 
             except Exception as e:
                 log.error(f"Update failed: {e}")

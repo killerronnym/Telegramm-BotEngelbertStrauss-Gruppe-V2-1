@@ -1,0 +1,22 @@
+[
+    {
+        "frage": "Welche Farbe gefällt dir am besten für Arbeitskleidung?",
+        "optionen": [
+            "Schwarz/Grau",
+            "Blau",
+            "Rot",
+            "Signalfarben"
+        ],
+        "allows_multiple_answers": false
+    },
+    {
+        "frage": "Wie oft bestellst du neue Arbeitskleidung?",
+        "optionen": [
+            "Monatlich",
+            "Alle 6 Monate",
+            "Jährlich",
+            "Nur wenn nötig"
+        ],
+        "allows_multiple_answers": false
+    }
+]

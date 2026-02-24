@@ -1,8 +1,11 @@
 from flask import Flask, redirect, url_for
-from .models import db, User # User weiterhin für db.create_all() und init_db.py
+from .models import db, User 
+from flask_login import LoginManager
 from dotenv import load_dotenv
 from .config import Config
+from flask_apscheduler import APScheduler
 import os
+import logging
 from .utils import datetimeformat
 
 def create_app(test_config=None):
@@ -18,6 +21,15 @@ def create_app(test_config=None):
         app.config.from_object(Config)
 
     db.init_app(app)
+    
+    login_manager = LoginManager()
+    login_manager.login_view = 'auth.login'
+    login_manager.init_app(app)
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+    
     app.jinja_env.filters['datetimeformat'] = datetimeformat
     
     # Blueprints registrieren
@@ -43,5 +55,14 @@ def create_app(test_config=None):
     @app.route('/')
     def root():
         return redirect(url_for('dashboard.index'))
+
+    # Scheduler initialisieren
+    scheduler = APScheduler()
+    scheduler.init_app(app)
+    scheduler.start()
+    
+    # Auto-Update Job registrieren (läuft alle 6 Stunden)
+    from .updater_task import check_and_auto_update
+    scheduler.add_job(id='auto_update_job', func=check_and_auto_update, trigger='interval', hours=6, args=[app])
 
     return app

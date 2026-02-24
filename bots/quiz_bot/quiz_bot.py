@@ -11,26 +11,30 @@ from telegram.error import TelegramError
 
 # ----------------- Setup -----------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Navigate up to the project root: bots/quiz_bot -> bots -> project_root
 PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
-
-CONFIG_FILE = os.path.join(BASE_DIR, "quiz_bot_config.json")
 TRIGGER_FILE = os.path.join(BASE_DIR, "send_now.tmp")
-STATE_FILE = os.path.join(BASE_DIR, "quiz_bot_state.json") # To store last run date
+STATE_FILE = os.path.join(BASE_DIR, "quiz_bot_state.json")
 
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 QUIZ_FILE = os.path.join(DATA_DIR, "quizfragen.json")
 USED_FILE = os.path.join(BASE_DIR, "quizfragen_gestellt.json")
 
+# Navigating to project root
+sys.path.append(PROJECT_ROOT)
+from shared_bot_utils import get_bot_config
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s: %(message)s",
     handlers=[
-        logging.FileHandler(os.path.join(BASE_DIR, "quiz_bot.log")),
-        logging.StreamHandler()
+        logging.FileHandler(os.path.join(BASE_DIR, "quiz_bot.log"), encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
     ]
 )
 log = logging.getLogger("quiz_bot")
+
+def load_config_from_db():
+    return get_bot_config("quiz")
 
 
 # ----------------- Helpers -----------------
@@ -78,7 +82,7 @@ def question_fingerprint(q: dict) -> str:
 # ----------------- Core Logic -----------------
 async def send_quiz():
     log.info(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Attempting to send quiz...")
-    cfg = load_json(CONFIG_FILE, {})
+    cfg = load_config_from_db()
     token = cfg.get("bot_token", "").strip()
     chat_id = cfg.get("channel_id", "").strip() # Can be channel or group ID
     topic_id = cfg.get("topic_id", "")
@@ -172,7 +176,7 @@ def process_trigger():
             log.error(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Error processing trigger: {e}")
 
 def check_schedule():
-    cfg = load_json(CONFIG_FILE, {})
+    cfg = load_config_from_db()
     schedule = cfg.get("schedule", {})
     
     if not schedule.get("enabled"):

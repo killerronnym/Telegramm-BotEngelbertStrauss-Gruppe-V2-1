@@ -26,3 +26,8 @@ web_dashboard/critical_errors.log*
 app.log*
 .venv/
 venv/
+app.db
+data/tmp_update/
+nohup.out
+web_server.pid
+*.log

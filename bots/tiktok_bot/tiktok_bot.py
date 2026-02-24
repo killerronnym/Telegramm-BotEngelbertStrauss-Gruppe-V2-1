@@ -4,11 +4,9 @@ import requests
 import json
 import os
 import sys
-import sqlite3
-import traceback
 from dataclasses import dataclass
 from typing import Dict, Tuple, Optional, List
-from telegram.ext import Application # Import Application for type hinting
+from telegram.ext import Application
 
 # --- AUTO-PFAD SETUP ---
 def setup_environment():
@@ -29,7 +27,6 @@ def setup_environment():
     return None
 
 PROJECT_ROOT = setup_environment()
-DB_PATH = os.path.join(PROJECT_ROOT, 'instance', 'app.db') if PROJECT_ROOT else "instance/app.db"
 
 def log_print(msg):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -61,7 +58,7 @@ from shared_bot_utils import get_bot_config
 
 def load_config():
     id_finder_config = get_bot_config("id_finder")
-    tiktok_config = get_bot_config("tiktok_bot")
+    tiktok_config = get_bot_config("tiktok")
     
     # Kompatibilität für alte und neue Config-Struktur
     targets = tiktok_config.get("target_unique_ids", [])
@@ -207,3 +204,9 @@ async def start_tiktok_monitor(app_instance: Application = None):
         # Keep the monitor alive, but sleeping if there are no hosts to watch
         while True:
             await asyncio.sleep(60)
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(start_tiktok_monitor())
+    except KeyboardInterrupt:
+        pass

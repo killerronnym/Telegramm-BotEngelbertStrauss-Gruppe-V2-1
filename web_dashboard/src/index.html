@@ -7,28 +7,112 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
-    .dashboard-container { padding: 2.5rem; }
-    .card { height: 100%; transition: all 0.2s ease; border: 1px solid var(--border-muted); position: relative; display: flex; flex-direction: column; }
-    .card:hover { transform: translateY(-3px); background-color: var(--card-hover); border-color: rgba(59, 130, 246, 0.2); }
-    .status-badge { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-    .btn-action-sm { padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 700; border-radius: 8px; border: none; text-transform: uppercase; }
-    .btn-settings-big { background-color: var(--blue-deep); color: white; border: none; font-weight: 600; border-radius: 8px; padding: 0.75rem 1rem; transition: all 0.2s; text-align: center; text-decoration: none; display: block; width: 100%; font-size: 0.9rem; cursor: pointer; }
-    .btn-settings-big:hover { background-color: #2563eb; color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
-    .action-header { border-bottom: 1px solid var(--border-muted); margin-bottom: 2rem; padding-bottom: 1.5rem; }
-    
+    .dashboard-container {
+        padding: 2.5rem;
+    }
+
+    .card {
+        height: 100%;
+        transition: all 0.2s ease;
+        border: 1px solid var(--border-muted);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card:hover {
+        transform: translateY(-3px);
+        background-color: var(--card-hover);
+        border-color: rgba(59, 130, 246, 0.2);
+    }
+
+    .status-badge {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
+    }
+
+    .btn-action-sm {
+        padding: 0.6rem 1rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        border-radius: 8px;
+        border: none;
+        text-transform: uppercase;
+    }
+
+    .btn-settings-big {
+        background-color: var(--blue-deep);
+        color: white;
+        border: none;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        transition: all 0.2s;
+        text-align: center;
+        text-decoration: none;
+        display: block;
+        width: 100%;
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+
+    .btn-settings-big:hover {
+        background-color: #2563eb;
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    }
+
+    .action-header {
+        border-bottom: 1px solid var(--border-muted);
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+    }
+
     /* Edit Mode Styles */
-    .edit-mode .card { cursor: move; }
-    .edit-mode .card:hover { border-color: #f59e0b !important; }
-    .edit-mode .dashboard-title-edit { display: block !important; }
-    .edit-mode .dashboard-title-static { display: none !important; }
-    
-    .wiggle { animation: wiggle 0.3s infinite; }
+    .edit-mode .card {
+        cursor: move;
+    }
+
+    .edit-mode .card:hover {
+        border-color: #f59e0b !important;
+    }
+
+    .edit-mode .dashboard-title-edit {
+        display: block !important;
+    }
+
+    .edit-mode .dashboard-title-static {
+        display: none !important;
+    }
+
+    .wiggle {
+        animation: wiggle 0.3s infinite;
+    }
+
     @keyframes wiggle {
-        0% { transform: rotate(0deg); }
-        25% { transform: rotate(0.5deg); }
-        50% { transform: rotate(0deg); }
-        75% { transform: rotate(-0.5deg); }
-        100% { transform: rotate(0deg); }
+        0% {
+            transform: rotate(0deg);
+        }
+
+        25% {
+            transform: rotate(0.5deg);
+        }
+
+        50% {
+            transform: rotate(0deg);
+        }
+
+        75% {
+            transform: rotate(-0.5deg);
+        }
+
+        100% {
+            transform: rotate(0deg);
+        }
     }
 
     .visibility-toggle {
@@ -36,7 +120,7 @@
         top: 10px;
         right: 10px;
         z-index: 10;
-        background: rgba(0,0,0,0.5);
+        background: rgba(0, 0, 0, 0.5);
         border: none;
         color: #fff;
         padding: 4px 8px;
@@ -44,16 +128,53 @@
         display: none;
         cursor: pointer;
     }
-    .edit-mode .visibility-toggle { display: block; }
-    
-    .hidden-card { opacity: 0.4; filter: grayscale(1); }
-    .hidden-card:not(.edit-mode *) { display: none !important; }
+
+    .edit-mode .visibility-toggle {
+        display: block;
+    }
+
+    .hidden-card {
+        opacity: 0.4;
+        filter: grayscale(1);
+    }
+
+    .hidden-card:not(.edit-mode *) {
+        display: none !important;
+    }
 
     /* Update Specifics */
-    .card-update { border-color: #3b82f644; background: rgba(59, 130, 246, 0.05); }
-    .update-notify { padding: 10px; border-radius: 8px; font-size: 0.8rem; margin-bottom: 1rem; display: none; text-align: center; font-weight: 600; }
-    .update-info-box { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; margin-top: 10px; display: none; border: 1px solid rgba(59, 130, 246, 0.2); }
-    .changelog-text { font-size: 0.75rem; color: #94a3b8; max-height: 80px; overflow-y: auto; margin-top: 8px; white-space: pre-wrap; }
+    .card-update {
+        border-color: #3b82f644;
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .update-notify {
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        margin-bottom: 1rem;
+        display: none;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .update-info-box {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 12px;
+        border-radius: 8px;
+        margin-top: 10px;
+        display: none;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .changelog-text {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        max-height: 80px;
+        overflow-y: auto;
+        margin-top: 8px;
+        white-space: pre-wrap;
+    }
 
     /* Version Footer */
     .version-footer {
@@ -67,8 +188,16 @@
         align-items: center;
     }
 
-    .spin { animation: spin 1s linear infinite; display: inline-block; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .spin {
+        animation: spin 1s linear infinite;
+        display: inline-block;
+    }
+
+    @keyframes spin {
+        100% {
+            transform: rotate(360deg);
+        }
+    }
 </style>
 
 <div class="dashboard-container">
@@ -76,11 +205,14 @@
         <div>
             <h1 class="fw-bold mb-1 h3 text-white">
                 <span class="dashboard-title-static">{{ layout.title if layout and layout.title else 'Bot' }}</span>
-                <input type="text" id="inputDashboardTitle" class="dashboard-title-edit bg-transparent border-0 border-bottom border-warning text-white fw-bold h3 mb-0" 
-                       value="{{ layout.title if layout and layout.title else 'Bot' }}" style="display:none; outline: none; width: auto;">
+                <input type="text" id="inputDashboardTitle"
+                    class="dashboard-title-edit bg-transparent border-0 border-bottom border-warning text-white fw-bold h3 mb-0"
+                    value="{{ layout.title if layout and layout.title else 'Bot' }}"
+                    style="display:none; outline: none; width: auto;">
                 <span class="text-blue">Steuerung</span>
             </h1>
-            <p class="text-secondary small">Zentrale Verwaltung aller Bot-Systeme (Modus: Gast-Admin)</p>
+            <p class="text-secondary small">Angemeldet als: <span class="text-white fw-medium">{{ current_user.username
+                    }}</span> (Rolle: <span class="badge bg-secondary ms-1">{{ current_user.role|upper }}</span>)</p>
         </div>
         <div>
             <button id="btnEditLayout" class="btn btn-outline-warning fw-bold px-4">
@@ -94,79 +226,122 @@
 
     <!-- ⚡ SOFORT-AKTIONEN -->
     <div class="action-header text-center">
-        <h5 class="text-white fw-bold mb-4" style="letter-spacing: 0.05em;"><i class="bi bi-lightning-charge-fill text-warning me-2"></i> SOFORT-AKTIONEN</h5>
+        <h5 class="text-white fw-bold mb-4" style="letter-spacing: 0.05em;"><i
+                class="bi bi-lightning-charge-fill text-warning me-2"></i> SOFORT-AKTIONEN</h5>
         <div class="d-flex gap-3 justify-content-center flex-wrap">
-            <form action="/quiz/send-random" method="POST" class="m-0"><button type="submit" class="btn btn-primary fw-bold px-5 py-2" style="border-radius: 12px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);">❔ QUIZFRAGE SENDEN</button></form>
-            <form action="/umfrage/send-random" method="POST" class="m-0"><button type="submit" class="btn btn-secondary fw-bold px-5 py-2" style="border-radius: 12px; background-color: #475569; border: none;">📊 UMFRAGE SENDEN</button></form>
+            <form action="/quiz/send-random" method="POST" class="m-0"><button type="submit"
+                    class="btn btn-primary fw-bold px-5 py-2"
+                    style="border-radius: 12px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);">❔ QUIZFRAGE
+                    SENDEN</button></form>
+            <form action="/umfrage/send-random" method="POST" class="m-0"><button type="submit"
+                    class="btn btn-secondary fw-bold px-5 py-2"
+                    style="border-radius: 12px; background-color: #475569; border: none;">📊 UMFRAGE SENDEN</button>
+            </form>
         </div>
     </div>
 
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="sortableGrid">
         {% set items = [
-            {'id': 'live_mod', 'title': 'Live Moderation', 'icon': 'bi-shield-check', 'desc': 'Überwachen und moderieren Sie Telegram-Gruppen in Echtzeit.', 'link': url_for('dashboard.live_moderation'), 'type': 'open'},
-            {'id': 'planer', 'title': 'Nachricht Planer', 'icon': 'bi-megaphone', 'desc': 'Nachrichten & Medien planen oder sofort über den ID-Finder senden.', 'link': url_for('dashboard.broadcast_manager'), 'type': 'settings', 'bot': 'id_finder'},
-            {'id': 'tiktok', 'title': 'TikTok Live Benachrichtigung', 'icon': 'bi-tiktok', 'desc': 'Überwacht TikTok Livestreams auf Zielpersonen.', 'link': url_for('dashboard.tiktok_settings'), 'type': 'bot', 'bot': 'tiktok'},
-            {'id': 'invite', 'title': 'Einladungs-Bot', 'icon': 'bi-apple', 'desc': 'Begrüßungstexte & automatische Beitrittskontrolle.', 'link': url_for('dashboard.bot_settings'), 'type': 'bot', 'bot': 'invite'},
-            {'id': 'quiz', 'title': 'Quiz Bot', 'icon': 'bi-question-circle', 'desc': 'Verwaltung der Quizfragen und automatischer Zeitplaner.', 'link': url_for('dashboard.quiz_settings'), 'type': 'bot', 'bot': 'quiz'},
-            {'id': 'umfrage', 'title': 'Umfrage Bot', 'icon': 'bi-bar-chart', 'desc': 'Verwaltung der Umfragen und automatischer Zeitplaner.', 'link': url_for('dashboard.umfrage_settings'), 'type': 'bot', 'bot': 'umfrage'},
-            {'id': 'outfit', 'title': 'Outfit-Wettbewerb', 'icon': 'bi-person-badge', 'desc': 'Steuerung für den täglichen Outfit-Contest.', 'link': url_for('dashboard.outfit_bot_dashboard'), 'type': 'bot', 'bot': 'outfit'},
-            {'id': 'id_finder', 'title': 'ID-Finder Bot', 'icon': 'bi-search', 'desc': 'Werkzeuge zum Ermitteln von Chat-IDs & Topic-IDs.', 'link': url_for('dashboard.id_finder_dashboard'), 'type': 'bot', 'bot': 'id_finder'},
-            {'id': 'minecraft', 'title': 'Minecraft Server Status', 'icon': 'bi-hammer', 'desc': 'Statusüberwachung und Benachrichtigungen.', 'link': url_for('dashboard.minecraft_status_page'), 'type': 'settings'},
-            {'id': 'users', 'title': 'Benutzerverwaltung', 'icon': 'bi-people', 'desc': 'Benutzerkonten & Zugriffsrechte verwalten.', 'link': url_for('dashboard.manage_users'), 'type': 'settings'},
-            {'id': 'logs', 'title': 'Kritische Logs', 'icon': 'bi-exclamation-triangle', 'desc': 'Zeigt alle Error- und Critical-Logs der Anwendung an.', 'link': url_for('dashboard.critical_errors'), 'type': 'logs'},
-            {'id': 'update', 'title': 'Software Update', 'icon': 'bi-cloud-arrow-down-fill', 'desc': 'Prüfen Sie manuell, ob eine neue Version der Bot-Software verfügbar ist.', 'type': 'update'}
+        {'id': 'live_mod', 'title': 'Live Moderation', 'icon': 'bi-shield-check', 'desc': 'Überwachen und moderieren Sie
+        Telegram-Gruppen in Echtzeit.', 'link': url_for('dashboard.live_moderation'), 'type': 'open'},
+        {'id': 'planer', 'title': 'Nachricht Planer', 'icon': 'bi-megaphone', 'desc': 'Nachrichten & Medien planen oder
+        sofort über den ID-Finder senden.', 'link': url_for('dashboard.broadcast_manager'), 'type': 'settings', 'bot':
+        'id_finder'},
+        {'id': 'tiktok', 'title': 'TikTok Live Benachrichtigung', 'icon': 'bi-tiktok', 'desc': 'Überwacht TikTok
+        Livestreams auf Zielpersonen.', 'link': url_for('dashboard.tiktok_settings'), 'type': 'bot', 'bot': 'tiktok'},
+        {'id': 'invite', 'title': 'Einladungs-Bot', 'icon': 'bi-apple', 'desc': 'Begrüßungstexte & automatische
+        Beitrittskontrolle.', 'link': url_for('dashboard.bot_settings'), 'type': 'bot', 'bot': 'invite'},
+        {'id': 'quiz', 'title': 'Quiz Bot', 'icon': 'bi-question-circle', 'desc': 'Verwaltung der Quizfragen und
+        automatischer Zeitplaner.', 'link': url_for('dashboard.quiz_settings'), 'type': 'bot', 'bot': 'quiz'},
+        {'id': 'umfrage', 'title': 'Umfrage Bot', 'icon': 'bi-bar-chart', 'desc': 'Verwaltung der Umfragen und
+        automatischer Zeitplaner.', 'link': url_for('dashboard.umfrage_settings'), 'type': 'bot', 'bot': 'umfrage'},
+        {'id': 'outfit', 'title': 'Outfit-Wettbewerb', 'icon': 'bi-person-badge', 'desc': 'Steuerung für den täglichen
+        Outfit-Contest.', 'link': url_for('dashboard.outfit_bot_dashboard'), 'type': 'bot', 'bot': 'outfit'},
+        {'id': 'id_finder', 'title': 'ID-Finder Bot', 'icon': 'bi-search', 'desc': 'Werkzeuge zum Ermitteln von Chat-IDs
+        & Topic-IDs.', 'link': url_for('dashboard.id_finder_dashboard'), 'type': 'bot', 'bot': 'id_finder'},
+        {'id': 'minecraft', 'title': 'Minecraft Server Status', 'icon': 'bi-hammer', 'desc': 'Statusüberwachung und
+        Benachrichtigungen.', 'link': url_for('dashboard.minecraft_status_page'), 'type': 'settings'},
+        {'id': 'users', 'title': 'Benutzerverwaltung', 'icon': 'bi-people', 'desc': 'Benutzerkonten & Zugriffsrechte
+        verwalten.', 'link': url_for('dashboard.manage_users'), 'type': 'settings'},
+        {'id': 'logs', 'title': 'Kritische Logs', 'icon': 'bi-exclamation-triangle', 'desc': 'Zeigt alle Error- und
+        Critical-Logs der Anwendung an.', 'link': url_for('dashboard.critical_errors'), 'type': 'logs'},
+        {'id': 'update', 'title': 'Software Update', 'icon': 'bi-cloud-arrow-down-fill', 'desc': 'Prüfen Sie manuell, ob
+        eine neue Version der Bot-Software verfügbar ist.', 'type': 'update'}
         ] %}
 
         {% for item in items %}
         <div class="col" data-id="{{ item.id }}" id="card-{{ item.id }}">
             <div class="card h-100 {% if item.type == 'update' %}card-update{% endif %}">
-                <button class="visibility-toggle" onclick="toggleVisibility('{{ item.id }}')"><i class="bi bi-eye"></i></button>
+                <button class="visibility-toggle" onclick="toggleVisibility('{{ item.id }}')"><i
+                        class="bi bi-eye"></i></button>
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6><i class="bi {{ item.icon }} me-2"></i>{{ item.title }}</h6>
                     {% if item.bot %}
-                        <span class="small fw-bold {{ 'text-success' if bot_status[item.bot].running else 'text-danger' }}">
-                            <span class="status-badge {{ 'bg-success' if bot_status[item.bot].running else 'bg-danger' }}"></span>
-                            {{ 'AKTIV' if bot_status[item.bot].running else 'OFFLINE' }}
-                        </span>
+                    <span class="small fw-bold {{ 'text-success' if bot_status[item.bot].running else 'text-danger' }}">
+                        <span
+                            class="status-badge {{ 'bg-success' if bot_status[item.bot].running else 'bg-danger' }}"></span>
+                        {{ 'AKTIV' if bot_status[item.bot].running else 'OFFLINE' }}
+                    </span>
                     {% endif %}
                 </div>
                 <div class="card-body d-flex flex-column">
                     <p class="card-text small text-secondary mb-3">{{ item.desc }}</p>
-                    
+
                     {% if item.type == 'update' %}
-                        <div id="updateBox">
-                            <div id="updateNotify" class="update-notify"></div>
-                            <button id="btnManualUpdateCheck" class="btn-settings-big btn-primary">
-                                <i class="bi bi-arrow-repeat me-1"></i> NACH UPDATES SCANNEN
-                            </button>
-                            <div id="updateInfoBox" class="update-info-box">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="badge bg-primary">v<span id="newVersionTag"></span> verfügbar</span>
-                                    <small class="text-dim" id="newVersionDate"></small>
-                                </div>
-                                <div class="changelog-text" id="updateChangelog"></div>
-                                <button id="btnInstallNow" class="btn btn-success w-100 mt-3 fw-bold btn-action-sm">JETZT INSTALLIEREN</button>
-                            </div>
-                            <div class="progress mt-3" id="updateProgress" style="display:none; height: 8px;">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%"></div>
+                    <div id="updateBox">
+                        <div id="updateNotify" class="update-notify"></div>
+
+                        <!-- Auto-Update Toggle -->
+                        <div
+                            class="d-flex justify-content-between align-items-center mb-3 p-2 border border-subtle rounded-3 bg-opacity-10 bg-white">
+                            <div class="small fw-medium"><i class="bi bi-robot me-1"></i> Auto-Update</div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="checkAutoUpdate">
                             </div>
                         </div>
+
+                        <button id="btnManualUpdateCheck" class="btn-settings-big btn-primary">
+                            <i class="bi bi-arrow-repeat me-1"></i> NACH UPDATES SCANNEN
+                        </button>
+                        <div class="text-center mt-2">
+                            <small class="text-secondary" style="font-size: 0.75rem;">Zuletzt geprüft: <span
+                                    id="lastCheckTime">-</span></small>
+                        </div>
+                        <div id="updateInfoBox" class="update-info-box">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-primary">v<span id="newVersionTag"></span> verfügbar</span>
+                                <small class="text-dim" id="newVersionDate"></small>
+                            </div>
+                            <div class="changelog-text" id="updateChangelog"></div>
+                            <button id="btnInstallNow" class="btn btn-success w-100 mt-3 fw-bold btn-action-sm">JETZT
+                                INSTALLIEREN</button>
+                        </div>
+                        <div class="progress mt-3" id="updateProgress" style="display:none; height: 8px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                style="width: 0%"></div>
+                        </div>
+                    </div>
                     {% endif %}
 
                     <div class="mt-auto">
                         {% if item.type == 'bot' %}
-                            <div class="d-flex gap-2 mb-2">
-                                {% if bot_status[item.bot].running %}
-                                    <form action="/bot-action/{{ item.bot }}/stop" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
-                                {% else %}
-                                    <form action="/bot-action/{{ item.bot }}/start" method="POST" class="flex-grow-1 m-0"><button type="submit" class="btn btn-success btn-action-sm w-100">START</button></form>
-                                {% endif %}
-                            </div>
+                        <div class="d-flex gap-2 mb-2">
+                            {% if bot_status[item.bot].running %}
+                            <form action="/bot-action/{{ item.bot }}/stop" method="POST" class="flex-grow-1 m-0"><button
+                                    type="submit" class="btn btn-danger btn-action-sm w-100">STOP</button></form>
+                            {% else %}
+                            <form action="/bot-action/{{ item.bot }}/start" method="POST" class="flex-grow-1 m-0">
+                                <button type="submit" class="btn btn-success btn-action-sm w-100">START</button>
+                            </form>
+                            {% endif %}
+                        </div>
                         {% endif %}
                         {% if item.type != 'update' %}
-                            <a href="{{ item.link }}" class="btn-settings-big {% if item.type == 'logs' %}btn-danger{% endif %}">
-                                {{ 'LOGS ANSEHEN' if item.type == 'logs' else ('ÖFFNEN' if item.type == 'open' else 'EINSTELLUNGEN') }}
-                            </a>
+                        <a href="{{ item.link }}"
+                            class="btn-settings-big {% if item.type == 'logs' %}btn-danger{% endif %}">
+                            {{ 'LOGS ANSEHEN' if item.type == 'logs' else ('ÖFFNEN' if item.type == 'open' else
+                            'EINSTELLUNGEN') }}
+                        </a>
                         {% endif %}
                     </div>
                 </div>
@@ -190,7 +365,7 @@
     let sortable = null;
 
     // Load saved layout
-    const savedLayout = {{ layout|tojson if layout else 'null' }};
+    const savedLayout = {{ layout| tojson if layout else 'null' }};
     if (savedLayout) {
         if (savedLayout.order) {
             savedLayout.order.forEach(id => {
@@ -218,10 +393,10 @@
         const order = Array.from(grid.children).map(child => child.dataset.id);
         const hidden = Array.from(document.querySelectorAll('.hidden-card')).map(el => el.dataset.id);
         const title = titleInput.value;
-        
+
         const res = await fetch('/api/dashboard/save-layout', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ order, hidden, title })
         });
         if (res.ok) location.reload();
@@ -238,17 +413,46 @@
     const scanBtn = document.getElementById('btnManualUpdateCheck');
     const notify = document.getElementById('updateNotify');
     const infoBox = document.getElementById('updateInfoBox');
+    const autoUpdateToggle = document.getElementById('checkAutoUpdate');
+    const lastCheckSpan = document.getElementById('lastCheckTime');
     let updateData = null;
+
+    // Load initial system settings
+    async function initUpdateSettings() {
+        try {
+            const res = await fetch('/api/system/settings');
+            const data = await res.json();
+            if (autoUpdateToggle) autoUpdateToggle.checked = !!data.auto_update_enabled;
+            if (lastCheckSpan && data.last_check_at) {
+                const date = new Date(data.last_check_at);
+                lastCheckSpan.innerText = date.toLocaleString('de-DE');
+            }
+        } catch (e) { console.error("Could not load system settings", e); }
+    }
+    initUpdateSettings();
+
+    // Save auto-update preference
+    if (autoUpdateToggle) {
+        autoUpdateToggle.onchange = async () => {
+            try {
+                await fetch('/api/system/settings/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ auto_update_enabled: autoUpdateToggle.checked })
+                });
+            } catch (e) { alert("Fehler beim Speichern der Einstellung."); }
+        };
+    }
 
     // Helper to safe reload page
     function safeReload() {
         notify.innerText = 'Server startet neu... Bitte warten...';
         notify.style.background = 'rgba(255, 165, 0, 0.2)'; // Orange
         notify.style.color = '#fbbf24';
-        
+
         let attempts = 0;
         const maxAttempts = 30; // 30 seconds timeout
-        
+
         const interval = setInterval(async () => {
             attempts++;
             try {
@@ -261,7 +465,7 @@
             } catch (e) {
                 // Server still down, keep waiting
             }
-            
+
             if (attempts >= maxAttempts) {
                 clearInterval(interval);
                 notify.innerText = 'Server antwortet nicht. Bitte Seite manuell neu laden.';
@@ -313,26 +517,26 @@
     const installBtn = document.getElementById('btnInstallNow');
     if (installBtn) {
         installBtn.onclick = async () => {
-            if(!confirm("Update jetzt installieren? Der Server wird neu gestartet.")) return;
+            if (!confirm("Update jetzt installieren? Der Server wird neu gestartet.")) return;
             document.getElementById('updateProgress').style.display = 'block';
             infoBox.style.display = 'none';
             notify.innerText = 'Installation wird vorbereitet...';
-            
+
             try {
                 const res = await fetch('/api/update/install', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(updateData)
                 });
-                
-                if(res.ok) {
+
+                if (res.ok) {
                     const statusInterval = setInterval(async () => {
                         try {
                             const sRes = await fetch('/api/update/status');
                             const s = await sRes.json();
-                            
+
                             document.querySelector('#updateProgress .progress-bar').style.width = s.progress + '%';
-                            
+
                             // Show detailed status text
                             if (s.status === 'downloading') notify.innerText = 'Lade Update herunter... (' + s.progress + '%)';
                             else if (s.status === 'extracting') notify.innerText = 'Entpacke Dateien... (' + s.progress + '%)';

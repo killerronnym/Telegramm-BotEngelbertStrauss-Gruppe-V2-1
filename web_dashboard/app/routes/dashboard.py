@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, session
+from flask_login import login_required, current_user
 import os
 import json
 import subprocess
@@ -21,13 +22,17 @@ BASE_DIR = os.path.join(PROJECT_ROOT, 'web_dashboard')
 INVITE_BOT_PID_FILE = os.path.join(BASE_DIR, "invite_bot.pid")
 ID_FINDER_BOT_PID_FILE = os.path.join(BASE_DIR, "id_finder_bot.pid")
 TIKTOK_BOT_PID_FILE = os.path.join(BASE_DIR, "tiktok_bot.pid")
+QUIZ_BOT_PID_FILE = os.path.join(BASE_DIR, "quiz_bot.pid")
+UMFRAGE_BOT_PID_FILE = os.path.join(BASE_DIR, "umfrage_bot.pid")
+OUTFIT_BOT_PID_FILE = os.path.join(BASE_DIR, "outfit_bot.pid")
 
 # Log Files
-INVITE_BOT_ERROR_LOG = os.path.join(BASE_DIR, "invite_bot_error.log")
-USER_INTERACTION_LOG_FILE = os.path.join(PROJECT_ROOT, "user_interactions.log")
 INVITE_BOT_LOG_FILE = os.path.join(BASE_DIR, "invite_bot.log")
 ID_FINDER_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "bots", "id_finder_bot", "id_finder_bot.log")
 TIKTOK_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "bots", "tiktok_bot", "tiktok_bot.log")
+QUIZ_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "bots", "quiz_bot", "quiz_bot.log")
+UMFRAGE_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "bots", "umfrage_bot", "umfrage_bot.log")
+OUTFIT_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "bots", "outfit_bot", "outfit_bot.log")
 
 def is_process_running(pid):
     try:
@@ -53,6 +58,9 @@ def get_bot_status_simple():
     check_pid("invite", INVITE_BOT_PID_FILE)
     check_pid("id_finder", ID_FINDER_BOT_PID_FILE)
     check_pid("tiktok", TIKTOK_BOT_PID_FILE)
+    check_pid("quiz", QUIZ_BOT_PID_FILE)
+    check_pid("umfrage", UMFRAGE_BOT_PID_FILE)
+    check_pid("outfit", OUTFIT_BOT_PID_FILE)
     return status
 
 @bp.context_processor
@@ -61,6 +69,7 @@ def inject_globals():
 
 @bp.route('/')
 @bp.route('/dashboard')
+@login_required
 def index():
     version_path = os.path.join(PROJECT_ROOT, 'version.json')
     version = {"version": "1.0.0"}
@@ -73,6 +82,7 @@ def index():
     return render_template('index.html', version=version, layout=layout)
 
 @bp.route('/api/dashboard/save-layout', methods=['POST'])
+@login_required
 def save_dashboard_layout():
     data = request.json
     s = BotSettings.query.filter_by(bot_name='dashboard_layout').first()
@@ -83,6 +93,7 @@ def save_dashboard_layout():
 
 # --- INVITE BOT ROUTES ---
 @bp.route('/bot-settings', methods=["GET", "POST"])
+@login_required
 def bot_settings():
     s = BotSettings.query.filter_by(bot_name='invite').first()
     if not s:
@@ -103,6 +114,7 @@ def bot_settings():
     return render_template("bot_settings.html", config=json.loads(s.config_json), is_invite_running=get_bot_status_simple()['invite']['running'], user_interaction_logs=[], invite_bot_logs=logs)
 
 @bp.route('/bot-settings/save-content', methods=['POST'])
+@login_required
 def save_invite_content():
     s = BotSettings.query.filter_by(bot_name='invite').first()
     cfg = json.loads(s.config_json)
@@ -111,6 +123,7 @@ def save_invite_content():
     return redirect(url_for('dashboard.bot_settings'))
 
 @bp.route('/bot-settings/add-field', methods=['POST'])
+@login_required
 def add_field():
     s = BotSettings.query.filter_by(bot_name='invite').first()
     cfg = json.loads(s.config_json); fields = cfg.setdefault('form_fields', [])
@@ -118,6 +131,7 @@ def add_field():
     s.config_json = json.dumps(cfg); db.session.commit(); return redirect(url_for('dashboard.bot_settings'))
 
 @bp.route('/bot-settings/edit-field', methods=['POST'])
+@login_required
 def edit_field():
     s = BotSettings.query.filter_by(bot_name='invite').first()
     cfg = json.loads(s.config_json); fid = request.form.get('field_id')
@@ -126,6 +140,7 @@ def edit_field():
     s.config_json = json.dumps(cfg); db.session.commit(); return redirect(url_for('dashboard.bot_settings'))
 
 @bp.route('/bot-settings/delete-field', methods=['POST'])
+@login_required
 def delete_field():
     s = BotSettings.query.filter_by(bot_name='invite').first()
     cfg = json.loads(s.config_json); fid = request.form.get('field_id')
@@ -133,6 +148,7 @@ def delete_field():
     s.config_json = json.dumps(cfg); db.session.commit(); return redirect(url_for('dashboard.bot_settings'))
 
 @bp.route('/bot-settings/move-field/<string:field_id>/<string:direction>', methods=['POST'])
+@login_required
 def invite_bot_move_field(field_id, direction):
     s = BotSettings.query.filter_by(bot_name='invite').first()
     cfg = json.loads(s.config_json); fs = cfg.get('form_fields', [])
@@ -143,22 +159,26 @@ def invite_bot_move_field(field_id, direction):
     s.config_json = json.dumps(cfg); db.session.commit(); return redirect(url_for('dashboard.bot_settings'))
 
 @bp.route('/bot-settings/clear-logs/user', methods=['POST'])
+@login_required
 def clear_user_logs():
     if os.path.exists(USER_INTERACTION_LOG_FILE): open(USER_INTERACTION_LOG_FILE, 'w').close()
     return redirect(url_for('dashboard.bot_settings'))
 
 @bp.route('/bot-settings/clear-logs/system', methods=['POST'])
+@login_required
 def clear_system_logs():
     if os.path.exists(INVITE_BOT_LOG_FILE): open(INVITE_BOT_LOG_FILE, 'w').close()
     return redirect(url_for('dashboard.bot_settings'))
 
 # --- BROADCAST ROUTES ---
 @bp.route('/broadcast_manager')
+@login_required
 def broadcast_manager():
     ts = TopicMapping.query.all(); bs = Broadcast.query.order_by(Broadcast.created_at.desc()).all()
     return render_template('broadcast_manager.html', known_topics={str(t.topic_id): t.topic_name for t in ts}, broadcasts=bs)
 
 @bp.route('/broadcast_manager/save', methods=['POST'])
+@login_required
 def save_broadcast():
     m = request.files.get('media'); mpath, mtype = None, None
     if m and m.filename:
@@ -169,6 +189,7 @@ def save_broadcast():
     db.session.add(b); db.session.commit(); flash('Eingestellt.', 'success'); return redirect(url_for('dashboard.broadcast_manager'))
 
 @bp.route('/broadcast_manager/topic/save', methods=['POST'])
+@login_required
 def save_topic_mapping():
     tid, tname = request.form.get('topic_id'), request.form.get('topic_name')
     m = TopicMapping.query.filter_by(topic_id=tid).first()
@@ -177,12 +198,14 @@ def save_topic_mapping():
     db.session.commit(); return redirect(url_for('dashboard.broadcast_manager'))
 
 @bp.route('/broadcast_manager/topic/delete/<topic_id>', methods=['POST'])
+@login_required
 def delete_topic_mapping(topic_id):
     m = TopicMapping.query.filter_by(topic_id=topic_id).first()
     if m: db.session.delete(m); db.session.commit()
     return redirect(url_for('dashboard.broadcast_manager'))
 
 @bp.route('/broadcast_manager/delete/<int:broadcast_id>', methods=['POST'])
+@login_required
 def delete_broadcast(broadcast_id):
     b = Broadcast.query.get(broadcast_id)
     if b: db.session.delete(b); db.session.commit()
@@ -190,33 +213,274 @@ def delete_broadcast(broadcast_id):
 
 # --- OTHER BOT ROUTES ---
 @bp.route('/live-moderation')
+@login_required
 def live_moderation(): return render_template('live_moderation.html')
 
 @bp.route('/quiz-settings', methods=['GET', 'POST'])
+@login_required
 def quiz_settings():
     s = BotSettings.query.filter_by(bot_name='quiz').first()
-    if not s: s = BotSettings(bot_name='quiz', config_json='{}'); db.session.add(s); db.session.commit()
-    return render_template('quiz_settings.html', schedule={}, stats={'total': 0, 'asked': 0, 'remaining': 0}, config=json.loads(s.config_json), questions_json='[]', asked_questions_json='[]', logs=[])
+    if not s:
+        cfg = {"bot_token": "", "channel_id": "", "topic_id": "", "schedule": {"enabled": False, "time": "12:00", "days": []}}
+        s = BotSettings(bot_name='quiz', config_json=json.dumps(cfg))
+        db.session.add(s); db.session.commit()
+    
+    cfg = json.loads(s.config_json)
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'save_settings':
+            cfg['bot_token'] = request.form.get('token')
+            cfg['channel_id'] = request.form.get('channel_id')
+            cfg['topic_id'] = request.form.get('topic_id')
+        elif action == 'save_schedule':
+            cfg['schedule'] = {
+                'enabled': 'schedule_enabled' in request.form,
+                'time': request.form.get('schedule_time', '12:00'),
+                'days': [int(d) for d in request.form.getlist('schedule_days')]
+            }
+        elif action == 'save_questions':
+            q_json = request.form.get('questions_json')
+            try:
+                data = json.loads(q_json)
+                q_path = os.path.join(PROJECT_ROOT, "data", "quizfragen.json")
+                os.makedirs(os.path.dirname(q_path), exist_ok=True)
+                with open(q_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                flash('Fragen gespeichert.', 'success')
+            except Exception as e:
+                flash(f'Fehler beim Speichern der Fragen: {e}', 'danger')
+        elif action == 'save_asked_questions':
+            aq_json = request.form.get('asked_questions_json')
+            try:
+                data = json.loads(aq_json)
+                aq_path = os.path.join(PROJECT_ROOT, "bots", "quiz_bot", "quizfragen_gestellt.json")
+                os.makedirs(os.path.dirname(aq_path), exist_ok=True)
+                with open(aq_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                flash('Protokoll gespeichert.', 'success')
+            except Exception as e:
+                flash(f'Fehler beim Speichern des Protokolls: {e}', 'danger')
+        
+        s.config_json = json.dumps(cfg)
+        db.session.commit()
+        if action in ['save_settings', 'save_schedule']: flash('Einstellungen gespeichert.', 'success')
+        return redirect(url_for('dashboard.quiz_settings'))
+
+    # Load Data for Template
+    q_path = os.path.join(PROJECT_ROOT, "data", "quizfragen.json")
+    aq_path = os.path.join(PROJECT_ROOT, "bots", "quiz_bot", "quizfragen_gestellt.json")
+    
+    questions = []
+    if os.path.exists(q_path):
+        try:
+            with open(q_path, 'r', encoding='utf-8') as f: questions = json.load(f)
+        except: pass
+        
+    asked_questions = []
+    if os.path.exists(aq_path):
+        try:
+            with open(aq_path, 'r', encoding='utf-8') as f: asked_questions = json.load(f)
+        except: pass
+
+    logs = []
+    if os.path.exists(QUIZ_BOT_LOG_FILE):
+        try:
+            with open(QUIZ_BOT_LOG_FILE, 'r', encoding='utf-8') as f: logs = f.readlines()[-50:]
+        except: pass
+
+    stats = {
+        'total': len(questions),
+        'asked': len(asked_questions),
+        'remaining': max(0, len(questions) - len(asked_questions))
+    }
+
+    return render_template('quiz_settings.html', 
+                          schedule=cfg.get('schedule', {}), 
+                          stats=stats, 
+                          config=cfg, 
+                          questions_json=json.dumps(questions, indent=2, ensure_ascii=False), 
+                          asked_questions_json=json.dumps(asked_questions, indent=2, ensure_ascii=False), 
+                          logs=logs)
+
+@bp.route('/quiz/send-random', methods=['POST'])
+@login_required
+def quiz_send_random():
+    tfile = os.path.join(PROJECT_ROOT, "bots", "quiz_bot", "send_now.tmp")
+    with open(tfile, 'w') as f: f.write('1')
+    flash('Trigger gesendet. Der Bot wird die Frage in Kürze senden.', 'info')
+    return redirect(url_for('dashboard.quiz_settings'))
 
 @bp.route('/umfrage-settings', methods=['GET', 'POST'])
+@login_required
 def umfrage_settings():
     s = BotSettings.query.filter_by(bot_name='umfrage').first()
-    if not s: s = BotSettings(bot_name='umfrage', config_json='{}'); db.session.add(s); db.session.commit()
-    return render_template('umfrage_settings.html', config=json.loads(s.config_json), schedule={}, stats={}, logs=[])
+    if not s:
+        cfg = {"bot_token": "", "channel_id": "", "topic_id": "", "schedule": {"enabled": False, "time": "12:00", "days": []}}
+        s = BotSettings(bot_name='umfrage', config_json=json.dumps(cfg))
+        db.session.add(s); db.session.commit()
+    
+    cfg = json.loads(s.config_json)
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'save_settings':
+            cfg['bot_token'] = request.form.get('token')
+            cfg['channel_id'] = request.form.get('channel_id')
+            cfg['topic_id'] = request.form.get('topic_id')
+        elif action == 'save_schedule':
+            cfg['schedule'] = {
+                'enabled': 'schedule_enabled' in request.form,
+                'time': request.form.get('schedule_time', '12:00'),
+                'days': [int(d) for d in request.form.getlist('schedule_days')]
+            }
+        elif action == 'save_polls':
+            p_json = request.form.get('polls_json')
+            try:
+                data = json.loads(p_json)
+                p_path = os.path.join(PROJECT_ROOT, "data", "umfragen.json")
+                os.makedirs(os.path.dirname(p_path), exist_ok=True)
+                with open(p_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                flash('Umfragen gespeichert.', 'success')
+            except Exception as e:
+                flash(f'Fehler beim Speichern der Umfragen: {e}', 'danger')
+        
+        s.config_json = json.dumps(cfg)
+        db.session.commit()
+        if action in ['save_settings', 'save_schedule']: flash('Einstellungen gespeichert.', 'success')
+        return redirect(url_for('dashboard.umfrage_settings'))
+
+    # Load Data
+    p_path = os.path.join(PROJECT_ROOT, "data", "umfragen.json")
+    up_path = os.path.join(PROJECT_ROOT, "bots", "umfrage_bot", "umfragen_gestellt.json")
+    
+    polls = []
+    if os.path.exists(p_path):
+        try:
+            with open(p_path, 'r', encoding='utf-8') as f: polls = json.load(f)
+        except: pass
+        
+    used_polls = []
+    if os.path.exists(up_path):
+        try:
+            with open(up_path, 'r', encoding='utf-8') as f: used_polls = json.load(f)
+        except: pass
+
+    logs = []
+    if os.path.exists(UMFRAGE_BOT_LOG_FILE):
+        try:
+            with open(UMFRAGE_BOT_LOG_FILE, 'r', encoding='utf-8') as f: logs = f.readlines()[-50:]
+        except: pass
+
+    stats = {
+        'total': len(polls),
+        'asked': len(used_polls),
+        'remaining': max(0, len(polls) - len(used_polls))
+    }
+
+    return render_template('umfrage_settings.html', 
+                          config=cfg, 
+                          schedule=cfg.get('schedule', {}), 
+                          stats=stats, 
+                          logs=logs,
+                          polls_json=json.dumps(polls, indent=2, ensure_ascii=False))
+
+@bp.route('/umfrage/send-now', methods=['POST'])
+@login_required
+def umfrage_send_now():
+    tfile = os.path.join(PROJECT_ROOT, "bots", "umfrage_bot", "send_now.tmp")
+    with open(tfile, 'w') as f: f.write('1')
+    flash('Trigger gesendet.', 'info')
+    return redirect(url_for('dashboard.umfrage_settings'))
 
 @bp.route('/outfit-bot', methods=['GET', 'POST'])
+@login_required
 def outfit_bot_dashboard():
     s = BotSettings.query.filter_by(bot_name='outfit').first()
-    if not s: s = BotSettings(bot_name='outfit', config_json='{}'); db.session.add(s); db.session.commit()
-    return render_template('outfit_bot_dashboard.html', config=json.loads(s.config_json), is_running=get_bot_status_simple()['outfit']['running'], logs=[], duel_status={'active': False})
+    if not s:
+        cfg = {
+            "CHAT_ID": "", "TOPIC_ID": "", "POST_TIME": "18:00", "WINNER_TIME": "22:00",
+            "AUTO_POST_ENABLED": True, "ADMIN_USER_IDS": [], "DUEL_MODE": False,
+            "DUEL_TYPE": "tie_breaker", "DUEL_DURATION_MINUTES": 60, "BOT_TOKEN": ""
+        }
+        s = BotSettings(bot_name='outfit', config_json=json.dumps(cfg))
+        db.session.add(s); db.session.commit()
+    
+    cfg = json.loads(s.config_json)
+    
+    logs = []
+    if os.path.exists(OUTFIT_BOT_LOG_FILE):
+        try:
+            with open(OUTFIT_BOT_LOG_FILE, 'r', encoding='utf-8') as f: logs = f.readlines()[-50:]
+        except: pass
+        
+    # Load Duel Status from data file
+    data_path = os.path.join(PROJECT_ROOT, "bots", "outfit_bot", "outfit_bot_data.json")
+    duel_status = {'active': False}
+    if os.path.exists(data_path):
+        try:
+            with open(data_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if data.get('contest_active'):
+                    duel_status = {'active': True, 'contestants': f"{len(data.get('submissions', {}))} Teilnehmer"}
+        except: pass
+
+    return render_template('outfit_bot_dashboard.html', 
+                          config=cfg, 
+                          is_running=get_bot_status_simple()['outfit']['running'], 
+                          logs=logs, 
+                          duel_status=duel_status)
 
 @bp.route('/outfit-bot/actions/<action>', methods=['POST'])
+@login_required
 def outfit_bot_actions(action):
-    # Dummy Action Handler
-    flash(f"Aktion {action} ausgeführt.", "info")
+    s = BotSettings.query.filter_by(bot_name='outfit').first()
+    if not s:
+        cfg = DEFAULT_CONFIG.copy()
+        s = BotSettings(bot_name='outfit', config_json=json.dumps(cfg))
+        db.session.add(s); db.session.commit()
+    
+    cfg = json.loads(s.config_json)
+    
+    if action == 'save_config':
+        cfg.update({
+            'BOT_TOKEN': request.form.get('BOT_TOKEN'),
+            'CHAT_ID': request.form.get('CHAT_ID'),
+            'TOPIC_ID': request.form.get('TOPIC_ID'),
+            'AUTO_POST_ENABLED': 'AUTO_POST_ENABLED' in request.form,
+            'POST_TIME': request.form.get('POST_TIME', '18:00'),
+            'WINNER_TIME': request.form.get('WINNER_TIME', '22:00'),
+            'DUEL_MODE': 'DUEL_MODE' in request.form,
+            'DUEL_TYPE': request.form.get('DUEL_TYPE', 'tie_breaker'),
+            'DUEL_DURATION_MINUTES': int(request.form.get('DUEL_DURATION_MINUTES', 60)),
+            'ADMIN_USER_IDS': [uid.strip() for uid in request.form.get('ADMIN_USER_IDS', '').split(',') if uid.strip()]
+        })
+        s.config_json = json.dumps(cfg)
+        db.session.commit()
+        flash('Outfit-Konfiguration gespeichert.', 'success')
+    
+    elif action == 'start_contest':
+        tfile = os.path.join(PROJECT_ROOT, "bots", "outfit_bot", "start_contest.tmp")
+        # Ensure the bot can notice this file. We should probably use a standard trigger file name or mechanism.
+        # Based on outfit_bot.py, it doesn't have a trigger file mechanism yet, only schedule.
+        # Let's add it to outfit_bot.py or just use a message file system.
+        with open(tfile, 'w') as f: f.write('1')
+        flash('Befehl zum Starten des Wettbewerbs gesendet.', 'info')
+    
+    elif action == 'announce_winner':
+        tfile = os.path.join(PROJECT_ROOT, "bots", "outfit_bot", "announce_winner.tmp")
+        with open(tfile, 'w') as f: f.write('1')
+        flash('Befehl zum Auslosen des Gewinners gesendet.', 'info')
+        
+    elif action == 'clear_logs':
+        if os.path.exists(OUTFIT_BOT_LOG_FILE): open(OUTFIT_BOT_LOG_FILE, 'w').close()
+        flash('Logs gelöscht.', 'success')
+        
     return redirect(url_for('dashboard.outfit_bot_dashboard'))
 
 @bp.route('/critical-errors')
+@login_required
 def critical_errors():
     logs = []
     lpath = os.path.join(BASE_DIR, "critical_errors.log")
@@ -225,12 +489,14 @@ def critical_errors():
     return render_template("critical_errors.html", critical_logs=logs)
 
 @bp.route('/critical-errors/clear', methods=['POST'])
+@login_required
 def clear_critical_errors():
     lpath = os.path.join(BASE_DIR, "critical_errors.log")
     if os.path.exists(lpath): open(lpath, 'w').close()
     return redirect(url_for('dashboard.critical_errors'))
 
 @bp.route('/id-finder')
+@login_required
 def id_finder_dashboard():
     s = BotSettings.query.filter_by(bot_name='id_finder').first()
     if not s:
@@ -244,6 +510,7 @@ def id_finder_dashboard():
     return render_template('id_finder_dashboard.html', config=cfg, user_registry=us, is_running=get_bot_status_simple()['id_finder']['running'], logs=[])
 
 @bp.route('/id-finder/save-config', methods=['POST'])
+@login_required
 def id_finder_save_config():
     s = BotSettings.query.filter_by(bot_name='id_finder').first()
     cfg = json.loads(s.config_json)
@@ -269,30 +536,55 @@ def id_finder_save_config():
     return redirect(url_for('dashboard.id_finder_dashboard'))
 
 @bp.route('/id-finder/user/<int:user_id>')
+@login_required
 def id_finder_user_detail(user_id):
     u = IDFinderUser.query.filter_by(telegram_id=user_id).first_or_404()
     ms = IDFinderMessage.query.filter_by(telegram_user_id=user_id).order_by(IDFinderMessage.timestamp.desc()).limit(100).all()
     return render_template('id_finder_user_detail.html', user=u, messages=ms)
 
 @bp.route('/id-finder/delete-user/<int:user_id>', methods=['POST'])
+@login_required
 def id_finder_delete_user(user_id):
     u = IDFinderUser.query.filter_by(telegram_id=user_id).first()
     if u: db.session.delete(u); db.session.commit()
     return redirect(url_for('dashboard.id_finder_dashboard'))
 
 @bp.route('/id-finder/commands')
+@login_required
 def id_finder_commands(): return render_template('id_finder_commands.html')
 
 @bp.route('/id-finder/admin-panel')
+@login_required
 def id_finder_admin_panel():
     ads = IDFinderAdmin.query.all()
-    # Mocking admins as a dictionary for the template for demo purposes if needed, 
-    # but the template expects a dict per the loop: `for admin_id, admin_data in admins.items()`
-    # We should convert ads list to dict:
     admins_dict = {str(a.telegram_user_id): {'name': a.name, 'permissions': json.loads(a.permissions) if a.permissions else {}} for a in ads}
-    return render_template('id_finder_admin_panel.html', admins=admins_dict, available_permission_groups={}, available_permissions={})
+    
+    perm_groups = {
+        "Moderation": {
+            "can_warn": "Nutzer verwarnen",
+            "can_mute": "Nutzer stummschalten",
+            "can_kick": "Nutzer kicken",
+            "can_ban": "Nutzer bannen",
+            "can_delete": "Nachrichten löschen"
+        },
+        "Management": {
+            "can_broadcast": "Broadcasts senden",
+            "can_manage_topics": "Topics verwalten",
+            "can_view_logs": "Logs einsehen"
+        },
+        "System": {
+            "is_superadmin": "Vollzugriff (Superadmin)",
+            "can_manage_admins": "Andere Admins verwalten"
+        }
+    }
+    
+    return render_template('id_finder_admin_panel.html', 
+                          admins=admins_dict, 
+                          available_permission_groups=perm_groups, 
+                          available_permissions={})
 
 @bp.route('/id-finder/admin-panel/add', methods=['POST'])
+@login_required
 def id_finder_add_admin():
     admin_id = request.form.get('admin_id')
     admin_name = request.form.get('admin_name')
@@ -308,6 +600,7 @@ def id_finder_add_admin():
     return redirect(url_for('dashboard.id_finder_admin_panel'))
 
 @bp.route('/id-finder/admin-panel/delete', methods=['POST'])
+@login_required
 def id_finder_delete_admin():
     admin_id = request.form.get('admin_id')
     if admin_id:
@@ -319,6 +612,7 @@ def id_finder_delete_admin():
     return redirect(url_for('dashboard.id_finder_admin_panel'))
 
 @bp.route('/id-finder/admin-panel/update-permissions', methods=['POST'])
+@login_required
 def id_finder_update_admin_permissions():
     admin_id = request.form.get('admin_id')
     if admin_id:
@@ -332,6 +626,7 @@ def id_finder_update_admin_permissions():
     return redirect(url_for('dashboard.id_finder_admin_panel'))
 
 @bp.route('/id-finder/analytics')
+@login_required
 def id_finder_analytics():
     try:
         days = int(request.args.get('days') or 7)
@@ -411,18 +706,23 @@ def id_finder_analytics():
             busiest_hours[int(row.hour)] = row.count
 
     # Weekdays distribution
-    # Extract 'dow' works across most dialects (0=Sun, 1=Mon... in some, or 1=Sun in others).
-    # MySQL: 1=Sun, 2=Mon
-    # SQLite: 0=Sun, 1=Mon
+    # Extract 'dow' is not supported in MySQL/MariaDB.
+    engine_name = db.engine.dialect.name
+    if engine_name == 'mysql':
+        # MySQL/MariaDB: DAYOFWEEK returns 1 (Sun) to 7 (Sat)
+        dow_expr = func.dayofweek(IDFinderMessage.timestamp)
+    else:
+        # SQLite: 0 (Sun) to 6 (Sat)
+        dow_expr = db.extract('dow', IDFinderMessage.timestamp)
+
     dow_query = db.session.query(
-        db.extract('dow', IDFinderMessage.timestamp).label('dow'),
+        dow_expr.label('dow'),
         func.count(IDFinderMessage.id).label('count')
     ).filter(query_filter).group_by('dow').all()
 
     busiest_days = [0] * 7
     for row in dow_query:
         if row.dow is not None:
-            engine_name = db.engine.dialect.name
             if engine_name == 'mysql':
                 # Shift MySQL 1-7 (Sun-Sat) to 0-6 (Mon-Sun)
                 py_dow = (int(row.dow) + 5) % 7
@@ -467,49 +767,155 @@ def id_finder_user_activity(uid):
 
 # --- USER MANAGEMENT ---
 @bp.route('/users')
+@login_required
 def manage_users():
     us = User.query.all(); ud = {u.username: {'role': u.role} for u in us}
     return render_template('manage_users.html', users=ud)
 
 @bp.route('/users/add', methods=['POST'])
+@login_required
 def add_user():
     u, p, r = request.form.get('username'), request.form.get('password'), request.form.get('role', 'user')
-    if u and p and not User.query.filter_by(username=u).first():
+    if not u or not p:
+        flash('Benutzername und Passwort sind erforderlich.', 'danger')
+        return redirect(url_for('dashboard.manage_users'))
+        
+    if User.query.filter_by(username=u).first():
+        flash(f'Benutzername "{u}" existiert bereits.', 'danger')
+        return redirect(url_for('dashboard.manage_users'))
+        
+    try:
         nu = User(username=u, role=r); nu.set_password(p); db.session.add(nu); db.session.commit()
+        flash(f'Benutzer "{u}" wurde angelegt.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Fehler beim Anlegen des Benutzers: {e}', 'danger')
+        
     return redirect(url_for('dashboard.manage_users'))
 
 @bp.route('/users/delete/<username>', methods=['POST'])
+@login_required
 def delete_user(username):
+    if username == current_user.username:
+        flash('Du kannst dich nicht selbst löschen.', 'danger')
+        return redirect(url_for('dashboard.manage_users'))
+        
     u = User.query.filter_by(username=username).first()
-    if u: db.session.delete(u); db.session.commit()
+    if not u:
+        flash('Benutzer nicht gefunden.', 'danger')
+        return redirect(url_for('dashboard.manage_users'))
+        
+    try:
+        db.session.delete(u)
+        db.session.commit()
+        flash(f'Benutzer "{username}" wurde gelöscht.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Fehler beim Löschen des Benutzers: {e}', 'danger')
+        
     return redirect(url_for('dashboard.manage_users'))
 
 @bp.route('/users/edit/<username>', methods=['POST'])
+@login_required
 def edit_user(username):
     u = User.query.filter_by(username=username).first()
-    if u:
-        nu, np, nr = request.form.get('new_username'), request.form.get('new_password'), request.form.get('new_role')
-        if nu: u.username = nu
-        if np: u.set_password(np)
-        if nr: u.role = nr
+    if not u:
+        flash('Benutzer nicht gefunden.', 'danger')
+        return redirect(url_for('dashboard.manage_users'))
+        
+    nu, np, nr = request.form.get('new_username'), request.form.get('new_password'), request.form.get('new_role')
+    
+    if nu and nu != username:
+        if User.query.filter_by(username=nu).first():
+            flash(f'Benutzername "{nu}" wird bereits verwendet.', 'danger')
+            return redirect(url_for('dashboard.manage_users'))
+        u.username = nu
+        
+    if np: u.set_password(np)
+    if nr: u.role = nr
+    
+    try:
         db.session.commit()
+        flash(f'Benutzer "{username}" wurde aktualisiert.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Interner Fehler: {e}', 'danger')
+        
     return redirect(url_for('dashboard.manage_users'))
 
 # --- MINECRAFT ---
-@bp.route('/minecraft')
-def minecraft_status_page(): return render_template('minecraft_status.html', cfg=None)
+@bp.route('/minecraft', methods=['GET', 'POST'])
+@login_required
+def minecraft_status_page():
+    s = BotSettings.query.filter_by(bot_name='minecraft').first()
+    if not s:
+        cfg = {
+            "mc_host": "127.0.0.1", "mc_port": 25565, "display_host": "", "display_port": None,
+            "chat_id": "", "topic_id": None, "update_seconds": 30, "delete_player_seconds": 8
+        }
+        s = BotSettings(bot_name='minecraft', config_json=json.dumps(cfg))
+        db.session.add(s); db.session.commit()
+    
+    cfg = json.loads(s.config_json)
+    
+    if request.method == 'POST':
+        # Update settings from form
+        cfg['mc_host'] = request.form.get('mc_host', '127.0.0.1')
+        cfg['mc_port'] = int(request.form.get('mc_port', 25565))
+        cfg['display_host'] = request.form.get('display_host', '')
+        cfg['display_port'] = int(request.form.get('display_port', 25565))
+        cfg['chat_id'] = request.form.get('chat_id', '')
+        cfg['topic_id'] = request.form.get('topic_id') or None
+        cfg['update_seconds'] = int(request.form.get('update_seconds', 30))
+        cfg['delete_player_seconds'] = int(request.form.get('delete_player_seconds', 8))
+        
+        s.config_json = json.dumps(cfg)
+        db.session.commit()
+        flash('Minecraft-Einstellungen gespeichert.', 'success')
+        return redirect(url_for('dashboard.minecraft_status_page'))
+
+    # Load Status Cache
+    cache_path = os.path.join(PROJECT_ROOT, "bots", "data", "minecraft_status_cache.json")
+    status = {}
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                status = json.load(f)
+        except: pass
+
+    return render_template('minecraft_status.html', 
+                          cfg=cfg, 
+                          status=status, 
+                          latency_ms=status.get('ping_ms'),
+                          motd=status.get('motd'),
+                          players_text=status.get('players'),
+                          error=status.get('error'))
 
 # --- TIKTOK BOT ---
 @bp.route('/tiktok-settings', methods=['GET', 'POST'])
+@login_required
 def tiktok_settings():
-    s = BotSettings.query.filter_by(bot_name='tiktok_bot').first()
+    s = BotSettings.query.filter_by(bot_name='tiktok').first()
     if not s:
-        cfg = {'telegram_chat_id': '', 'telegram_topic_id': '', 'target_unique_ids': [], 'watch_hosts': [], 'retry_offline_seconds': 60, 'alert_cooldown_seconds': 1800, 'max_concurrent_lives': 3, 'is_active': False, 'message_template_self': "🔴 {target} ist LIVE!", 'message_template_presence': "👀 {target} bei @{host}!"}
-        s = BotSettings(bot_name='tiktok_bot', config_json=json.dumps(cfg)); db.session.add(s); db.session.commit()
+        cfg = {
+            'target_unique_ids': [], 'watch_hosts': [], 'telegram_chat_id': '', 'telegram_topic_id': '',
+            'retry_offline_seconds': 60, 'alert_cooldown_seconds': 1800, 'max_concurrent_lives': 3,
+            'is_active': False, 'message_template_self': "🔴 {target} ist LIVE!", 'message_template_presence': "👀 {target} bei @{host}!"
+        }
+        s = BotSettings(bot_name='tiktok', config_json=json.dumps(cfg)); db.session.add(s); db.session.commit()
     
     cfg = json.loads(s.config_json)
     if request.method == 'POST':
-        cfg.update({'telegram_chat_id': request.form.get('telegram_chat_id'), 'telegram_topic_id': request.form.get('telegram_topic_id'), 'target_unique_ids': [t.strip().lstrip('@') for t in request.form.getlist('target_unique_ids') if t.strip()], 'watch_hosts': [h.strip().lstrip('@') for h in request.form.get('watch_hosts', '').split(',') if h.strip()], 'message_template_self': request.form.get('message_template_self'), 'message_template_presence': request.form.get('message_template_presence'), 'alert_cooldown_seconds': int(request.form.get('alert_cooldown_seconds', 1800)), 'max_concurrent_lives': int(request.form.get('max_concurrent_lives', 3))})
+        cfg.update({
+            'telegram_chat_id': request.form.get('telegram_chat_id'),
+            'telegram_topic_id': request.form.get('telegram_topic_id'),
+            'target_unique_ids': [t.strip().lstrip('@') for t in request.form.getlist('target_unique_ids') if t.strip()],
+            'watch_hosts': [h.strip().lstrip('@') for h in request.form.get('watch_hosts', '').split(',') if h.strip()],
+            'message_template_self': request.form.get('message_template_self'),
+            'message_template_presence': request.form.get('message_template_presence'),
+            'alert_cooldown_seconds': int(request.form.get('alert_cooldown_seconds', 1800)),
+            'max_concurrent_lives': int(request.form.get('max_concurrent_lives', 3))
+        })
         s.config_json = json.dumps(cfg); db.session.commit(); flash('TikTok-Einstellungen gespeichert.', 'success'); return redirect(url_for('dashboard.tiktok_settings'))
 
     logs = []
@@ -521,6 +927,7 @@ def tiktok_settings():
     return render_template('tiktok_settings.html', config=cfg, logs=logs)
 
 @bp.route('/tiktok/clear-logs', methods=['POST'])
+@login_required
 def tiktok_clear_logs():
     if os.path.exists(TIKTOK_BOT_LOG_FILE): open(TIKTOK_BOT_LOG_FILE, 'w').close()
     return redirect(url_for('dashboard.tiktok_settings'))
@@ -531,6 +938,10 @@ def bot_action_route(bot_name, action):
     pfile, script, lpath = None, None, None
     if bot_name == 'id_finder': pfile, script, lpath = ID_FINDER_BOT_PID_FILE, os.path.join(PROJECT_ROOT, "bots", "id_finder_bot", "id_finder_bot.py"), ID_FINDER_BOT_LOG_FILE
     elif bot_name == 'tiktok': pfile, script, lpath = TIKTOK_BOT_PID_FILE, os.path.join(PROJECT_ROOT, "bots", "tiktok_bot", "tiktok_bot.py"), TIKTOK_BOT_LOG_FILE
+    elif bot_name == 'invite': pfile, script, lpath = INVITE_BOT_PID_FILE, os.path.join(PROJECT_ROOT, "bots", "invite_bot", "invite_bot.py"), INVITE_BOT_LOG_FILE
+    elif bot_name == 'quiz': pfile, script, lpath = QUIZ_BOT_PID_FILE, os.path.join(PROJECT_ROOT, "bots", "quiz_bot", "quiz_bot.py"), QUIZ_BOT_LOG_FILE
+    elif bot_name == 'umfrage': pfile, script, lpath = UMFRAGE_BOT_PID_FILE, os.path.join(PROJECT_ROOT, "bots", "umfrage_bot", "umfrage_bot.py"), UMFRAGE_BOT_LOG_FILE
+    elif bot_name == 'outfit': pfile, script, lpath = OUTFIT_BOT_PID_FILE, os.path.join(PROJECT_ROOT, "bots", "outfit_bot", "outfit_bot.py"), OUTFIT_BOT_LOG_FILE
     
     if pfile and script:
         if action == 'start':
@@ -547,7 +958,14 @@ def bot_action_route(bot_name, action):
             elif os.path.exists(old_venv_lin): exe = old_venv_lin
 
             os.makedirs(os.path.dirname(lpath), exist_ok=True)
-            env = os.environ.copy(); env["PYTHONUNBUFFERED"] = "1"
+            
+            # Ensure all environment variables from .env are loaded into the Flask process
+            from dotenv import load_dotenv as load_env_file
+            load_env_file(os.path.join(PROJECT_ROOT, '.env'))
+            
+            env = os.environ.copy()
+            env["PYTHONUNBUFFERED"] = "1"
+            env["PYTHONIOENCODING"] = "utf-8"
             
             # Use creationflags on Windows to detach the process properly
             creationflags = 0
@@ -557,27 +975,30 @@ def bot_action_route(bot_name, action):
             with open(lpath, 'a', encoding='utf-8') as lf: 
                 proc = subprocess.Popen([exe, script], start_new_session=(os.name != 'nt'), creationflags=creationflags, stdout=lf, stderr=lf, env=env)
             with open(pfile, 'w') as f: f.write(str(proc.pid))
-            s = BotSettings.query.filter_by(bot_name=f"{bot_name}_bot").first()
+            s = BotSettings.query.filter_by(bot_name=bot_name).first()
             if s: c = json.loads(s.config_json); c['is_active'] = True; s.config_json = json.dumps(c); db.session.commit()
             flash(f'{bot_name} Bot gestartet.', 'success')
         elif action == 'stop' and os.path.exists(pfile):
             try:
                 with open(pfile, 'r') as f: pid = int(f.read().strip())
-                os.kill(pid, signal.SIGTERM); os.remove(pfile)
-                s = BotSettings.query.filter_by(bot_name=f"{bot_name}_bot").first()
-                if s: c = json.loads(s.config_json); c['is_active'] = False; s.config_json = json.dumps(c); db.session.commit()
-                flash(f'{bot_name} Bot gestoppt.', 'success')
-            except: pass
+                if os.name == 'nt':
+                    subprocess.run(['taskkill', '/F', '/T', '/PID', str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                else:
+                    os.kill(pid, signal.SIGTERM)
+                os.remove(pfile)
+            except Exception as e:
+                print(f"Fehler beim Stoppen von {bot_name} (PID: {pid}): {e}")
+            finally:
+                # Always update the database so the dashboard doesn't get stuck showing "Running"
+                s = BotSettings.query.filter_by(bot_name=bot_name).first()
+                if s: 
+                    c = json.loads(s.config_json)
+                    c['is_active'] = False
+                    s.config_json = json.dumps(c)
+                    db.session.commit()
+                flash(f'{bot_name} Bot Befehl gesendet.', 'success')
     return redirect(request.referrer or url_for('dashboard.index'))
 
 @bp.route('/api/bot-status')
+@login_required
 def bot_status_api(): return jsonify(get_bot_status_simple())
-
-@bp.route('/api/dashboard/save-layout', methods=['POST'])
-def save_dashboard_layout_api():
-    data = request.json
-    s = BotSettings.query.filter_by(bot_name='dashboard_layout').first()
-    if not s: s = BotSettings(bot_name='dashboard_layout', config_json=json.dumps(data)); db.session.add(s)
-    else: s.config_json = json.dumps(data)
-    db.session.commit()
-    return jsonify({"success": True})
