@@ -4,29 +4,18 @@ import requests
 import json
 import os
 import sys
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 from dataclasses import dataclass
 from typing import Dict, Tuple, Optional, List
 from telegram.ext import Application
 
 # --- AUTO-PFAD SETUP ---
-def setup_environment():
-    current = os.path.dirname(os.path.abspath(__file__))
-    project_root = None
-    for _ in range(5):
-        if os.path.exists(os.path.join(current, 'venv')):
-            project_root = current
-            break
-        parent = os.path.dirname(current)
-        if parent == current: break
-        current = parent
-    if project_root:
-        venv_pkgs = os.path.join(project_root, 'venv', 'lib', 'python3.11', 'site-packages')
-        if os.path.exists(venv_pkgs) and venv_pkgs not in sys.path:
-            sys.path.insert(0, venv_pkgs)
-        return project_root
-    return None
-
-PROJECT_ROOT = setup_environment()
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..', '..'))
 
 def log_print(msg):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")

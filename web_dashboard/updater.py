@@ -164,18 +164,8 @@ class Updater:
                     log.info("Windows detected. Terminating process to allow wrapper script to restart.")
                     os._exit(0) # Immediate exit to prevent further execution
                 else:
-                    pid_file_path = os.path.join(self.project_root, "web_server.pid")
-                    if os.path.exists(pid_file_path):
-                        try:
-                            with open(pid_file_path, "r") as f:
-                                pid = int(f.read().strip())
-                            log.info(f"Sending SIGHUP to web server process with PID {pid} for graceful restart.")
-                            os.kill(pid, signal.SIGHUP)
-                        except Exception as e:
-                            log.error(f"Failed to signal web server for restart: {e}")
-                    else:
-                        log.warning("Web server PID file not found. Terminating current process.")
-                        os.kill(os.getpid(), signal.SIGTERM)
+                    log.info("Linux/Docker detected. Terminating process with exit 0 to trigger container restart.")
+                    os._exit(0)
 
             except Exception as e:
                 log.error(f"Update failed: {e}")

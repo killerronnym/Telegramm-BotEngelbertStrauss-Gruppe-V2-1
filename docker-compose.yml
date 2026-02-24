@@ -1,33 +1,34 @@
-# Docker Compose Datei für das Bot-System
-
 version: '3.8'
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: bot_system_app
-    restart: unless-stopped
-    ports:
-      - "5000:5000"
-    volumes:
-      # Datenbank und Konfiguration persistent machen
-      - ./instance:/app/instance
-      - ./bots/outfit_bot/outfit_bot_data.json:/app/bots/outfit_bot/outfit_bot_data.json
-      - ./bots/quiz_bot/quizfragen_gestellt.json:/app/bots/quiz_bot/quizfragen_gestellt.json
-      - ./bots/umfrage_bot/umfrage_bot_state.json:/app/bots/umfrage_bot/umfrage_bot_state.json
-      - ./bots/umfrage_bot/umfragen_gestellt.json:/app/bots/umfrage_bot/umfragen_gestellt.json
-      - ./web_dashboard/app/static/avatars:/app/web_dashboard/app/static/avatars
-      # Logs
-      - ./app.log:/app/app.log
-      - ./web_dashboard/critical_errors.log:/app/web_dashboard/critical_errors.log
+  db:
+    image: mariadb:10.11
+    container_name: bot_db
+    restart: always
     environment:
-      - FLASK_ENV=production
-      - TZ=Europe/Berlin
-    entrypoint: ["./entrypoint.sh"]
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: bot_engine
+      MYSQL_USER: bot_user
+      MYSQL_PASSWORD: bot_password
+    volumes:
+      - db_data:/var/lib/mysql
 
-# Optional: Falls du eine separate Datenbank (z.B. PostgreSQL) verwenden möchtest
-# db:
-#   image: postgres:13
-#   ...
+  app:
+    build: .
+    container_name: bot_app
+    restart: always
+    ports:
+      - "9002:9002"
+    environment:
+      - DATABASE_URL=mysql+pymysql://bot_user:bot_password@db:3306/bot_engine?charset=utf8mb4
+      - SECRET_KEY=your_secret_key_here
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+      - ./instance:/app/instance
+      - ./data:/app/data
+      - ./bots:/app/bots
+
+volumes:
+  db_data:

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Engine v2 | Installation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.9);
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            --input-bg: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background: radial-gradient(circle at top right, #0f172a, #1e1b4b);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .install-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 600px;
+            padding: 3rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3rem;
+        }
+
+        .step-dot {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .step-dot.active {
+            background: var(--accent-blue);
+            box-shadow: 0 0 15px var(--accent-blue);
+            transform: scale(1.2);
+        }
+
+        .step-content {
+            display: none;
+        }
+
+        .step-content.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-label {
+            color: #fff;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            background: var(--input-bg);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff !important;
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-install {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border: none;
+            color: white;
+            font-weight: 700;
+            padding: 1rem 2rem;
+            border-radius: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-install:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-install:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .db-option {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .db-option:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .db-option.active {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .spinner-border {
+            width: 1.2rem;
+            height: 1.2rem;
+            display: none;
+            margin-right: 8px;
+        }
+
+        /* Password Strength Meter */
+        .strength-meter {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s ease;
+        }
+
+        .strength-text {
+            font-size: 0.75rem;
+            margin-top: 4px;
+            display: block;
+            font-weight: 600;
+        }
+
+        .requirement-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 0 0;
+            font-size: 0.8rem;
+        }
+
+        .requirement-item {
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .requirement-item i {
+            margin-right: 6px;
+            font-size: 0.9rem;
+        }
+
+        .requirement-item.met {
+            color: #10b981;
+        }
+
+        .requirement-item.met i::before {
+            content: "\F26B";
+        }
+
+        /* bi-check-circle-fill */
+    </style>
+</head>
+
+<body>
+
+    <div class="install-card">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold mb-1">Bot Engine <span class="text-info">v2</span></h2>
+            <p class="text-muted">Installation & Konfiguration</p>
+        </div>
+
+        <div class="step-indicator">
+            <div class="step-dot active" data-step="1"></div>
+            <div class="step-dot" data-step="2"></div>
+            <div class="step-dot" data-step="3"></div>
+            <div class="step-dot" data-step="4"></div>
+        </div>
+
+        <!-- STEP 1: DB TYPE -->
+        <div class="step-content active" id="step1">
+            <h4 class="mb-4">1. Datenbank-Typ wählen</h4>
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="db-option active" id="opt-sqlite" onclick="selectDB('sqlite')">
+                        <i class="bi bi-database-fill h2 text-info"></i>
+                        <p class="mb-0 mt-2 fw-bold">SQLite</p>
+                        <small class="text-muted">Lokal (Empfohlen)</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="db-option" id="opt-mysql" onclick="selectDB('mysql')">
+                        <i class="bi bi-hdd-network-fill h2 text-primary"></i>
+                        <p class="mb-0 mt-2 fw-bold">MySQL</p>
+                        <small class="text-muted">Remote / Docker</small>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-5 d-flex justify-content-end">
+                <button class="btn btn-install" onclick="goToStep(2)">Weiter <i
+                        class="bi bi-arrow-right ms-2"></i></button>
+            </div>
+        </div>
+
+        <!-- STEP 2: DB CREDENTIALS -->
+        <div class="step-content" id="step2">
+            <h4 class="mb-4">2. Datenbank-Zugang</h4>
+            <div id="sqliteInfo" class="alert alert-info bg-info bg-opacity-10 border-info text-white small mb-4">
+                <i class="bi bi-info-circle me-2"></i> SQLite benötigt keine weiteren Angaben.
+            </div>
+            <div id="mysqlFields" style="display:none;">
+                <div class="mb-3">
+                    <label class="form-label">Host</label>
+                    <input type="text" id="dbHost" class="form-control" placeholder="localhost">
+                </div>
+                <div class="row mb-3">
+                    <div class="col-8">
+                        <label class="form-label">Benutzername</label>
+                        <input type="text" id="dbUser" class="form-control" placeholder="root">
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label">Port</label>
+                        <input type="number" id="dbPort" class="form-control" value="3306">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Passwort</label>
+                    <input type="password" id="dbPass" class="form-control" placeholder="Passwort">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Datenbank Name</label>
+                    <input type="text" id="dbName" class="form-control" placeholder="bot_engine">
+                </div>
+            </div>
+
+            <div id="dbStatus" class="alert py-2 small" style="display:none;"></div>
+
+            <div class="mt-5 d-flex justify-content-between align-items-center">
+                <button class="btn btn-link text-white text-decoration-none" onclick="goToStep(1)">
+                    <i class="bi bi-arrow-left me-2"></i> Zurück
+                </button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-light px-4" id="btnTestDB" onclick="testDB()">
+                        <span class="spinner-border spinner-border-sm" id="testSpinner"></span>
+                        Testen
+                    </button>
+                    <button class="btn btn-install" id="btnStep2Next" onclick="proceedToStep3()"
+                        disabled>Weiter</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3: ADMIN ACCOUNT -->
+        <div class="step-content" id="step3">
+            <h4 class="mb-4">3. Admin-Registrierung</h4>
+            <div class="mb-3">
+                <label class="form-label">Nutzername</label>
+                <input type="text" id="adminUser" class="form-control" value="admin">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Passwort</label>
+                <input type="password" id="adminPass" class="form-control" placeholder="Passwort"
+                    oninput="checkPasswordStrength(this.value)">
+                <div class="strength-meter" id="strengthMeter">
+                    <div class="strength-bar" id="strengthBar"></div>
+                </div>
+                <small id="strengthDesc" class="strength-text"></small>
+
+                <ul class="requirement-list">
+                    <li class="requirement-item" id="req-length"><i class="bi bi-circle"></i> Mind. 6 Zeichen</li>
+                    <li class="requirement-item" id="req-upper"><i class="bi bi-circle"></i> Mind. 1 Großbuchstabe</li>
+                    <li class="requirement-item" id="req-special"><i class="bi bi-circle"></i> Mind. 1 Sonderzeichen (@,
+                        #, !, %, etc.)</li>
+                </ul>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Passwort wiederholen</label>
+                <input type="password" id="adminPass2" class="form-control" placeholder="Passwort">
+            </div>
+            <div id="adminError" class="alert alert-danger py-2 small" style="display:none;"></div>
+
+            <div class="mt-5 d-flex justify-content-between">
+                <button class="btn btn-link text-white text-decoration-none" onclick="goToStep(2)">
+                    <i class="bi bi-arrow-left me-2"></i> Zurück
+                </button>
+                <button class="btn btn-install" onclick="validateAdmin()">Weiter</button>
+            </div>
+        </div>
+
+        <!-- STEP 4: FINISH -->
+        <div class="step-content" id="step4">
+            <h4 class="mb-4 text-center">4. Einrichtung bereit</h4>
+            <div class="bg-white bg-opacity-5 p-4 rounded-3 mb-4">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Datenbank:</span>
+                    <span id="sumDB" class="fw-bold">SQLite</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Administrator:</span>
+                    <span id="sumAdmin" class="fw-bold">admin</span>
+                </div>
+            </div>
+            <button class="btn btn-install w-100 py-3" id="btnFinish" onclick="finishInstall()">
+                <span class="spinner-border spinner-border-sm" id="finishSpinner"></span>
+                JETZT INSTALLIEREN 🚀
+            </button>
+            <div class="text-center mt-3">
+                <button class="btn btn-link text-white text-decoration-none small" onclick="goToStep(3)">Nochmals
+                    prüfen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let config = { db_type: 'sqlite', db_url: '', is_tested: false };
+
+        function selectDB(type) {
+            config.db_type = type;
+            config.is_tested = (type === 'sqlite');
+            document.querySelectorAll('.db-option').forEach(el => el.classList.remove('active'));
+            document.getElementById('opt-' + type).classList.add('active');
+
+            document.getElementById('sqliteInfo').style.display = type === 'sqlite' ? 'block' : 'none';
+            document.getElementById('mysqlFields').style.display = type === 'mysql' ? 'block' : 'none';
+            document.getElementById('btnStep2Next').disabled = !config.is_tested;
+            document.getElementById('sumDB').innerText = type.toUpperCase();
+        }
+
+        function goToStep(n) {
+            document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('step' + n).classList.add('active');
+            document.querySelectorAll('.step-dot').forEach(el => {
+                if (parseInt(el.dataset.step) <= n) el.classList.add('active');
+                else el.classList.remove('active');
+            });
+        }
+
+        async function testDB() {
+            const btn = document.getElementById('btnTestDB');
+            const spinner = document.getElementById('testSpinner');
+            const status = document.getElementById('dbStatus');
+            const nextBtn = document.getElementById('btnStep2Next');
+
+            status.style.display = 'none';
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+
+            const payload = {
+                db_type: config.db_type,
+                host: document.getElementById('dbHost').value,
+                port: document.getElementById('dbPort').value,
+                user: document.getElementById('dbUser').value,
+                password: document.getElementById('dbPass').value,
+                dbname: document.getElementById('dbName').value
+            };
+
+            try {
+                const res = await fetch('/install/check-db', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    config.db_url = data.db_url;
+                    config.is_tested = true;
+                    status.className = 'alert alert-success py-2 small';
+                    status.innerHTML = '<i class="bi bi-check-circle me-2"></i> Verbindung erfolgreich!';
+                    status.style.display = 'block';
+                    nextBtn.disabled = false;
+                } else {
+                    status.className = 'alert alert-danger py-2 small';
+                    status.innerHTML = '<i class="bi bi-x-circle me-2"></i> Fehler: ' + data.error;
+                    status.style.display = 'block';
+                    nextBtn.disabled = true;
+                }
+            } catch (e) {
+                status.className = 'alert alert-danger py-2 small';
+                status.innerText = 'Netzwerkfehler';
+                status.style.display = 'block';
+            }
+            btn.disabled = false;
+            spinner.style.display = 'none';
+        }
+
+        function proceedToStep3() {
+            if (config.is_tested) goToStep(3);
+        }
+
+        function validateAdmin() {
+            const u = document.getElementById('adminUser').value;
+            const p1 = document.getElementById('adminPass').value;
+            const p2 = document.getElementById('adminPass2').value;
+            const err = document.getElementById('adminError');
+            err.style.display = 'none';
+
+            if (u.length < 3) { err.innerText = "Nutzername zu kurz (min. 3)"; err.style.display = 'block'; return; }
+
+            // Strict Validation
+            const hasUpper = /[A-Z]/.test(p1);
+            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(p1);
+
+            if (p1.length < 6) { err.innerText = "Das Passwort muss mindestens 6 Zeichen lang sein."; err.style.display = 'block'; return; }
+            if (!hasUpper) { err.innerText = "Das Passwort muss mindestens einen Großbuchstaben enthalten."; err.style.display = 'block'; return; }
+            if (!hasSpecial) { err.innerText = "Das Passwort muss mindestens ein Sonderzeichen enthalten."; err.style.display = 'block'; return; }
+
+            if (p1 !== p2) { err.innerText = "Die Passwörter stimmen nicht überein."; err.style.display = 'block'; return; }
+
+            config.admin_user = u;
+            config.admin_pass = p1;
+            document.getElementById('sumAdmin').innerText = u;
+            goToStep(4);
+        }
+
+        function checkPasswordStrength(p) {
+            const meter = document.getElementById('strengthMeter');
+            const bar = document.getElementById('strengthBar');
+            const desc = document.getElementById('strengthDesc');
+
+            if (!p) {
+                meter.style.display = 'none';
+                desc.innerText = '';
+                return;
+            }
+
+            meter.style.display = 'block';
+            let strength = 0;
+
+            // Requirements
+            const reqs = {
+                length: p.length >= 6,
+                upper: /[A-Z]/.test(p),
+                special: /[!@#$%^&*(),.?":{}|<>]/.test(p)
+            };
+
+            // Update UI requirements
+            Object.keys(reqs).forEach(r => {
+                const el = document.getElementById('req-' + r);
+                if (reqs[r]) el.classList.add('met');
+                else el.classList.remove('met');
+            });
+
+            if (reqs.length) strength += 33;
+            if (reqs.upper) strength += 33;
+            if (reqs.special) strength += 34;
+
+            bar.style.width = strength + '%';
+
+            if (strength <= 33) {
+                bar.style.backgroundColor = '#ef4444'; // Red
+                desc.innerText = 'Schwach';
+                desc.style.color = '#ef4444';
+            } else if (strength <= 66) {
+                bar.style.backgroundColor = '#f59e0b'; // Yellow
+                desc.innerText = 'Mittel';
+                desc.style.color = '#f59e0b';
+            } else {
+                bar.style.backgroundColor = '#10b981'; // Green
+                desc.innerText = 'Sicher';
+                desc.style.color = '#10b981';
+            }
+        }
+
+        async function finishInstall() {
+            const btn = document.getElementById('btnFinish');
+            const spinner = document.getElementById('finishSpinner');
+            btn.disabled = true;
+            spinner.style.display = 'inline-block';
+
+            try {
+                const res = await fetch('/install/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    btn.className = "btn btn-success w-100 py-3";
+                    btn.innerHTML = "FERTIG! 🎉";
+                    setTimeout(() => window.location.href = "/auth/login", 1500);
+                } else {
+                    alert("Installation fehlgeschlagen: " + data.error);
+                    btn.disabled = false;
+                    spinner.style.display = 'none';
+                }
+            } catch (e) {
+                alert("Verbindungsfehler");
+                btn.disabled = false;
+                spinner.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>

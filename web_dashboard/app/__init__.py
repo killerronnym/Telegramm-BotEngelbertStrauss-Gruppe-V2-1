@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, request
 from .models import db, User 
 from flask_login import LoginManager
 from dotenv import load_dotenv
@@ -33,21 +33,37 @@ def create_app(test_config=None):
     app.jinja_env.filters['datetimeformat'] = datetimeformat
     
     # Blueprints registrieren
-    from .routes import dashboard, auth, api
+    from .routes import dashboard, auth, api, install
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
     app.register_blueprint(api.bp)
+    app.register_blueprint(install.bp)
     
+    # Check for installation
+    PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    INSTANCE_DIR = os.path.join(PROJECT_ROOT, 'instance')
+    INSTALL_LOCK = os.path.join(INSTANCE_DIR, 'installed.lock')
+
+    @app.before_request
+    def check_for_install():
+        if os.path.exists(INSTALL_LOCK):
+            return
+        # Allow access to install blueprint and static files
+        if request.blueprint == 'install' or request.endpoint == 'static' or request.path.startswith('/static/'):
+            return
+        return redirect(url_for('install.index'))
+
     with app.app_context():
         try:
             db.create_all()
-            # Initialen Admin erstellen, falls nicht vorhanden (für neue Installationen)
-            if not User.query.filter_by(username='admin').first():
-                admin = User(username='admin', role='admin')
-                admin.set_password('admin') # Standardpasswort "admin"
-                db.session.add(admin)
-                db.session.commit()
-                print("Initialer Admin-Account 'admin' / 'admin' erstellt.")
+            # Initialer Admin nur erstellen, wenn wir nicht im Setup-Modus sind oder explizit gewünscht
+            # In der neuen Version übernimmt der Installer das
+            if os.path.exists(INSTALL_LOCK):
+                if not User.query.filter_by(username='admin').first():
+                    admin = User(username='admin', role='admin')
+                    admin.set_password('admin') 
+                    db.session.add(admin)
+                    db.session.commit()
         except Exception as e:
             print(f"DB Error during app context: {e}")
 

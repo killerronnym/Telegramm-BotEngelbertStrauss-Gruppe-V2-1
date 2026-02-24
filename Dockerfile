@@ -1,24 +1,34 @@
 FROM python:3.11-slim
 
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV FLASK_APP web_dashboard.app
+ENV PORT 9002
+
+# Set work directory
 WORKDIR /app
 
-# Systemabhängigkeiten installieren (falls nötig, z.B. für gcc)
+# Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
+    build-essential \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Requirements kopieren und installieren
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Den gesamten Projektcode kopieren
+# Copy project
 COPY . .
 
-# Ausführrechte für Skripte setzen
-RUN chmod +x scripts/setup.sh scripts/init_db.py
+# Ensure scripts are executable
+RUN chmod +x docker-entrypoint.sh
 
-# Port für das Dashboard freigeben
-EXPOSE 5000
+# Ensure instance directory exists
+RUN mkdir -p /app/instance
 
-# Startbefehl (wird später durch entrypoint.sh ersetzt/ergänzt)
-CMD ["python", "web_dashboard/app.py"]
+# Expose port
+EXPOSE 9002
+
+# Run the application via entrypoint
+ENTRYPOINT ["./docker-entrypoint.sh"]

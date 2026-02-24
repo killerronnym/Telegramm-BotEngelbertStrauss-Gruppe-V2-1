@@ -945,6 +945,16 @@ def bot_action_route(bot_name, action):
     
     if pfile and script:
         if action == 'start':
+            # Verhindern, dass mehrere Instanzen gestartet werden
+            if os.path.exists(pfile):
+                try:
+                    with open(pfile, 'r') as f: pid = int(f.read().strip())
+                    if is_process_running(pid):
+                        flash(f'{bot_name} Bot läuft bereits.', 'warning')
+                        return redirect(request.referrer or url_for('dashboard.index'))
+                except: pass
+            
+            # Start logic continues...
             # Check common Windows/Linux venv paths
             exe = sys.executable
             venv_win = os.path.join(PROJECT_ROOT, ".venv", "Scripts", "python.exe")
