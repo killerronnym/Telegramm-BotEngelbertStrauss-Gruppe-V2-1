@@ -33,16 +33,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # Flask Setup für DB Querys ausserhalb von Requests
 flask_app = create_app({'SQLALCHEMY_DATABASE_URI': get_db_url()})
 
-from shared_bot_utils import is_bot_active
-
-def get_id_finder_config():
-    """Lädt den Master-Token vom ID-Finder."""
-    from web_dashboard.app.models import BotSettings
-    with flask_app.app_context():
-        settings = BotSettings.query.filter_by(bot_name='id_finder').first()
-        if settings and settings.config_json:
-            return json.loads(settings.config_json)
-    return {}
+from shared_bot_utils import is_bot_active, get_bot_token
 
 import bots.id_finder_bot.id_finder_bot as id_finder_plugin
 import bots.invite_bot.invite_bot as invite_plugin
@@ -58,10 +49,9 @@ async def main_post_shutdown(app: Application) -> None:
     logger.info("🛑 Master-Bot wurde beendet und heruntergefahren.")
 
 def main():
-    config = get_id_finder_config()
-    token = config.get("bot_token")
+    token = get_bot_token()
     if not token:
-        logger.critical("❌ Kein Bot-Token in 'id_finder' Config gefunden! Bitte erst eintragen.")
+        logger.critical("❌ Kein Bot-Token gefunden (weder in ENV 'TELEGRAM_BOT_TOKEN' noch in DB)! Bot wird beendet.")
         sys.exit(1)
 
     logger.info("Starte ApplicationBuilder...")

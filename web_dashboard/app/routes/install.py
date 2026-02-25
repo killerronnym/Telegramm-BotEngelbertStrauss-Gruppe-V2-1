@@ -23,7 +23,8 @@ def check_db():
     db_type = data.get('db_type')
     
     if db_type == 'sqlite':
-        db_url = f"sqlite:///{os.path.join(PROJECT_ROOT, 'instance', 'app.db')}"
+        from shared_bot_utils import get_db_url
+        db_url = get_db_url()
     else:
         host = data.get('host')
         port = data.get('port')
@@ -54,8 +55,19 @@ def setup():
     try:
         # Update .env file
         env_path = os.path.join(PROJECT_ROOT, '.env')
-        with open(env_path, 'a') as f:
-            f.write(f"\nDATABASE_URL={db_url}\n")
+        lines = []
+        if os.path.exists(env_path):
+            with open(env_path, 'r') as f:
+                lines = f.readlines()
+        
+        # Bestehende DATABASE_URL entfernen und neu hinzufügen
+        new_lines = [l for l in lines if not l.startswith("DATABASE_URL=")]
+        if not any(l.strip() == "" for l in new_lines[-1:]): # Neue Zeile falls nötig
+             new_lines.append("\n")
+        new_lines.append(f"DATABASE_URL={db_url}\n")
+        
+        with open(env_path, 'w') as f:
+            f.writelines(new_lines)
         
         # Reload env and re-init DB
         os.environ['DATABASE_URL'] = db_url

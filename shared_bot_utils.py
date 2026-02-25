@@ -27,10 +27,11 @@ def get_db_url():
             db_url += f"{separator}charset=utf8mb4"
         return db_url
     
-    # Fallback SQLite (nur für Notfall/Installation)
+    # Fallback SQLite (Konsistent mit Docker/Windows Pfaden)
+    # Bevorzugte Pfade: /app/instance/app.db oder ./instance/app.db
     if not os.path.exists(INSTANCE_DIR):
-        os.makedirs(INSTANCE_DIR)
-    return f"sqlite:///{os.path.join(INSTANCE_DIR, 'app.db')}"
+        os.makedirs(INSTANCE_DIR, exist_ok=True)
+    return f"sqlite:///{DB_PATH}"
 
 def get_bot_config(bot_name):
     """
@@ -39,9 +40,16 @@ def get_bot_config(bot_name):
     """
     try:
         url = get_db_url()
-        # print(f"DEBUG: Using DB {url.split('@')[-1] if '@' in url else url}")
+        # Fallback zum Verhindern von Abstürzen wenn DB noch nicht bereit
+        if not os.path.exists(DB_PATH) and url.startswith("sqlite"):
+            return {}
+
         engine = create_engine(url)
         with engine.connect() as conn:
+            # Tabelle prüfen bevor Query
+            if not inspect(engine).has_table("bot_settings"):
+                return {}
+                
             result = conn.execute(
                 text("SELECT config_json FROM bot_settings WHERE bot_name = :name"),
                 {"name": bot_name}
@@ -52,9 +60,19 @@ def get_bot_config(bot_name):
             else:
                 return {}
     except Exception as e:
-        # Hier kein print() mit Emojis oder Sonderzeichen riskieren
         sys.stderr.write(f"ERROR loading config for {bot_name}: {str(e)}\n")
         return {}
+
+def get_bot_token():
+    """Zentrale Stelle für den Bot-Token. Priorisiert ENV vor DB."""
+    # 1. Check ENV (am wichtigsten für Docker)
+    env_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+    if env_token:
+        return env_token
+    
+    # 2. Check DB ('id_finder' gilt als Master-Bot Config)
+    config = get_bot_config('id_finder')
+    return config.get('bot_token')
 
 def get_env_var(key, default=None):
     return os.environ.get(key, default)

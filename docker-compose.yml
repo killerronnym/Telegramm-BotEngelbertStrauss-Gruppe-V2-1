@@ -8,10 +8,9 @@ services:
     ports:
       - "9002:9002"
     volumes:
-      # Empfohlen fǬr In-App Updates: Den gesamten Code-Ordner mounten.
-      # So bleiben Updates auch nach einem Container-Neustart erhalten.
+      # Empfohlen fǬr In-App Updates & Legacy-Configs: Den gesamten Projekt-Ordner mounten.
       - .:/app
-      # Einzelne Mounts für Daten (redundant falls .:/app aktiv ist, aber gut für Übersicht)
+      # WICHTIG: Die folgenden Ordner muessen auf dem Host existieren und beschreibbar sein.
       - ./instance:/app/instance
       - ./logs:/app/logs
       - ./data:/app/data
@@ -20,10 +19,11 @@ services:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Berlin
       - FLASK_ENV=production
-    # Falls eine externe MySQL Datenbank genutzt wird, kann diese hier verlinkt werden
-    # networks:
-    #   - bot-network
+      # - TELEGRAM_BOT_TOKEN=dein_token_hier (Optional, falls .env nicht genutzt wird)
+      # Falls eine externe MySQL Datenbank genutzt wird, kann diese hier verlinkt werden
+      # networks:
+      #   - bot-network
 
-    # networks:
-    #   bot-network:
-    #     driver: bridge
+      # networks:
+      #   bot-network:
+      #     driver: bridge
