@@ -41,21 +41,27 @@ Diese Methode wird für Server empfohlen, da sie Updates und Neustarts am stabil
 
 1. **Voraussetzungen:** Docker und Docker-Compose installiert.
 2. **Repository klonen:** (siehe oben).
-3. **Konfiguration:** Kopiere die `.env.example` zu `.env` (falls vorhanden) und trage deine Daten ein.
+3. **Konfiguration:** Kopiere die `.env.example` zu `.env`. 
+   Trage mindestens folgende Werte ein:
+   ```bash
+   TELEGRAM_BOT_TOKEN=dein_bot_token
+   DATABASE_URL=sqlite:///instance/app.db
+   ```
 4. **Starten:**
    ```bash
    docker-compose up -d --build
    ```
 5. **Dashboard:** Erreichbar unter `http://<server-ip>:9002`.
 
-> [!TIP]
-> Um In-App Updates im Docker-Container dauerhaft zu speichern, ist in der `docker-compose.yml` standardmäßig der Mount `- .:/app` aktiv.
+> [!IMPORTANT]
+> **Dual-Prozess Betrieb:** Das System startet im Docker-Container automatisch sowohl das **Web-Dashboard** als auch den **Master-Bot**. Ein manueller Start des Bots ist nicht mehr nötig.
 
 ---
 
 ## 🔄 Updates
 - **Automatisch:** Aktiviere in den Dashboard-Systemeinstellungen die Option "Auto-Update".
 - **Manuell:** Klicke im Dashboard auf "Nach Updates suchen" und dann auf "Update jetzt installieren".
+  *Hinweis: Der Bot sendet unter Linux/Docker ein Restart-Signal an den Gunicorn-Master, wodurch der gesamte Container neu geladen wird.*
 - **Docker-Konsole:** `docker-compose pull && docker-compose up -d`.
 
 ## 📂 Ordnerstruktur
