@@ -4,12 +4,10 @@
     "github_repo": "Bot-EngelbertStrauss-Gruppe-ffentlich",
     "secret_key": "b1dac1a4-edbc-4869-9574-4e0ce1d092eb",
     "quiz": {
-        "token": "",
         "channel_id": "",
         "topic_id": ""
     },
     "umfrage": {
-        "token": "",
         "channel_id": "",
         "topic_id": ""
     }

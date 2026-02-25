@@ -317,7 +317,8 @@ def quiz_settings():
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'save_settings':
-            cfg['bot_token'] = request.form.get('token')
+            # Token wird zentral über ID-Finder verwaltet
+            # cfg['bot_token'] = request.form.get('token')
             cfg['channel_id'] = request.form.get('channel_id')
             cfg['topic_id'] = request.form.get('topic_id')
         elif action == 'save_schedule':
@@ -412,7 +413,8 @@ def umfrage_settings():
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'save_settings':
-            cfg['bot_token'] = request.form.get('token')
+            # Token wird zentral über ID-Finder verwaltet
+            # cfg['bot_token'] = request.form.get('token')
             cfg['channel_id'] = request.form.get('channel_id')
             cfg['topic_id'] = request.form.get('topic_id')
         elif action == 'save_schedule':
@@ -544,7 +546,7 @@ def outfit_bot_actions(action):
     
     if action == 'save_config':
         cfg.update({
-            'BOT_TOKEN': request.form.get('BOT_TOKEN'),
+            # 'BOT_TOKEN': request.form.get('BOT_TOKEN'),
             'CHAT_ID': request.form.get('CHAT_ID'),
             'TOPIC_ID': request.form.get('TOPIC_ID'),
             'AUTO_POST_ENABLED': 'AUTO_POST_ENABLED' in request.form,

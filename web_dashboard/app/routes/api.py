@@ -129,9 +129,9 @@ def get_media(file_id):
         
         # If not in cache, download from Telegram
         settings = BotSettings.query.filter_by(bot_name='id_finder').first()
-        if not settings: return jsonify({'error': 'Bot settings not found'}), 404
+        if not settings: return jsonify({'error': 'Master-Setting nicht gefunden'}), 404
         config = json.loads(settings.config_json); bot_token = config.get('bot_token')
-        if not bot_token: return jsonify({'error': 'Bot token not found'}), 404
+        if not bot_token: return jsonify({'error': 'Master-Token fehlt in DB'}), 404
         
         # Get file info
         file_info_res = requests.get(f"https://api.telegram.org/bot{bot_token}/getFile", params={'file_id': file_id}, timeout=5)
@@ -221,7 +221,9 @@ def delete_message():
         if send_private:
             warning_bot_name = config.get('warning_bot_name', 'invite'); warning_settings = BotSettings.query.filter_by(bot_name=warning_bot_name).first()
             if warning_settings:
-                w_config = json.loads(warning_settings.config_json); w_token = w_config.get('bot_token')
+                # SSoT: Wir nutzen den Master-Token vom id_finder, es sei denn wir wollen wirklich 
+                # einen separaten Bot. Aber da alles konsolidiert werden soll:
+                w_token = bot_token 
                 if w_token:
                     private_text = (f"Hallo, deine Nachricht in der Gruppe wurde gelöscht.\n\nGrund: {reason}\nDu hast nun {warning_count} von {max_warnings} Verwarnungen.")
                     if action_taken_text: private_text += f"\nKonsequenz: {action_taken_text.replace('<b>', '').replace('</b>', '')}"
@@ -283,10 +285,8 @@ def delete_warning(warning_id):
                         db.session.commit()
                 
                 if send_private:
-                    warning_bot_name = config.get('warning_bot_name', 'invite')
-                    w_settings = BotSettings.query.filter_by(bot_name=warning_bot_name).first()
-                    w_token = json.loads(w_settings.config_json).get('bot_token') if w_settings else bot_token
-                    
+                    # SSoT: Nutze Master-Token
+                    w_token = bot_token
                     if w_token:
                         private_text = "Hallo, eine deiner Verwarnungen wurde zurückgesetzt."
                         requests.post(f"https://api.telegram.org/bot{w_token}/sendMessage", 
@@ -335,10 +335,8 @@ def clear_all_warnings(user_id):
                         db.session.commit()
                 
                 if send_private:
-                    warning_bot_name = config.get('warning_bot_name', 'invite')
-                    w_settings = BotSettings.query.filter_by(bot_name=warning_bot_name).first()
-                    w_token = json.loads(w_settings.config_json).get('bot_token') if w_settings else bot_token
-                    
+                    # SSoT: Nutze Master-Token
+                    w_token = bot_token
                     if w_token:
                         private_text = "Hallo, deine Verwarnungen wurden alle zurückgesetzt."
                         requests.post(f"https://api.telegram.org/bot{w_token}/sendMessage", 
