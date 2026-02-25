@@ -180,13 +180,61 @@ def broadcast_manager():
 @bp.route('/broadcast_manager/save', methods=['POST'])
 @login_required
 def save_broadcast():
-    m = request.files.get('media'); mpath, mtype = None, None
-    if m and m.filename:
-        fname = secure_filename(m.filename); fdir = os.path.join(BASE_DIR, 'app', 'static', 'uploads'); os.makedirs(fdir, exist_ok=True)
-        m.save(os.path.join(fdir, fname)); mpath = f'uploads/{fname}'
-        mtype = 'image' if fname.lower().endswith(('.png', '.jpg', '.jpeg')) else 'video'
-    b = Broadcast(text=request.form.get('text'), topic_id=request.form.get('topic_id'), scheduled_at=datetime.utcnow(), media_path=mpath, media_type=mtype)
-    db.session.add(b); db.session.commit(); flash('Eingestellt.', 'success'); return redirect(url_for('dashboard.broadcast_manager'))
+    action = request.form.get('action', 'send_now')
+    fdir = os.path.join(BASE_DIR, 'app', 'static', 'uploads')
+    os.makedirs(fdir, exist_ok=True)
+
+    # Handle multiple file uploads
+    uploaded = request.files.getlist('media')
+    saved_paths = []
+    first_mtype = None
+    for m in uploaded:
+        if m and m.filename:
+            fname = secure_filename(m.filename)
+            m.save(os.path.join(fdir, fname))
+            rel = f'uploads/{fname}'
+            saved_paths.append(rel)
+            if first_mtype is None:
+                first_mtype = 'image' if fname.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')) else 'video'
+
+    # Determine send time
+    if action == 'schedule':
+        raw_dt = request.form.get('scheduled_at')
+        try:
+            scheduled_at = datetime.strptime(raw_dt, '%Y-%m-%dT%H:%M') if raw_dt else datetime.utcnow()
+        except ValueError:
+            scheduled_at = datetime.utcnow()
+    else:
+        scheduled_at = datetime.utcnow()
+
+    # Single-file: media_path; multi-file: media_files as JSON list
+    mpath = saved_paths[0] if len(saved_paths) == 1 else None
+    mtype = first_mtype if len(saved_paths) == 1 else None
+    mfiles_json = json.dumps(saved_paths) if len(saved_paths) > 1 else None
+
+    b = Broadcast(
+        text=request.form.get('text'),
+        topic_id=request.form.get('topic_id') or None,
+        send_mode=request.form.get('send_mode', 'standard'),
+        scheduled_at=scheduled_at,
+        status='pending',
+        media_path=mpath,
+        media_type=mtype,
+        media_files=mfiles_json,
+        spoiler='spoiler' in request.form,
+        pin_message='pin_message' in request.form,
+        silent_send='silent_send' in request.form,
+    )
+    db.session.add(b)
+    db.session.commit()
+
+    if action == 'send_now':
+        flash('Nachricht in die Warteschlange eingestellt. Wird in Kuerze gesendet.', 'success')
+    else:
+        flash(f'Nachricht geplant fuer {scheduled_at.strftime("%d.%m.%Y %H:%M")} UTC.', 'success')
+
+    return redirect(url_for('dashboard.broadcast_manager'))
+
 
 @bp.route('/broadcast_manager/topic/save', methods=['POST'])
 @login_required
@@ -345,7 +393,18 @@ def umfrage_settings():
                 flash('Umfragen gespeichert.', 'success')
             except Exception as e:
                 flash(f'Fehler beim Speichern der Umfragen: {e}', 'danger')
-        
+        elif action == 'save_asked_polls':
+            up_json = request.form.get('asked_polls_json')
+            try:
+                data = json.loads(up_json)
+                up_path = os.path.join(PROJECT_ROOT, "bots", "umfrage_bot", "umfragen_gestellt.json")
+                os.makedirs(os.path.dirname(up_path), exist_ok=True)
+                with open(up_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+                flash('Gestellte-Umfragen-Protokoll gespeichert.', 'success')
+            except Exception as e:
+                flash(f'Fehler beim Speichern des Protokolls: {e}', 'danger')
+
         s.config_json = json.dumps(cfg)
         db.session.commit()
         if action in ['save_settings', 'save_schedule']: flash('Einstellungen gespeichert.', 'success')
@@ -384,7 +443,8 @@ def umfrage_settings():
                           schedule=cfg.get('schedule', {}), 
                           stats=stats, 
                           logs=logs,
-                          polls_json=json.dumps(polls, indent=2, ensure_ascii=False))
+                          polls_json=json.dumps(polls, indent=2, ensure_ascii=False),
+                          asked_polls_json=json.dumps(used_polls, indent=2, ensure_ascii=False))
 
 @bp.route('/umfrage/send-now', methods=['POST'])
 @login_required

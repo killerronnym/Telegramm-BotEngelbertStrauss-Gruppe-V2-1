@@ -1,22 +1,92 @@
 [
-    {
-        "frage": "Welche Farbe gefällt dir am besten für Arbeitskleidung?",
-        "optionen": [
-            "Schwarz/Grau",
-            "Blau",
-            "Rot",
-            "Signalfarben"
-        ],
-        "allows_multiple_answers": false
-    },
-    {
-        "frage": "Wie oft bestellst du neue Arbeitskleidung?",
-        "optionen": [
-            "Monatlich",
-            "Alle 6 Monate",
-            "Jährlich",
-            "Nur wenn nötig"
-        ],
-        "allows_multiple_answers": false
-    }
+  {
+    "frage": "Welches Gear magst du am liebsten?",
+    "optionen": [
+      "Pup Hood",
+      "Collar",
+      "Tail",
+      "Kniepads"
+    ]
+  },
+  {
+    "frage": "Was macht dir im Pup-Mode am meisten Spaß?",
+    "optionen": [
+      "Kuscheln",
+      "Spielen/Toben",
+      "Befehle ausführen",
+      "Einfach abschalten"
+    ]
+  },
+  {
+    "frage": "Bist du eher…",
+    "optionen": [
+      "Pup",
+      "Handler",
+      "Switch",
+      "Nur neugierig"
+    ]
+  },
+  {
+    "frage": "Wo bist du am liebsten im Pup-Mode?",
+    "optionen": [
+      "Zuhause privat",
+      "Bei Freunden",
+      "Auf Events/Meetups",
+      "Online/Videochat"
+    ]
+  },
+  {
+    "frage": "Was gehört für dich unbedingt dazu?",
+    "optionen": [
+      "Headpats",
+      "Leine",
+      "Napf",
+      "Spielzeug"
+    ]
+  },
+  {
+    "frage": "Wie kommst du am besten in deinen Headspace?",
+    "optionen": [
+      "Gear anziehen",
+      "Musik",
+      "Handler/Bezugsperson",
+      "Alleine entspannen"
+    ]
+  },
+  {
+    "frage": "Welcher Pup-Typ beschreibt dich am ehesten?",
+    "optionen": [
+      "Verspielt",
+      "Verschmust",
+      "Frech",
+      "Schüchtern"
+    ]
+  },
+  {
+    "frage": "Was magst du lieber?",
+    "optionen": [
+      "Gassi gehen",
+      "Drinnen spielen",
+      "Auf dem Boden liegen",
+      "Kuscheln auf der Couch"
+    ]
+  },
+  {
+    "frage": "Trägst du regelmäßig Pup-Gear?",
+    "optionen": [
+      "Ja oft",
+      "Manchmal",
+      "Selten",
+      "Noch gar nicht"
+    ]
+  },
+  {
+    "frage": "Was wäre dein Traum-Pup-Treffen?",
+    "optionen": [
+      "Park/Gassi",
+      "Pup-Mosh/Party",
+      "Kuschelabend",
+      "Fotoshooting"
+    ]
+  }
 ]

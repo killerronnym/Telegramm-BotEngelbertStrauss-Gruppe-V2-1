@@ -226,6 +226,24 @@ async def track_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
             elif msg.video: 
                 content_type = "video"
                 file_id = msg.video.file_id
+            elif msg.sticker:
+                content_type = "sticker"
+                file_id = msg.sticker.file_id
+            elif msg.animation:
+                content_type = "animation"
+                file_id = msg.animation.file_id
+            elif msg.document:
+                content_type = "document"
+                file_id = msg.document.file_id
+            elif msg.voice:
+                content_type = "voice"
+                file_id = msg.voice.file_id
+            elif msg.audio:
+                content_type = "audio"
+                file_id = msg.audio.file_id
+            elif msg.video_note:
+                content_type = "video_note"
+                file_id = msg.video_note.file_id
 
             db_msg = IDFinderMessage(
                 telegram_user_id=user.id, message_id=msg.message_id,
@@ -234,6 +252,7 @@ async def track_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 content_type=content_type, file_id=file_id,
                 is_command=is_command, timestamp=now
             )
+            logger.info(f"Logging message from {user.id}: type={content_type}, file_id={file_id}")
             db.session.add(db_msg)
             db.session.commit()
     except Exception as e:

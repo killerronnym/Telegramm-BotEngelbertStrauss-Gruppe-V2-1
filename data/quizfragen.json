@@ -1,22 +1,102 @@
 [
-    {
-        "frage": "Welches Tier ist das Logo von Engelbert Strauss?",
-        "optionen": [
-            "Adler",
-            "Strauß",
-            "Hase",
-            "Wolf"
-        ],
-        "antwort": 1
-    },
-    {
-        "frage": "In welcher Stadt hat Engelbert Strauss seinen Hauptsitz?",
-        "optionen": [
-            "Biebergemünd",
-            "Berlin",
-            "Frankfurt",
-            "München"
-        ],
-        "antwort": 0
-    }
+  {
+    "frage": "Was bedeutet 'Handler' im Puppy Play?",
+    "optionen": [
+      "Ein Tierarzt",
+      "Die führende Person, die sich um den Pup kümmert",
+      "Ein Zuschauer",
+      "Ein Trainer für echte Hunde"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Wofür steht das 'Muzzle' im Puppy Play?",
+    "optionen": [
+      "Eine Halskette",
+      "Ein Napf",
+      "Eine Schnauze/Maulkorb als Gear",
+      "Ein Spielzeug"
+    ],
+    "antwort": 2
+  },
+  {
+    "frage": "Was ist typisches Verhalten eines Pups?",
+    "optionen": [
+      "Steif sitzen und diskutieren",
+      "Bellen, spielen und herumtollen",
+      "Schlafen den ganzen Tag",
+      "Nur am Handy sein"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Was beschreibt 'Headspace' im Puppy Play am besten?",
+    "optionen": [
+      "Eine Party Location",
+      "Der mentale Rollenspiel-Zustand",
+      "Ein Spielzeug",
+      "Eine Dating App"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Was ist ein Pup Hood?",
+    "optionen": [
+      "Ein Hundebett",
+      "Eine Maske im Puppy Play",
+      "Ein Halsbandverschluss",
+      "Ein Napfhalter"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Welche Rolle gibt es neben dem Pup häufig?",
+    "optionen": [
+      "Chefkoch",
+      "Handler",
+      "Tierpfleger im Zoo",
+      "Schiedsrichter"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Wozu dient ein Collar (Halsband) im Puppy Play meistens?",
+    "optionen": [
+      "Nur Mode",
+      "Als Symbol der Zugehörigkeit/Bindung",
+      "Zum Festhalten eines echten Hundes",
+      "Zum Aufladen eines Gerätes"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Was ist ein 'Pup Name'?",
+    "optionen": [
+      "Der echte Vorname",
+      "Ein Spitzname innerhalb der Rolle",
+      "Ein Benutzername für Spiele",
+      "Ein Zwingername für echte Hunde"
+    ],
+    "antwort": 1
+  },
+  {
+    "frage": "Was ist wichtig im Puppy Play?",
+    "optionen": [
+      "Regeln, Einvernehmlichkeit und Vertrauen",
+      "Gewinnen",
+      "Möglichst laut sein",
+      "Viele Zuschauer"
+    ],
+    "antwort": 0
+  },
+  {
+    "frage": "Was ist ein 'Chew Toy' im Puppy Play?",
+    "optionen": [
+      "Ein elektronisches Gerät",
+      "Ein Kau-Spielzeug",
+      "Ein Getränk",
+      "Ein Trainingsplan"
+    ],
+    "antwort": 1
+  }
 ]

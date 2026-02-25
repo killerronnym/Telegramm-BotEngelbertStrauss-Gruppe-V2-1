@@ -12,6 +12,7 @@
         padding-bottom: 1.5rem;
         border-bottom: 1px solid var(--border-muted);
     }
+
     .user-avatar {
         width: 80px;
         height: 80px;
@@ -19,6 +20,7 @@
         object-fit: cover;
         background: #2d3748;
     }
+
     .warning-card {
         background-color: rgba(245, 158, 11, 0.05);
         border: 1px solid rgba(245, 158, 11, 0.2);
@@ -27,6 +29,7 @@
         margin-bottom: 0.75rem;
         position: relative;
     }
+
     .message-card {
         background-color: var(--card-base);
         border: 1px solid var(--border-muted);
@@ -34,6 +37,7 @@
         padding: 1rem;
         margin-bottom: 0.75rem;
     }
+
     .message-meta {
         font-size: 0.8rem;
         color: var(--text-dim);
@@ -41,13 +45,60 @@
         gap: 1rem;
         margin-top: 0.5rem;
     }
+
+    .message-card {
+        position: relative;
+    }
+
+    .message-actions {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .message-card:hover .message-actions {
+        opacity: 1;
+    }
+
+    .message-media {
+        margin-top: 0.75rem;
+        max-width: 300px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border-muted);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .message-media:hover {
+        transform: scale(1.02);
+    }
+
+    .message-media img {
+        max-width: 100%;
+        max-height: 250px;
+        display: block;
+    }
+
+    .message-media.sticker {
+        border: none;
+        max-width: 120px;
+        background: transparent;
+    }
+
+    .message-media.sticker img {
+        max-height: 120px;
+    }
 </style>
 
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-white">Nutzer-Aktivität & Moderation</h2>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-warning" onclick="clearWarnings({{ user.telegram_id }})">
+            <button class="btn btn-outline-warning"
+                onclick="openResetModal('all', '{{ user.telegram_id|e }}', '{{ (messages[0].chat_id if messages and messages[0].chat_id else '')|e }}', '{{ (messages[0].message_thread_id if messages and messages[0].message_thread_id else '')|e }}')">
                 <i class="bi bi-shield-x"></i> Alle Warnungen löschen
             </button>
             <a href="{{ url_for('dashboard.id_finder_dashboard') }}" class="btn btn-outline-secondary">
@@ -57,15 +108,20 @@
     </div>
 
     <div class="user-detail-header text-white">
-        <img src="/api/avatar/{{ user.telegram_id }}" class="user-avatar" alt="Avatar" onerror="this.src='https://ui-avatars.com/api/?name={{ user.first_name }}&background=random&color=fff'">
+        <img src="/api/avatar/{{ user.telegram_id }}" class="user-avatar" alt="Avatar"
+            onerror="this.src='https://ui-avatars.com/api/?name={{ user.first_name }}&background=random&color=fff'">
         <div>
             <h3 class="mb-1">{{ user.first_name }} {{ user.last_name or '' }}</h3>
-            <p class="text-muted mb-1">ID: <code>{{ user.telegram_id }}</code> | Username: {% if user.username %}<span class="text-info">@{{ user.username }}</span>{% else %}<span class="text-muted">keiner</span>{% endif %}</p>
+            <p class="text-muted mb-1">ID: <code>{{ user.telegram_id }}</code> | Username: {% if user.username %}<span
+                    class="text-info">@{{ user.username }}</span>{% else %}<span class="text-muted">keiner</span>{%
+                endif %}</p>
             <div class="d-flex align-items-center gap-3">
-                <span class="badge {% if user.warnings|length > 0 %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                <span
+                    class="badge {% if user.warnings|length > 0 %}bg-warning text-dark{% else %}bg-success{% endif %}">
                     {{ user.warnings|length }} Verwarnungen
                 </span>
-                <span class="small text-dim">Erster Kontakt: {{ user.first_contact.strftime('%d.%m.%Y %H:%M') if user.first_contact else '—' }}</span>
+                <span class="small text-dim">Erster Kontakt: {{ user.first_contact.strftime('%d.%m.%Y %H:%M') if
+                    user.first_contact else '—' }}</span>
             </div>
         </div>
     </div>
@@ -74,64 +130,248 @@
         <div class="col-lg-4">
             <h4 class="text-white mb-3">⚠️ Verwarnungen</h4>
             {% if user.warnings %}
-                {% for warning in user.warnings | reverse %}
-                <div class="warning-card">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <p class="text-warning fw-bold mb-1">Grund: {{ warning.reason }}</p>
-                        <button class="btn btn-sm text-danger p-0" onclick="deleteSingleWarning({{ warning.id }})">
-                            <i class="bi bi-x-circle"></i>
-                        </button>
-                    </div>
-                    <p class="small text-muted mb-0">{{ warning.timestamp.strftime('%d.%m.%Y %H:%M') }}</p>
+            {% for warning in user.warnings | reverse %}
+            <div class="warning-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <p class="text-warning fw-bold mb-1">Grund: {{ warning.reason }}</p>
+                    <button class="btn btn-sm btn-danger px-2 py-1"
+                        onclick="openResetModal('single', '{{ warning.id|e }}', '{{ (messages[0].chat_id if messages and messages[0].chat_id else '')|e }}', '{{ (messages[0].message_thread_id if messages and messages[0].message_thread_id else '')|e }}')">
+                        <i class="bi bi-trash"></i> Verwarnung löschen
+                    </button>
                 </div>
-                {% endfor %}
+                <p class="small text-muted mb-0">{{ warning.timestamp.strftime('%d.%m.%Y %H:%M') }}</p>
+            </div>
+            {% endfor %}
             {% else %}
-                <div class="alert alert-success bg-opacity-10 border-success text-success small">
-                    Keine aktiven Verwarnungen.
-                </div>
+            <div class="alert alert-success bg-opacity-10 border-success text-success small">
+                Keine aktiven Verwarnungen.
+            </div>
             {% endif %}
         </div>
-        
+
         <div class="col-lg-8">
             <h4 class="text-white mb-3">💬 Letzte Nachrichten</h4>
             {% if messages %}
-                {% for msg in messages %}
-                <div class="message-card {% if msg.is_deleted %}border-danger bg-danger bg-opacity-10{% endif %}">
-                    <p class="text-white mb-1">{{ msg.text }}</p>
-                    {% if msg.is_deleted %}
-                        <p class="small text-danger fw-bold mb-1">🗑️ GELÖSCHT: {{ msg.deletion_reason }}</p>
+            {% for msg in messages %}
+            <div class="message-card {% if msg.is_deleted %}border-danger bg-danger bg-opacity-10{% endif %}">
+                <div class="message-actions">
+                    {% if not msg.is_deleted %}
+                    <button class="btn btn-sm btn-danger" onclick="openModModal('{{ msg.id }}')">
+                        <i class="bi bi-trash"></i> Löschen
+                    </button>
                     {% endif %}
-                    <div class="message-meta">
-                        <span><i class="bi bi-clock"></i> {{ msg.timestamp.strftime('%d.%m.%Y %H:%M') }}</span>
-                        <span><i class="bi bi-hash"></i> {{ msg.chat_type }}</span>
-                        {% if msg.message_thread_id %}
-                            <span><i class="bi bi-tag"></i> Topic ID: {{ msg.message_thread_id }}</span>
-                        {% endif %}
-                    </div>
                 </div>
-                {% endfor %}
+                <p class="text-white mb-1">{{ msg.text or '' }}</p>
+
+                {% if msg.content_type == 'photo' and msg.file_id %}
+                <div class="message-media">
+                    <img src="/api/media/{{ msg.file_id }}" onclick="window.open(this.src,'_blank')">
+                </div>
+                {% elif msg.content_type == 'sticker' and msg.file_id %}
+                <div class="message-media sticker">
+                    <img src="/api/media/{{ msg.file_id }}">
+                </div>
+                {% elif msg.content_type == 'animation' and msg.file_id %}
+                <div class="message-media">
+                    <video src="/api/media/{{ msg.file_id }}" autoplay loop muted playsinline
+                        style="max-width:100%;max-height:250px;display:block;"></video>
+                </div>
+                {% elif msg.content_type != 'text' %}
+                <div class="mt-2">
+                    <span class="badge bg-secondary">{{ msg.content_type|upper }}</span>
+                </div>
+                {% endif %}
+
+                {% if msg.is_deleted %}
+                <p class="small text-danger fw-bold mb-1">🗑️ GELÖSCHT: {{ msg.deletion_reason }}</p>
+                {% endif %}
+                <div class="message-meta">
+                    <span><i class="bi bi-clock"></i> {{ msg.timestamp.strftime('%d.%m.%Y %H:%M') }}</span>
+                    <span><i class="bi bi-hash"></i> {{ msg.chat_type }}</span>
+                    {% if msg.message_thread_id %}
+                    <span><i class="bi bi-tag"></i> Topic ID: {{ msg.message_thread_id }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
             {% else %}
-                <div class="alert alert-info bg-dark border-secondary text-white small">
-                    Keine Nachrichten geloggt.
-                </div>
+            <div class="alert alert-info bg-dark border-secondary text-white small">
+                Keine Nachrichten geloggt.
+            </div>
             {% endif %}
         </div>
     </div>
 </div>
 
-<script>
-    async function deleteSingleWarning(id) {
-        if(confirm("Diese Verwarnung löschen?")) {
-            const res = await fetch(`/api/moderation/warnings/delete/${id}`, {method: 'POST'});
-            if(res.ok) location.reload();
-        }
-    }
+<!-- Toast-Container für Benachrichtigungen -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+    <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive">
+        <div class="d-flex">
+            <div class="toast-body fw-bold" id="toastMsg"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
 
-    async function clearWarnings(uid) {
-        if(confirm("WIRKLICH ALLE Verwarnungen für diesen Nutzer löschen?")) {
-            const res = await fetch(`/api/moderation/warnings/clear/${uid}`, {method: 'POST'});
-            if(res.ok) location.reload();
-        }
-    }
+<!-- Moderation Modal -->
+<div class="modal fade" id="moderationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">🚫 Nachricht moderieren</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modMsgId">
+                <div class="mb-3">
+                    <label class="form-label small text-muted">GRUND FÜR LÖSCHUNG</label>
+                    <select class="form-select bg-dark text-white border-secondary" id="modReasonSelect">
+                        <option value="Beleidigung / Unhöflichkeit">Beleidigung / Unhöflichkeit</option>
+                        <option value="Spam / Werbung">Spam / Werbung</option>
+                        <option value="Falsches Topic / Offtopic">Falsches Topic / Offtopic</option>
+                        <option value="NSFW / Unangemessener Inhalt">NSFW / Unangemessener Inhalt</option>
+                        <option value="Sonstiges">Sonstiges (Manueller Grund)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <input type="text" class="form-control bg-dark text-white border-secondary" id="modReasonCustom"
+                        placeholder="Manueller Grund..." style="display:none;">
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="modSendPublic" checked>
+                    <label class="form-check-label">Öffentliche Löschmeldung im Topic</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="modSendPrivate" checked>
+                    <label class="form-check-label">Private Nachricht an Nutzer senden</label>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-danger" id="confirmModBtn">Nachricht löschen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Warning Modal -->
+<div class="modal fade" id="resetWarningModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="resetModalTitle">🔄 Verwarnungen zurücksetzen</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="resetType"> <!-- 'single' or 'all' -->
+                <input type="hidden" id="resetTargetId"> <!-- uid or wid -->
+                <input type="hidden" id="resetChatId">
+                <input type="hidden" id="resetThreadId">
+                <p id="resetModalText">Möchtest du wirklich alle Verwarnungen für diesen Nutzer zurücksetzen?</p>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="resetSendPublic" checked>
+                    <label class="form-check-label">Öffentliche Nachricht in Gruppe senden</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="resetSendPrivate" checked>
+                    <label class="form-check-label">Private Nachricht an Nutzer senden</label>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="confirmResetBtn">Verwarnung(en) zurücksetzen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const resetWarningModal = new bootstrap.Modal(document.getElementById('resetWarningModal'));
+        const moderationModal = new bootstrap.Modal(document.getElementById('moderationModal'));
+
+        document.getElementById('modReasonSelect').onchange = function () {
+            document.getElementById('modReasonCustom').style.display = this.value === 'Sonstiges' ? 'block' : 'none';
+        };
+
+        window.openModModal = (id) => {
+            document.getElementById('modMsgId').value = id;
+            moderationModal.show();
+        };
+
+        document.getElementById('confirmModBtn').onclick = async () => {
+            const id = document.getElementById('modMsgId').value;
+            const selectReason = document.getElementById('modReasonSelect').value;
+            const reason = selectReason === 'Sonstiges' ? document.getElementById('modReasonCustom').value : selectReason;
+
+            const res = await fetch('/api/moderation/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id,
+                    reason,
+                    send_public: document.getElementById('modSendPublic').checked,
+                    send_private: document.getElementById('modSendPrivate').checked
+                })
+            });
+
+            if (res.ok) {
+                moderationModal.hide();
+                location.reload();
+            }
+        };
+
+        window.openResetModal = (type, targetId, chatId, threadId) => {
+            document.getElementById('resetType').value = type;
+            document.getElementById('resetTargetId').value = targetId;
+            document.getElementById('resetChatId').value = chatId || '';
+            document.getElementById('resetThreadId').value = threadId || '';
+
+            if (type === 'single') {
+                document.getElementById('resetModalTitle').textContent = '🔄 Verwarnung zurücksetzen';
+                document.getElementById('resetModalText').textContent = 'Möchtest du diese Verwarnung wirklich zurücksetzen?';
+            } else {
+                document.getElementById('resetModalTitle').textContent = '🔄 Alle Verwarnungen zurücksetzen';
+                document.getElementById('resetModalText').textContent = 'Möchtest du wirklich ALLE Verwarnungen für diesen Nutzer zurücksetzen?';
+            }
+
+            resetWarningModal.show();
+        };
+
+        document.getElementById('confirmResetBtn').onclick = async () => {
+            const type = document.getElementById('resetType').value;
+            const targetId = document.getElementById('resetTargetId').value;
+            const chatId = document.getElementById('resetChatId').value;
+            const threadId = document.getElementById('resetThreadId').value;
+            const sendPublic = document.getElementById('resetSendPublic').checked;
+            const sendPrivate = document.getElementById('resetSendPrivate').checked;
+
+            const endpoint = type === 'single'
+                ? `/api/moderation/warnings/delete/${targetId}`
+                : `/api/moderation/warnings/clear/${targetId}`;
+
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, thread_id: threadId, send_public: sendPublic, send_private: sendPrivate })
+            });
+
+            const toastEl = document.getElementById('liveToast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+
+            if (res.ok) {
+                resetWarningModal.hide();
+                toastEl.className = 'toast align-items-center text-white bg-success border-0';
+                toastMsg.textContent = '✅ Verwarnung(en) erfolgreich zurückgesetzt!';
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                toastEl.className = 'toast align-items-center text-white bg-danger border-0';
+                toastMsg.textContent = '❌ Fehler: Verwarnung(en) konnten nicht zurückgesetzt werden.';
+            }
+            toast.show();
+        };
+    });
 </script>
 {% endblock %}

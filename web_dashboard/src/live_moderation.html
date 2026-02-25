@@ -18,31 +18,218 @@
         --deleted-bg: rgba(239, 68, 68, 0.15);
         --deleted-border: #ef4444;
     }
-    .moderation-layout { display: flex; height: calc(100vh - 70px); gap: 1rem; padding: 1rem; background-color: var(--moderation-bg); }
-    .sidebar { flex: 0 0 320px; background-color: var(--sidebar-bg); border-radius: 12px; padding: 1rem; overflow-y: auto; border: 1px solid var(--border-color); }
-    .sidebar h5 { color: var(--text-bright); padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem; }
-    .topic-list .list-group-item { background-color: transparent; border: none; color: var(--text-muted); padding: 0.6rem 1rem; border-radius: 8px; font-weight: 500; cursor: pointer; display: block; text-decoration: none; margin-bottom: 2px; text-align: left; width: 100%; }
-    .topic-list .list-group-item:hover { background-color: var(--message-hover-bg); color: var(--text-bright); }
-    .topic-list .list-group-item.active { background-color: var(--accent-color); color: #0F172A; font-weight: 700; }
-    .chat-container { flex-grow: 1; background-color: var(--chat-bg); border-radius: 12px; display: flex; flex-direction: column; border: 1px solid var(--border-color); }
-    .chat-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-    .chat-header h4 { margin: 0; color: var(--text-bright); }
-    .message-feed { flex-grow: 1; overflow-y: auto; padding: 1.5rem; }
-    .message-bubble { display: flex; gap: 1rem; margin-bottom: 0.5rem; padding: 0.75rem; border-radius: 12px; transition: background-color 0.2s; position: relative; border: 1px solid transparent; }
-    .message-bubble:hover { background-color: var(--message-bubble-bg); }
-    .message-bubble.is-deleted { background-color: var(--deleted-bg); border-color: var(--deleted-border); opacity: 0.8; }
-    .message-bubble .avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; object-fit: cover; background: #2d3748; }
-    .message-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.3rem; }
-    .message-header .user-name { font-weight: 700; }
-    .message-header .timestamp { font-size: 0.75rem; color: var(--accent-color); }
-    .message-header .topic-badge { font-size: 0.65rem; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; color: var(--text-muted); }
-    .message-header .warning-badge { font-size: 0.65rem; background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; color: #f59e0b; padding: 2px 6px; border-radius: 4px; cursor: pointer; }
-    .message-text { color: var(--text-muted); white-space: pre-wrap; word-break: break-word; }
-    .deletion-info { font-size: 0.7rem; color: #ef4444; font-weight: bold; margin-top: 0.2rem; text-transform: uppercase; }
-    .message-actions { opacity: 0; margin-left: auto; transition: opacity 0.2s; display: flex; gap: 0.5rem; }
-    .message-bubble:not(.is-deleted):hover .message-actions { opacity: 1; }
-    .message-actions .btn { background: #ef4444; border: none; color: white; padding: 4px 10px; font-size: 0.75rem; border-radius: 6px; }
-    .loading-spinner { text-align: center; padding: 3rem; }
+
+    .moderation-layout {
+        display: flex;
+        height: calc(100vh - 70px);
+        gap: 1rem;
+        padding: 1rem;
+        background-color: var(--moderation-bg);
+    }
+
+    .sidebar {
+        flex: 0 0 320px;
+        background-color: var(--sidebar-bg);
+        border-radius: 12px;
+        padding: 1rem;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+    }
+
+    .sidebar h5 {
+        color: var(--text-bright);
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 1rem;
+    }
+
+    .topic-list .list-group-item {
+        background-color: transparent;
+        border: none;
+        color: var(--text-muted);
+        padding: 0.6rem 1rem;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        display: block;
+        text-decoration: none;
+        margin-bottom: 2px;
+        text-align: left;
+        width: 100%;
+    }
+
+    .topic-list .list-group-item:hover {
+        background-color: var(--message-hover-bg);
+        color: var(--text-bright);
+    }
+
+    .topic-list .list-group-item.active {
+        background-color: var(--accent-color);
+        color: #0F172A;
+        font-weight: 700;
+    }
+
+    .chat-container {
+        flex-grow: 1;
+        background-color: var(--chat-bg);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--border-color);
+    }
+
+    .chat-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .chat-header h4 {
+        margin: 0;
+        color: var(--text-bright);
+    }
+
+    .message-feed {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+    }
+
+    .message-bubble {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+        padding: 0.75rem;
+        border-radius: 12px;
+        transition: background-color 0.2s;
+        position: relative;
+        border: 1px solid transparent;
+    }
+
+    .message-bubble:hover {
+        background-color: var(--message-bubble-bg);
+    }
+
+    .message-bubble.is-deleted {
+        background-color: var(--deleted-bg);
+        border-color: var(--deleted-border);
+        opacity: 0.8;
+    }
+
+    .message-bubble .avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        object-fit: cover;
+        background: #2d3748;
+    }
+
+    .message-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .message-header .user-name {
+        font-weight: 700;
+    }
+
+    .message-header .timestamp {
+        font-size: 0.75rem;
+        color: var(--accent-color);
+    }
+
+    .message-header .topic-badge {
+        font-size: 0.65rem;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: var(--text-muted);
+    }
+
+    .message-header .warning-badge {
+        font-size: 0.65rem;
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid #f59e0b;
+        color: #f59e0b;
+        padding: 2px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .message-text {
+        color: var(--text-muted);
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .deletion-info {
+        font-size: 0.7rem;
+        color: #ef4444;
+        font-weight: bold;
+        margin-top: 0.2rem;
+        text-transform: uppercase;
+    }
+
+    .message-actions {
+        opacity: 0;
+        margin-left: auto;
+        transition: opacity 0.2s;
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .message-bubble:not(.is-deleted):hover .message-actions {
+        opacity: 1;
+    }
+
+    .message-actions .btn {
+        background: #ef4444;
+        border: none;
+        color: white;
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        border-radius: 6px;
+    }
+
+    .loading-spinner {
+        text-align: center;
+        padding: 3rem;
+    }
+
+    .message-media {
+        margin-top: 0.75rem;
+        max-width: 300px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .message-media:hover {
+        transform: scale(1.02);
+    }
+
+    .message-media img {
+        max-width: 100%;
+        max-height: 300px;
+        display: block;
+    }
+
+    .message-media.sticker {
+        border: none;
+        max-width: 150px;
+        background: transparent;
+    }
+
+    .message-media.sticker img {
+        max-height: 150px;
+    }
 </style>
 
 <div class="moderation-layout">
@@ -77,6 +264,16 @@
     </main>
 </div>
 
+<!-- Toast-Container für Benachrichtigungen -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+    <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive">
+        <div class="d-flex">
+            <div class="toast-body fw-bold" id="toastMsg"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
 <!-- Settings Modal -->
 <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
@@ -88,7 +285,8 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label small text-muted">MAX. VERWARNUNGEN BIS AKTION</label>
-                    <input type="number" id="setMaxWarnings" class="form-control bg-dark text-white border-secondary" value="3">
+                    <input type="number" id="setMaxWarnings" class="form-control bg-dark text-white border-secondary"
+                        value="3">
                 </div>
                 <div class="mb-3">
                     <label class="form-label small text-muted">AKTION BEI LIMIT-ERREICHUNG</label>
@@ -101,11 +299,13 @@
                 </div>
                 <div class="mb-3" id="muteDurationContainer">
                     <label class="form-label small text-muted">MUTE DAUER (STUNDEN)</label>
-                    <input type="number" id="setMuteDuration" class="form-control bg-dark text-white border-secondary" value="24">
+                    <input type="number" id="setMuteDuration" class="form-control bg-dark text-white border-secondary"
+                        value="24">
                 </div>
                 <div class="mb-3">
                     <label class="form-label small text-muted">LÖSCH-TIMER FÜR MELDUNGEN (SEKUNDEN)</label>
-                    <input type="number" id="setCleanupSeconds" class="form-control bg-dark text-white border-secondary" value="60">
+                    <input type="number" id="setCleanupSeconds" class="form-control bg-dark text-white border-secondary"
+                        value="60">
                 </div>
                 <div class="mb-3">
                     <label class="form-label small text-muted">BOT FÜR PRIVATNACHRICHTEN</label>
@@ -144,7 +344,8 @@
                     </select>
                 </div>
                 <div class="mb-3">
-                    <input type="text" class="form-control bg-dark text-white border-secondary" id="modReasonCustom" placeholder="Manueller Grund..." style="display:none;">
+                    <input type="text" class="form-control bg-dark text-white border-secondary" id="modReasonCustom"
+                        placeholder="Manueller Grund..." style="display:none;">
                 </div>
                 <div class="form-check mb-2">
                     <input class="form-check-input" type="checkbox" id="modSendPublic" checked>
@@ -163,34 +364,66 @@
     </div>
 </div>
 
+<!-- Reset Warning Modal -->
+<div class="modal fade" id="resetWarningModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">🔄 Verwarnungen zurücksetzen</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="resetUserId">
+                <input type="hidden" id="resetChatId">
+                <input type="hidden" id="resetThreadId">
+                <p>Möchtest du wirklich alle Verwarnungen für diesen Nutzer zurücksetzen?</p>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="resetSendPublic" checked>
+                    <label class="form-check-label">Öffentliche Nachricht in Gruppe senden</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="resetSendPrivate" checked>
+                    <label class="form-check-label">Private Nachricht an Nutzer senden</label>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="confirmResetBtn">Verwarnungen zurücksetzen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // Utility functions defined at the top scope
-    function escapeHTML(str) { 
+    function escapeHTML(str) {
         if (!str) return '';
         return str.toString().replace(/[&<>"']/g, m => ({
-            '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
-        }[m])); 
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[m]));
     }
 
-    function formatTimestamp(ts_str) { 
+    function formatTimestamp(ts_str) {
         if (!ts_str) return '—';
-        const d = new Date(ts_str); 
-        return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); 
+        const d = new Date(ts_str);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         const messageFeed = document.getElementById('message-feed');
         const topicList = document.getElementById('topic-list');
         const moderationModal = new bootstrap.Modal(document.getElementById('moderationModal'));
+        const resetWarningModal = new bootstrap.Modal(document.getElementById('resetWarningModal'));
         const settingsModal = new bootstrap.Modal(document.getElementById('settingsModal'));
         let currentTopic = 'all';
         let intervalId;
 
-        document.getElementById('modReasonSelect').addEventListener('change', function() {
+        document.getElementById('modReasonSelect').addEventListener('change', function () {
             document.getElementById('modReasonCustom').style.display = (this.value === 'Sonstiges') ? 'block' : 'none';
         });
 
-        document.getElementById('setPunishmentType').addEventListener('change', function() {
+        document.getElementById('setPunishmentType').addEventListener('change', function () {
             document.getElementById('muteDurationContainer').style.display = (this.value === 'mute') ? 'block' : 'none';
         });
 
@@ -220,7 +453,7 @@
                 if (!response.ok) throw new Error("Network response was not ok");
                 const messages = await response.json();
                 renderMessages(messages);
-            } catch (error) { 
+            } catch (error) {
                 console.error("Error fetching messages:", error);
                 messageFeed.innerHTML = '<p class="text-danger text-center">Fehler beim Laden der Nachrichten.</p>';
             }
@@ -233,21 +466,40 @@
             }
             let html = '';
             messages.forEach(msg => {
+                // Build media element if message has a photo or video
+                let mediaHtml = '';
+                if (msg.content_type === 'photo' && msg.file_id) {
+                    mediaHtml = `<div class="message-media"><img src="/api/media/${msg.file_id}" onclick="window.open(this.src,'_blank')" onerror="this.parentElement.style.display='none'"></div>`;
+                } else if (msg.content_type === 'sticker' && msg.file_id) {
+                    mediaHtml = `<div class="message-media sticker"><img src="/api/media/${msg.file_id}" onerror="this.parentElement.style.display='none'"></div>`;
+                } else if (msg.content_type === 'animation' && msg.file_id) {
+                    mediaHtml = `<div class="message-media"><video src="/api/media/${msg.file_id}" autoplay loop muted playsinline style="max-width:100%;max-height:300px;display:block;" onerror="this.parentElement.style.display='none'"></video></div>`;
+                } else if (msg.content_type === 'video' && msg.file_id) {
+                    mediaHtml = `<div class="message-media"><video src="/api/media/${msg.file_id}" controls style="max-width:100%;max-height:300px;display:block;" onerror="this.parentElement.style.display='none'"></video></div>`;
+                } else if (msg.content_type === 'voice' || msg.content_type === 'audio') {
+                    mediaHtml = `<div class="mt-2"><audio src="/api/media/${msg.file_id}" controls style="max-width:100%;" onerror="this.parentElement.style.display='none'"></audio></div>`;
+                } else if (msg.content_type === 'document') {
+                    mediaHtml = `<div class="mt-2"><span class="badge bg-info"><i class="bi bi-file-earmark"></i> Dokument</span></div>`;
+                } else if (msg.content_type === 'video_note') {
+                    mediaHtml = `<div class="mt-2"><span class="badge bg-success"><i class="bi bi-play-circle"></i> Video-Notiz</span></div>`;
+                }
+
                 html += `
                     <div class="message-bubble ${msg.is_deleted ? 'is-deleted' : ''}">
                         <img src="${msg.avatar_url}" class="avatar" onerror="this.src='https://ui-avatars.com/api/?name=${msg.username}&background=random&color=fff'">
                         <div class="message-content flex-grow-1">
                             <div class="message-header">
                                 <span class="user-name text-white">${escapeHTML(msg.full_name || msg.username)}</span>
-                                <span class="warning-badge" onclick="clearWarnings(${msg.user_id})"><i class="bi bi-exclamation-triangle"></i> ${msg.warning_count}</span>
+                                <span class="warning-badge" title="Klicken zum Zur\u00fccksetzen" onclick="openResetModal(${msg.user_id}, ${msg.chat_id}, ${msg.thread_id})"><i class="bi bi-exclamation-triangle"></i> ${msg.warning_count}</span>
                                 <span class="timestamp">${formatTimestamp(msg.ts_str)}</span>
                                 <span class="topic-badge">${escapeHTML(msg.topic_name)}</span>
                                 ${!msg.is_deleted ? `
                                 <div class="message-actions">
-                                    <button class="btn" onclick="openModModal(${msg.id})">Löschen</button>
+                                    <button class="btn" onclick="openModModal(${msg.id})">L\u00f6schen</button>
                                 </div>` : ''}
                             </div>
                             <div class="message-text">${escapeHTML(msg.text)}</div>
+                            ${mediaHtml}
                             ${msg.is_deleted ? `<div class="deletion-info">🗑️ GESTRICHEN: ${escapeHTML(msg.deletion_reason)}</div>` : ''}
                         </div>
                     </div>
@@ -261,11 +513,40 @@
             moderationModal.show();
         };
 
-        window.clearWarnings = async (uid) => {
-            if(confirm("Alle Verwarnungen für diesen Nutzer löschen?")) {
-                const res = await fetch(`/api/moderation/warnings/clear/${uid}`, {method: 'POST'});
-                if(res.ok) fetchMessages();
+        window.openResetModal = (uid, chatId, threadId) => {
+            document.getElementById('resetUserId').value = uid;
+            document.getElementById('resetChatId').value = chatId || '';
+            document.getElementById('resetThreadId').value = threadId || '';
+            resetWarningModal.show();
+        };
+
+        document.getElementById('confirmResetBtn').onclick = async () => {
+            const uid = document.getElementById('resetUserId').value;
+            const chatId = document.getElementById('resetChatId').value;
+            const threadId = document.getElementById('resetThreadId').value;
+            const sendPublic = document.getElementById('resetSendPublic').checked;
+            const sendPrivate = document.getElementById('resetSendPrivate').checked;
+
+            const res = await fetch(`/api/moderation/warnings/clear/${uid}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: chatId, thread_id: threadId, send_public: sendPublic, send_private: sendPrivate })
+            });
+
+            const toastEl = document.getElementById('liveToast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+
+            if (res.ok) {
+                resetWarningModal.hide();
+                toastEl.className = 'toast align-items-center text-white bg-success border-0';
+                toastMsg.textContent = '✅ Verwarnungen erfolgreich zurückgesetzt!';
+                fetchMessages();
+            } else {
+                toastEl.className = 'toast align-items-center text-white bg-danger border-0';
+                toastMsg.textContent = '❌ Fehler: Verwarnungen konnten nicht zurückgesetzt werden.';
             }
+            toast.show();
         };
 
         document.getElementById('confirmModBtn').onclick = async () => {
@@ -274,7 +555,7 @@
             const reason = selectReason === 'Sonstiges' ? document.getElementById('modReasonCustom').value : selectReason;
             const res = await fetch('/api/moderation/delete', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, reason, send_public: document.getElementById('modSendPublic').checked, send_private: document.getElementById('modSendPrivate').checked })
             });
             if (res.ok) { moderationModal.hide(); fetchMessages(); }
@@ -283,7 +564,7 @@
         document.getElementById('saveSettingsBtn').onclick = async () => {
             const res = await fetch('/api/moderation/settings', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     max_warnings: document.getElementById('setMaxWarnings').value,
                     cleanup_notification_seconds: document.getElementById('setCleanupSeconds').value,
@@ -292,16 +573,16 @@
                     mute_duration: document.getElementById('setMuteDuration').value
                 })
             });
-            if (res.ok) { 
-                settingsModal.hide(); 
-                alert("Einstellungen gespeichert!"); 
+            if (res.ok) {
+                settingsModal.hide();
+                alert("Einstellungen gespeichert!");
             }
         };
 
         // Initial Load
         fetchTopics();
         fetchMessages();
-        
+
         // Settings Load
         async function loadSettings() {
             try {
@@ -315,7 +596,7 @@
                     document.getElementById('setMuteDuration').value = s.mute_duration;
                     document.getElementById('muteDurationContainer').style.display = (s.punishment_type === 'mute') ? 'block' : 'none';
                 }
-            } catch(e) {}
+            } catch (e) { }
         }
         loadSettings();
 

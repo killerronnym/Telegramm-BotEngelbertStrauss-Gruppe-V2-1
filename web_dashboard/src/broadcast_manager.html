@@ -4,14 +4,68 @@
 
 {% block content %}
 <style>
-    .dashboard-container { padding: 2.5rem; }
-    .btn-back { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-muted); color: var(--text-secondary); font-weight: 500; border-radius: 8px; padding: 0.6rem 1.25rem; transition: all 0.2s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; }
-    .btn-back:hover { background: rgba(255, 255, 255, 0.05); color: #fff; border-color: var(--blue-accent); }
-    .card { height: 100%; transition: all 0.2s ease; border: 1px solid var(--border-muted); }
-    .card-header { background: rgba(0, 0, 0, 0.1); border-bottom: 1px solid var(--border-muted); padding: 1rem 1.5rem; }
-    .card-header h6 { margin-bottom: 0; font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-secondary); text-transform: uppercase; }
-    .table { color: var(--text-primary); --bs-table-bg: transparent; --bs-table-border-color: rgba(255, 255, 255, 0.04); font-size: 0.9rem; }
-    .table thead th { background: rgba(0, 0, 0, 0.15); color: var(--text-dim); font-weight: 600; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.08em; padding: 0.8rem 1.5rem; }
+    .dashboard-container {
+        padding: 2.5rem;
+    }
+
+    .btn-back {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-muted);
+        color: var(--text-secondary);
+        font-weight: 500;
+        border-radius: 8px;
+        padding: 0.6rem 1.25rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-back:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+        border-color: var(--blue-accent);
+    }
+
+    .card {
+        height: 100%;
+        transition: all 0.2s ease;
+        border: 1px solid var(--border-muted);
+    }
+
+    .card-header {
+        background: rgba(0, 0, 0, 0.1);
+        border-bottom: 1px solid var(--border-muted);
+        padding: 1rem 1.5rem;
+    }
+
+    .card-header h6 {
+        margin-bottom: 0;
+        font-weight: 600;
+        font-size: 0.8rem;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+    }
+
+    .table {
+        color: var(--text-primary);
+        --bs-table-bg: transparent;
+        --bs-table-border-color: rgba(255, 255, 255, 0.04);
+        font-size: 0.9rem;
+    }
+
+    .table thead th {
+        background: rgba(0, 0, 0, 0.15);
+        color: var(--text-dim);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
+        padding: 0.8rem 1.5rem;
+    }
 </style>
 
 <div class="dashboard-container">
@@ -27,12 +81,16 @@
         <!-- Links: Hauptformular -->
         <div class="col-lg-8">
             <div class="card mb-4">
-                <div class="card-header"><h6>📢 Nachricht senden / planen</h6></div>
+                <div class="card-header">
+                    <h6>📢 Nachricht senden / planen</h6>
+                </div>
                 <div class="card-body">
-                    <form action="{{ url_for('dashboard.save_broadcast') }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ url_for('dashboard.save_broadcast') }}" method="POST"
+                        enctype="multipart/form-data">
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">NACHRICHTENTEXT / CAPTION</label>
-                            <textarea class="form-control" name="text" rows="5" placeholder="Schreibe hier deine Nachricht..."></textarea>
+                            <textarea class="form-control" name="text" rows="5"
+                                placeholder="Schreibe hier deine Nachricht..."></textarea>
                         </div>
 
                         <div class="row g-3 mb-3">
@@ -41,23 +99,27 @@
                                 <select class="form-select" name="topic_id">
                                     <option value="">-- Hauptchat (kein Topic) --</option>
                                     {% for tid, name in known_topics.items() %}
-                                        <option value="{{ tid }}">{{ name }} (ID: {{ tid }})</option>
+                                    <option value="{{ tid }}">{{ name }} (ID: {{ tid }})</option>
                                     {% endfor %}
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="small text-secondary fw-bold mb-1">SENDE-MODUS</label>
-                                <select class="form-select" name="send_mode">
-                                    <option value="standard">Standard (Vorschau)</option>
-                                    <option value="document" selected>Dokument (Originalqualität)</option>
+                                <select class="form-select" name="send_mode" id="sendModeSelect"
+                                    onchange="onSendModeChange(this)">
+                                    <option value="standard" selected>Standard (Foto/Video Vorschau)</option>
+                                    <option value="document">Dokument (Originalqualität, kein Spoiler möglich)</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="small text-secondary fw-bold mb-1">MEDIUM HOCHLADEN</label>
-                                <input type="file" class="form-control" name="media" accept="image/*,video/*">
+                                <label class="small text-secondary fw-bold mb-1">MEDIEN HOCHLADEN (MEHRERE
+                                    MÖGLICH)</label>
+                                <input type="file" class="form-control" name="media" accept="image/*,video/*" multiple
+                                    id="mediaInput" onchange="updateMediaPreview(this)">
+                                <div id="mediaPreview" class="mt-2 d-flex flex-wrap gap-2"></div>
                             </div>
                             <div class="col-md-6">
                                 <label class="small text-secondary fw-bold mb-1">GEPLANTER ZEITPUNKT (OPTIONAL)</label>
@@ -65,25 +127,41 @@
                             </div>
                         </div>
 
-                        <!-- NEUE FUNKTIONEN: PIN & SILENT -->
+                        <!-- FUNKTIONEN: PIN, SILENT, SPOILER -->
                         <div class="row g-3 mb-4 border-top border-white border-opacity-5 pt-3">
-                            <div class="col-md-6">
-                                <div class="form-check form-switch p-2 ps-5 rounded border border-white border-opacity-5" style="background: rgba(255,255,255,0.01);">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch p-2 ps-5 rounded border border-white border-opacity-5"
+                                    style="background: rgba(255,255,255,0.01);">
                                     <input class="form-check-input" type="checkbox" id="pin_message" name="pin_message">
-                                    <label class="form-check-label small fw-bold" for="pin_message">Nachricht anpinnen</label>
+                                    <label class="form-check-label small fw-bold" for="pin_message">Nachricht
+                                        anpinnen</label>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-check form-switch p-2 ps-5 rounded border border-white border-opacity-5" style="background: rgba(255,255,255,0.01);">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch p-2 ps-5 rounded border border-white border-opacity-5"
+                                    style="background: rgba(255,255,255,0.01);">
                                     <input class="form-check-input" type="checkbox" id="silent_send" name="silent_send">
-                                    <label class="form-check-label small fw-bold" for="silent_send">Leise senden (Silent)</label>
+                                    <label class="form-check-label small fw-bold" for="silent_send">Leise senden
+                                        (Silent)</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4" id="spoilerWrapper">
+                                <div class="form-check form-switch p-2 ps-5 rounded border border-white border-opacity-5"
+                                    style="background: rgba(255,255,255,0.01);">
+                                    <input class="form-check-input" type="checkbox" id="spoiler" name="spoiler">
+                                    <label class="form-check-label small fw-bold" for="spoiler">🫣 Bild als
+                                        Spoiler</label>
                                 </div>
                             </div>
                         </div>
 
                         <div class="d-flex gap-3">
-                            <button type="submit" name="action" value="send_now" class="btn btn-warning flex-grow-1 py-3 fw-bold" style="border-radius: 10px;">🚀 SOFORT SENDEN</button>
-                            <button type="submit" name="action" value="schedule" class="btn btn-primary flex-grow-1 py-3 fw-bold" style="border-radius: 10px; background-color: var(--blue-deep);">🕒 PLANEN</button>
+                            <button type="submit" name="action" value="send_now"
+                                class="btn btn-warning flex-grow-1 py-3 fw-bold" style="border-radius: 10px;">🚀 SOFORT
+                                SENDEN</button>
+                            <button type="submit" name="action" value="schedule"
+                                class="btn btn-primary flex-grow-1 py-3 fw-bold"
+                                style="border-radius: 10px; background-color: var(--blue-deep);">🕒 PLANEN</button>
                         </div>
                     </form>
                 </div>
@@ -93,22 +171,33 @@
         <!-- Rechts: Topic Manager -->
         <div class="col-lg-4">
             <div class="card mb-4">
-                <div class="card-header"><h6>🏷️ Topics verwalten</h6></div>
+                <div class="card-header">
+                    <h6>🏷️ Topics verwalten</h6>
+                </div>
                 <div class="card-body">
                     <form action="{{ url_for('dashboard.save_topic_mapping') }}" method="POST">
-                        <div class="mb-2"><input type="text" name="topic_id" id="input_topic_id" class="form-control form-control-sm" placeholder="ID (z.B. 1234)" required></div>
-                        <div class="mb-2"><input type="text" name="topic_name" id="input_topic_name" class="form-control form-control-sm" placeholder="Name (z.B. Gear-Talk)" required></div>
+                        <div class="mb-2"><input type="text" name="topic_id" id="input_topic_id"
+                                class="form-control form-control-sm" placeholder="ID (z.B. 1234)" required></div>
+                        <div class="mb-2"><input type="text" name="topic_name" id="input_topic_name"
+                                class="form-control form-control-sm" placeholder="Name (z.B. Gear-Talk)" required></div>
                         <button type="submit" class="btn btn-blue-action btn-sm w-100 fw-bold">SPEICHERN</button>
                     </form>
                     <hr class="my-3 border-white border-opacity-10">
                     <div style="max-height: 250px; overflow-y: auto;">
                         <ul class="list-group list-group-flush">
                             {% for tid, name in known_topics.items() %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center p-2 small bg-transparent border-white border-opacity-5">
-                                <div class="text-truncate text-white"><b>{{ name }}</b> <code class="ms-1 text-dim">({{ tid }})</code></div>
+                            <li
+                                class="list-group-item d-flex justify-content-between align-items-center p-2 small bg-transparent border-white border-opacity-5">
+                                <div class="text-truncate text-white"><b>{{ name }}</b> <code
+                                        class="ms-1 text-dim">({{ tid }})</code></div>
                                 <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-sm text-blue p-0" onclick="editTopic('{{ tid }}', '{{ name }}')"><i class="bi bi-pencil-square"></i></button>
-                                    <form action="{{ url_for('dashboard.delete_topic_mapping', topic_id=tid) }}" method="POST" class="m-0"><button type="submit" class="btn btn-sm text-danger p-0" onclick="return confirm('Löschen?')"><i class="bi bi-trash3"></i></button></form>
+                                    <button type="button" class="btn btn-sm text-blue p-0"
+                                        onclick="editTopic('{{ tid }}', '{{ name }}')"><i
+                                            class="bi bi-pencil-square"></i></button>
+                                    <form action="{{ url_for('dashboard.delete_topic_mapping', topic_id=tid) }}"
+                                        method="POST" class="m-0"><button type="submit"
+                                            class="btn btn-sm text-danger p-0" onclick="return confirm('Löschen?')"><i
+                                                class="bi bi-trash3"></i></button></form>
                                 </div>
                             </li>
                             {% endfor %}
@@ -121,40 +210,60 @@
 
     <!-- Verlauf & Warteschlange -->
     <div class="card">
-        <div class="card-header"><h6>⏳ Verlauf & Warteschlange</h6></div>
+        <div class="card-header">
+            <h6>⏳ Verlauf & Warteschlange</h6>
+        </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-borderless align-middle mb-0">
                     <thead>
                         <tr>
-                            <th class="ps-4">STATUS</th><th>TYP</th><th>INHALT</th><th>TOPIC</th><th>DAUER</th><th class="text-end pe-4">AKTION</th>
+                            <th class="ps-4">STATUS</th>
+                            <th>TYP</th>
+                            <th>INHALT</th>
+                            <th>TOPIC</th>
+                            <th>DAUER</th>
+                            <th class="text-end pe-4">AKTION</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% if broadcasts %}
-                            {% for b in broadcasts %}
-                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.02) !important;">
-                                <td class="ps-4">
-                                    {% if b.status == 'sent' %}<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-3">GESENDET</span>
-                                    {% elif b.status == 'pending' %}<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-3">WARTEND</span>
-                                    {% else %}<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 px-3">FEHLER</span>
-                                    {% endif %}
-                                </td>
-                                <td><span class="small fw-bold text-dim text-uppercase">{{ b.send_mode or 'doc' }}</span></td>
-                                <td style="max-width: 300px;" class="text-truncate small">{{ b.text or '—' }} {% if b.media_name %}<span class="text-blue ms-1"><i class="bi bi-paperclip"></i> Media</span>{% endif %}</td>
-                                <td><code class="small text-secondary">{{ known_topics.get(b.topic_id|string, b.topic_id or 'Haupt') }}</code></td>
-                                <td><small class="text-dim">{{ b.scheduled_at or 'Sofort' }}</small></td>
-                                <td class="text-end pe-4">
-                                    {% if b.status == 'pending' %}
-                                        <form action="{{ url_for('dashboard.delete_broadcast', broadcast_id=b.id) }}" method="POST" class="d-inline">
-                                            <button class="btn btn-outline-danger btn-sm border-0"><i class="bi bi-trash3"></i></button>
-                                        </form>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
+                        {% for b in broadcasts %}
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.02) !important;">
+                            <td class="ps-4">
+                                {% if b.status == 'sent' %}<span
+                                    class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-3">GESENDET</span>
+                                {% elif b.status == 'pending' %}<span
+                                    class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-3">WARTEND</span>
+                                {% else %}<span
+                                    class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 px-3">FEHLER</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="small fw-bold text-dim text-uppercase">{{ b.send_mode or 'doc' }}</span>
+                            </td>
+                            <td style="max-width: 300px;" class="text-truncate small">{{ b.text or '—' }} {% if
+                                b.media_name %}<span class="text-blue ms-1"><i class="bi bi-paperclip"></i>
+                                    Media</span>{% endif %}</td>
+                            <td><code
+                                    class="small text-secondary">{{ known_topics.get(b.topic_id|string, b.topic_id or 'Haupt') }}</code>
+                            </td>
+                            <td><small class="text-dim">{{ b.scheduled_at or 'Sofort' }}</small></td>
+                            <td class="text-end pe-4">
+                                {% if b.status == 'pending' %}
+                                <form action="{{ url_for('dashboard.delete_broadcast', broadcast_id=b.id) }}"
+                                    method="POST" class="d-inline">
+                                    <button class="btn btn-outline-danger btn-sm border-0"><i
+                                            class="bi bi-trash3"></i></button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
                         {% else %}
-                            <tr><td colspan="6" class="text-center py-5 text-dim small italic">Keine Broadcasts im Verlauf vorhanden.</td></tr>
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-dim small italic">Keine Broadcasts im Verlauf
+                                vorhanden.</td>
+                        </tr>
                         {% endif %}
                     </tbody>
                 </table>
@@ -164,10 +273,53 @@
 </div>
 
 <script>
-function editTopic(id, name) {
-    document.getElementById('input_topic_id').value = id;
-    document.getElementById('input_topic_name').value = name;
-    document.getElementById('input_topic_name').focus();
-}
+    function editTopic(id, name) {
+        document.getElementById('input_topic_id').value = id;
+        document.getElementById('input_topic_name').value = name;
+        document.getElementById('input_topic_name').focus();
+    }
+
+    function onSendModeChange(select) {
+        const wrapper = document.getElementById('spoilerWrapper');
+        const cb = document.getElementById('spoiler');
+        if (select.value === 'document') {
+            wrapper.style.opacity = '0.4';
+            cb.checked = false;
+            cb.disabled = true;
+        } else {
+            wrapper.style.opacity = '1';
+            cb.disabled = false;
+        }
+    }
+
+    function updateMediaPreview(input) {
+        const preview = document.getElementById('mediaPreview');
+        preview.innerHTML = '';
+        const files = Array.from(input.files);
+        files.forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.style.cssText = 'height:64px;width:64px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.1);';
+                    preview.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-secondary d-flex align-items-center gap-1 p-2';
+                badge.innerHTML = '<i class="bi bi-camera-video"></i> ' + file.name.substring(0, 15);
+                preview.appendChild(badge);
+            }
+        });
+        const count = files.length;
+        if (count > 1) {
+            const info = document.createElement('small');
+            info.className = 'text-secondary w-100 mt-1';
+            info.textContent = count + ' Datei(en) ausgewaehlt – werden als Album gesendet';
+            preview.appendChild(info);
+        }
+    }
 </script>
 {% endblock %}

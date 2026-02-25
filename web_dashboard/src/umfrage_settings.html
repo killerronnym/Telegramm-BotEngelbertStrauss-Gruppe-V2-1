@@ -4,16 +4,79 @@
 
 {% block content %}
 <style>
-    .dashboard-container { padding: 2.5rem; }
-    .btn-back { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-muted); color: var(--text-secondary); font-weight: 500; border-radius: 8px; padding: 0.6rem 1.25rem; transition: all 0.2s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; }
-    .btn-back:hover { background: rgba(255, 255, 255, 0.05); color: #fff; border-color: var(--blue-accent); }
-    .status-badge-container { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-muted); padding: 0.4rem 1.2rem; border-radius: 30px; display: inline-flex; align-items: center; gap: 0.6rem; }
-    .log-display { background: #000; color: #a5b4fc; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; padding: 1rem; border-radius: 8px; border: 1px solid #1e293b; line-height: 1.5; }
-    .stat-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-muted); }
-    .stat-item:last-child { border-bottom: none; }
-    .stat-label { color: var(--text-secondary); font-size: 0.9rem; }
-    .stat-value { font-weight: bold; color: #fff; font-size: 1rem; }
-    .json-editor { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+    .dashboard-container {
+        padding: 2.5rem;
+    }
+
+    .btn-back {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-muted);
+        color: var(--text-secondary);
+        font-weight: 500;
+        border-radius: 8px;
+        padding: 0.6rem 1.25rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-back:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+        border-color: var(--blue-accent);
+    }
+
+    .status-badge-container {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid var(--border-muted);
+        padding: 0.4rem 1.2rem;
+        border-radius: 30px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .log-display {
+        background: #000;
+        color: #a5b4fc;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #1e293b;
+        line-height: 1.5;
+    }
+
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-muted);
+    }
+
+    .stat-item:last-child {
+        border-bottom: none;
+    }
+
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .stat-value {
+        font-weight: bold;
+        color: #fff;
+        font-size: 1rem;
+    }
+
+    .json-editor {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.8rem;
+    }
 </style>
 
 {% set umfrage_running = bot_status.umfrage.running %}
@@ -27,11 +90,12 @@
         </div>
         <div class="status-badge-container mt-2">
             {% if umfrage_running %}
-                <span class="rounded-circle bg-success" style="width: 8px; height: 8px; box-shadow: 0 0 8px #10b981;"></span>
-                <span class="small fw-bold text-success tracking-wider">AKTIV</span>
+            <span class="rounded-circle bg-success"
+                style="width: 8px; height: 8px; box-shadow: 0 0 8px #10b981;"></span>
+            <span class="small fw-bold text-success tracking-wider">AKTIV</span>
             {% else %}
-                <span class="rounded-circle bg-danger" style="width: 8px; height: 8px;"></span>
-                <span class="small fw-bold text-danger tracking-wider">OFFLINE</span>
+            <span class="rounded-circle bg-danger" style="width: 8px; height: 8px;"></span>
+            <span class="small fw-bold text-danger tracking-wider">OFFLINE</span>
             {% endif %}
         </div>
     </div>
@@ -39,10 +103,14 @@
     <div class="row g-4">
         <div class="col-lg-4">
             <div class="card mb-4">
-                <div class="card-header"><h6>Prozess-Steuerung</h6></div>
+                <div class="card-header">
+                    <h6>Prozess-Steuerung</h6>
+                </div>
                 <div class="card-body">
-                    <form action="/bot-action/umfrage/{{ 'stop' if umfrage_running else 'start' }}" method="POST" class="m-0">
-                        <button type="submit" class="btn btn-{{ 'danger' if umfrage_running else 'success' }} w-100 py-3 fw-bold">
+                    <form action="/bot-action/umfrage/{{ 'stop' if umfrage_running else 'start' }}" method="POST"
+                        class="m-0">
+                        <button type="submit"
+                            class="btn btn-{{ 'danger' if umfrage_running else 'success' }} w-100 py-3 fw-bold">
                             {{ '⏹️ BOT STOPPEN' if umfrage_running else '▶️ BOT STARTEN' }}
                         </button>
                     </form>
@@ -56,20 +124,23 @@
                     <form action="/umfrage-settings" method="POST">
                         <input type="hidden" name="action" value="save_schedule">
                         <div class="form-check form-switch mb-3">
-                            <input class="form-check-input" type="checkbox" role="switch" id="schedule_enabled" name="schedule_enabled" {% if schedule.enabled %}checked{% endif %}>
+                            <input class="form-check-input" type="checkbox" role="switch" id="schedule_enabled"
+                                name="schedule_enabled" {% if schedule.enabled %}checked{% endif %}>
                             <label class="form-check-label" for="schedule_enabled">Zeitplan aktiv</label>
                         </div>
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">Uhrzeit</label>
-                            <input type="time" class="form-control" name="schedule_time" value="{{ schedule.time or '12:00' }}">
+                            <input type="time" class="form-control" name="schedule_time"
+                                value="{{ schedule.time or '12:00' }}">
                         </div>
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">Tage</label>
                             <div class="btn-group w-100" role="group">
                                 {% set week_days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] %}
                                 {% for i in range(7) %}
-                                    <input type="checkbox" class="btn-check" id="day_{{ i }}" name="schedule_days" value="{{ i }}" {% if i in schedule.days %}checked{% endif %}>
-                                    <label class="btn btn-outline-primary" for="day_{{ i }}">{{ week_days[i] }}</label>
+                                <input type="checkbox" class="btn-check" id="day_{{ i }}" name="schedule_days"
+                                    value="{{ i }}" {% if i in schedule.days %}checked{% endif %}>
+                                <label class="btn btn-outline-primary" for="day_{{ i }}">{{ week_days[i] }}</label>
                                 {% endfor %}
                             </div>
                         </div>
@@ -78,7 +149,9 @@
                 </div>
             </div>
             <div class="card mb-4">
-                <div class="card-header"><h6>Statistiken</h6></div>
+                <div class="card-header">
+                    <h6>Statistiken</h6>
+                </div>
                 <div class="card-body">
                     <div class="stat-item">
                         <span class="stat-label">Gesamte Umfragen</span>
@@ -94,15 +167,18 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="card">
-                <div class="card-header"><h6>Sofort-Aktionen</h6></div>
+                <div class="card-header">
+                    <h6>Sofort-Aktionen</h6>
+                </div>
                 <div class="card-body">
-                    <form action="/umfrage/send-random" method="POST">
-                        <button type="submit" class="btn btn-primary w-100" {% if not umfrage_running %}disabled{% endif %}>JETZT UMFRAGE SENDEN</button>
+                    <form action="/umfrage/send-now" method="POST">
+                        <button type="submit" class="btn btn-primary w-100" {% if not umfrage_running %}disabled{% endif
+                            %}>JETZT UMFRAGE SENDEN</button>
                     </form>
                     {% if not umfrage_running %}
-                        <p class="text-danger small mt-2 mb-0">Bot muss laufen, um Aktionen zu senden.</p>
+                    <p class="text-danger small mt-2 mb-0">Bot muss laufen, um Aktionen zu senden.</p>
                     {% endif %}
                 </div>
             </div>
@@ -110,17 +186,21 @@
 
         <div class="col-lg-8">
             <div class="card">
-                <div class="card-header"><h6>Konfiguration</h6></div>
+                <div class="card-header">
+                    <h6>Konfiguration</h6>
+                </div>
                 <div class="card-body">
                     <form action="/umfrage-settings" method="POST">
                         <input type="hidden" name="action" value="save_settings">
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">TELEGRAM BOT TOKEN</label>
-                            <input type="password" class="form-control" name="token" value="{{ config.bot_token or '' }}">
+                            <input type="password" class="form-control" name="token"
+                                value="{{ config.bot_token or '' }}">
                         </div>
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">CHANNEL ID</label>
-                            <input type="text" class="form-control" name="channel_id" value="{{ config.channel_id or '' }}">
+                            <input type="text" class="form-control" name="channel_id"
+                                value="{{ config.channel_id or '' }}">
                         </div>
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">TOPIC ID (OPTIONAL)</label>
@@ -130,37 +210,48 @@
                     </form>
                 </div>
             </div>
-            
+
             <div class="row mt-4">
                 <div class="col-md-6">
                     <div class="card">
-                        <div class="card-header"><h6>Alle Umfragen (Verfügbar)</h6></div>
+                        <div class="card-header">
+                            <h6>Alle Umfragen (Verfügbar)</h6>
+                        </div>
                         <div class="card-body">
                             <form action="/umfrage-settings" method="POST">
-                                <input type="hidden" name="action" value="save_umfragen">
-                                <textarea class="form-control json-editor" name="umfragen_json" rows="15">{{ umfragen_json }}</textarea>
-                                <button type="submit" class="btn btn-primary w-100 mt-3">Verfügbare Umfragen speichern</button>
+                                <input type="hidden" name="action" value="save_polls">
+                                <textarea class="form-control json-editor" name="polls_json"
+                                    rows="15">{{ polls_json }}</textarea>
+                                <button type="submit" class="btn btn-primary w-100 mt-3">Verfügbare Umfragen
+                                    speichern</button>
                             </form>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="card">
-                        <div class="card-header"><h6>Gestellte Umfragen (Protokoll)</h6></div>
+                        <div class="card-header">
+                            <h6>Gestellte Umfragen (Protokoll)</h6>
+                        </div>
                         <div class="card-body">
                             <form action="/umfrage-settings" method="POST">
-                                <input type="hidden" name="action" value="save_asked_umfragen">
-                                <textarea class="form-control json-editor" name="asked_umfragen_json" rows="15">{{ asked_umfragen_json }}</textarea>
-                                <div class="form-text mt-2">Entfernen Sie Umfragen hier, um sie wieder in den Pool der verfügbaren Umfragen zu verschieben.</div>
-                                <button type="submit" class="btn btn-warning w-100 mt-3">Protokoll der gestellten Umfragen speichern</button>
+                                <input type="hidden" name="action" value="save_asked_polls">
+                                <textarea class="form-control json-editor" name="asked_polls_json"
+                                    rows="15">{{ asked_polls_json }}</textarea>
+                                <div class="form-text mt-2">Entfernen Sie Umfragen hier, um sie wieder in den Pool
+                                    zurückzuverschieben.</div>
+                                <button type="submit" class="btn btn-warning w-100 mt-3">Protokoll der gestellten
+                                    Umfragen speichern</button>
                             </form>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <div class="card bg-black border-0 mt-4">
-                <div class="card-header border-0 pb-0"><h6 class="text-secondary small font-monospace">System Console</h6></div>
+                <div class="card-header border-0 pb-0">
+                    <h6 class="text-secondary small font-monospace">System Console</h6>
+                </div>
                 <div class="card-body p-0">
                     <pre class="log-display mb-0" style="height: 200px; overflow-y: auto;">{% for line in logs %}{{ line.strip() }}
 {% endfor %}</pre>
