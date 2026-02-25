@@ -1,54 +1,70 @@
-# 🤖 Unified Bot System v2.0.0
+# 🤖 Bot Engine V2 - Engelbert Strauss Gruppe
 
-Zentrale Verwaltungsoberfläche für mehrere Telegram-Bots mit Live-Moderation, MySQL-Modul, automatischem Software-Update-System und professionellem Web-Installer.
+Ein leistungsstarker Telegram-Bot mit Dashboard zur Verwaltung von Einladungen, ID-Suche, Quiz und Umfragen. Optimiert für Windows und Linux (Docker).
 
-## 🚀 Kern-Features
-
-- **✨ Web-Installation Wizard**: Kinderleichte Einrichtung über den Browser (keine manuellen Config-Dateien!).
-- **🛡️ Live-Moderations-Dashboard**: Überwachung und Moderation von Telegram-Gruppen in Echtzeit.
-- **🔄 Auto-Update-System**: Automatische Erkennung und Installation von Software-Updates direkt von GitHub.
-- **🐳 Docker Support**: Native Unterstützung für Linux-Deployment via Docker Compose.
-- **🗄️ MySQL & SQLite**: Unterstützung für lokale und remote Datenbanken mit integriertem Verschlüsselungs-Support.
-- **🎮 Multi-Bot Steuerung**: Zentrale Steuerung für ID-Finder, Quiz-Bot, Umfrage-Bot, TikTok-Monitor und mehr.
-
-## 🚀 Schnellstart (Setup)
-
-### Option A: Klassische Installation (Windows/Linux)
-1. **Repository klonen/kopieren**.
-2. **Umgebung einrichten**:
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # Windows: .\.venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-3. **Starten**:
-   ```bash
-   python main.py  # Oder unter Windows: .\devserver.ps1
-   ```
-4. **Setup**: Öffne `http://127.0.0.1:9002` im Browser. Er wird dich automatisch zum **Installationsassistenten** leiten.
-
-### Option B: Docker (Empfohlen für Linux/Cloud)
-1. **Docker Compose starten**:
-   ```bash
-   docker-compose up -d
-   ```
-2. **Konfigurieren**: Gehe auf `http://deine-ip:9002` und folge den Anweisungen des Web-Installers.
-
-## 🔐 Sicherheit & Login
-- Das Admin-Passwort wird während der Installation festgelegt.
-- **Anforderungen**: Mind. 6 Zeichen, 1 Großbuchstabe, 1 Sonderzeichen.
-- Passwörter werden sicher mit modernem Hashing gespeichert.
-
-## 🔄 Software Updates
-Das System prüft alle 6 Stunden auf GitHub nach neuen Versionen. 
-- **Auto-Update**: Kann im Dashboard aktiviert werden, um Updates vollautomatisch im Hintergrund zu installieren.
-- **Manuell**: Über die Sidebar/Dashboard im Bereich "System Settings".
-
-## 📁 Projektstruktur
-- `/bots`: Quellcode der einzelnen Telegram-Bots.
-- `/web_dashboard`: Flask-App für die Verwaltungsoberfläche.
-- `/data`: Lokale Datenspeicher (Logs, JSON-Daten).
-- `/instance`: Enthält die Sperrdatei `installed.lock` und lokale Datenbanken.
+## 🚀 Features
+- **Invite Bot:** Automatisierte Bewerbungen mit Steckbrief und Whitelist-Funktion.
+- **ID-Finder Bot:** Gruppen-Moderation und Nutzer-Identifizierung.
+- **Dashboard:** Modernes Web-Interface zur Konfiguration aller Bots.
+- **Auto-Update:** Automatische Aktualisierung direkt über GitHub.
 
 ---
-*Entwickelt für maximale Portabilität und Benutzerfreundlichkeit.*
+
+## 🛠️ Installation (Windows)
+
+1. **Voraussetzungen:** [Python 3.11+](https://www.python.org/) installiert.
+2. **Repository klonen:**
+   ```bash
+   git clone https://github.com/killerronnym/Telegramm-BotEngelbertStrauss-Gruppe-V2-1.git
+   cd Telegramm-BotEngelbertStrauss-Gruppe-V2-1
+   ```
+3. **Virtuelle Umgebung erstellen:**
+   ```powershell
+   python -m venv venv
+   .\venv\Scripts\activate
+   ```
+4. **Abhängigkeiten installieren:**
+   ```powershell
+   pip install -r requirements.txt
+   ```
+5. **Starten:**
+   ```powershell
+   python run_waitress.py
+   ```
+   Das Dashboard ist nun unter `http://localhost:9002` erreichbar.
+
+---
+
+## 🐳 Installation (Docker / Linux)
+
+Diese Methode wird für Server empfohlen, da sie Updates und Neustarts am stabilsten handhabt.
+
+1. **Voraussetzungen:** Docker und Docker-Compose installiert.
+2. **Repository klonen:** (siehe oben).
+3. **Konfiguration:** Kopiere die `.env.example` zu `.env` (falls vorhanden) und trage deine Daten ein.
+4. **Starten:**
+   ```bash
+   docker-compose up -d --build
+   ```
+5. **Dashboard:** Erreichbar unter `http://<server-ip>:9002`.
+
+> [!TIP]
+> Um In-App Updates im Docker-Container dauerhaft zu speichern, ist in der `docker-compose.yml` standardmäßig der Mount `- .:/app` aktiv.
+
+---
+
+## 🔄 Updates
+- **Automatisch:** Aktiviere in den Dashboard-Systemeinstellungen die Option "Auto-Update".
+- **Manuell:** Klicke im Dashboard auf "Nach Updates suchen" und dann auf "Update jetzt installieren".
+- **Docker-Konsole:** `docker-compose pull && docker-compose up -d`.
+
+## 📂 Ordnerstruktur
+- `/bots`: Die Logik der einzelnen Bot-Module.
+- `/web_dashboard`: Flask-App für die Verwaltung.
+- `/instance`: Beinhaltet die `app.db` (SQLite Datenbank).
+- `/data`: Temporäre Dateien und Exporte.
+
+---
+
+**Entwickelt für die Engelbert Strauss Gruppe.**  
+Bei Fragen: @didinils | @pup_Rinno_cgn

@@ -44,11 +44,18 @@ def is_process_running(pid):
 def safe_clear_log(filepath):
     if not os.path.exists(filepath): return True
     try:
+        # Versuch 1: Löschen
         os.remove(filepath)
         return True
     except Exception as e:
-        print(f"Error clearing log {filepath}: {e}")
-        return False
+        # Versuch 2: Leeren (Truncate), falls Löschen fehlschlägt (File In Use)
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.truncate(0)
+            return True
+        except Exception as e2:
+            print(f"Error clearing log {filepath}: {e}, Truncate error: {e2}")
+            return False
 
 def get_master_pid():
     pfile = os.path.join(PROJECT_ROOT, "bots", "main_bot.pid")
@@ -158,7 +165,18 @@ def save_invite_content():
 def add_field():
     s = BotSettings.query.filter_by(bot_name='invite').first()
     cfg = json.loads(s.config_json); fields = cfg.setdefault('form_fields', [])
-    fields.append({'id': request.form.get('field_id'), 'emoji': request.form.get('emoji', '🔹'), 'display_name': request.form.get('display_name', ''), 'label': request.form.get('label', ''), 'type': request.form.get('type', 'text'), 'required': 'required' in request.form, 'enabled': True})
+    min_age = request.form.get('min_age')
+    fields.append({
+        'id': request.form.get('field_id'), 
+        'emoji': request.form.get('emoji', '🔹'), 
+        'display_name': request.form.get('display_name', ''), 
+        'label': request.form.get('label', ''), 
+        'type': request.form.get('type', 'text'), 
+        'required': 'required' in request.form, 
+        'enabled': True,
+        'min_age': int(min_age) if min_age and min_age.isdigit() else None,
+        'min_age_error_msg': request.form.get('min_age_error_msg', '')
+    })
     s.config_json = json.dumps(cfg); db.session.commit(); return redirect(url_for('dashboard.bot_settings'))
 
 @bp.route('/bot-settings/edit-field', methods=['POST'])
@@ -167,7 +185,18 @@ def edit_field():
     s = BotSettings.query.filter_by(bot_name='invite').first()
     cfg = json.loads(s.config_json); fid = request.form.get('field_id')
     for f in cfg.get('form_fields', []):
-        if f['id'] == fid: f.update({'emoji': request.form.get('emoji'), 'display_name': request.form.get('display_name'), 'label': request.form.get('label'), 'type': request.form.get('type'), 'required': 'required' in request.form, 'enabled': 'enabled' in request.form})
+        if f['id'] == fid:
+            min_age = request.form.get('min_age')
+            f.update({
+                'emoji': request.form.get('emoji'), 
+                'display_name': request.form.get('display_name'), 
+                'label': request.form.get('label'), 
+                'type': request.form.get('type'), 
+                'required': 'required' in request.form, 
+                'enabled': 'enabled' in request.form,
+                'min_age': int(min_age) if min_age and min_age.isdigit() else None,
+                'min_age_error_msg': request.form.get('min_age_error_msg', '')
+            })
     s.config_json = json.dumps(cfg); db.session.commit(); return redirect(url_for('dashboard.bot_settings'))
 
 @bp.route('/bot-settings/delete-field', methods=['POST'])

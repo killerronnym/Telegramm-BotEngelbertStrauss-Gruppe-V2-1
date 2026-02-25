@@ -80,6 +80,8 @@ def main():
     # ID Finder (Master Logic)
     if hasattr(id_finder_plugin, 'get_handlers'):
         for h in id_finder_plugin.get_handlers(): app.add_handler(h)
+    if hasattr(id_finder_plugin, 'get_track_handler'):
+        app.add_handler(id_finder_plugin.get_track_handler(), group=1)
     if hasattr(id_finder_plugin, 'setup_jobs'):
         id_finder_plugin.setup_jobs(app.job_queue)
         

@@ -8,6 +8,10 @@ services:
     ports:
       - "9002:9002"
     volumes:
+      # Empfohlen fǬr In-App Updates: Den gesamten Code-Ordner mounten.
+      # So bleiben Updates auch nach einem Container-Neustart erhalten.
+      - .:/app
+      # Einzelne Mounts für Daten (redundant falls .:/app aktiv ist, aber gut für Übersicht)
       - ./instance:/app/instance
       - ./logs:/app/logs
       - ./data:/app/data
@@ -15,6 +19,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=Europe/Berlin
+      - FLASK_ENV=production
     # Falls eine externe MySQL Datenbank genutzt wird, kann diese hier verlinkt werden
     # networks:
     #   - bot-network

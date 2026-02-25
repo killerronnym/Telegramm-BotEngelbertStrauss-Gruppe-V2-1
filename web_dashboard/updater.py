@@ -173,13 +173,19 @@ class Updater:
                 
                 # Attempt to gracefully restart the web server
                 if os.name == 'nt':
-                    # Windows: Signals like SIGHUP are not available.
-                    # We terminate the process and rely on a wrapper script (like a loop in PowerShell) to restart us.
+                    # Windows: Terminiere den Prozess. Erfordert einen externen Loop (z.B. .bat/.ps1) zum Neustart.
                     log.info("Windows detected. Terminating process to allow wrapper script to restart.")
-                    os._exit(0) # Immediate exit to prevent further execution
-                else:
-                    log.info("Linux/Docker detected. Terminating process with exit 0 to trigger container restart.")
                     os._exit(0)
+                else:
+                    # Linux/Docker: Sende SIGTERM an den eigenen Prozess und den Parent (Gunicorn Master)
+                    log.info("Linux/Docker detected. Sending SIGTERM to process group to trigger restart.")
+                    try:
+                        # Gunicorn Master beenden, damit Docker den Container neu startet
+                        os.kill(os.getppid(), signal.SIGTERM) 
+                        time.sleep(1)
+                        os.kill(os.getpid(), signal.SIGTERM)
+                    except:
+                        os._exit(0)
 
             except Exception as e:
                 log.error(f"Update failed: {e}")

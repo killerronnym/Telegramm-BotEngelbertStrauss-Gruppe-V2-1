@@ -388,10 +388,12 @@ async def warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def get_handlers():
     return [
-        MessageHandler(filters.ALL & ~filters.COMMAND, track_activity),
         CommandHandler("id", get_id),
         CommandHandler("warn", warn_user)
     ]
+
+def get_track_handler():
+    return MessageHandler(filters.ALL & ~filters.COMMAND, track_activity)
 
 def setup_jobs(job_queue):
     job_queue.run_repeating(check_and_send_broadcasts, interval=30)
