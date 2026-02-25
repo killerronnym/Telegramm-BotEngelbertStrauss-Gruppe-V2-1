@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from .config import Config
 from flask_apscheduler import APScheduler
 import os
+import json
 import logging
 from .utils import datetimeformat
 
@@ -82,21 +83,23 @@ def create_app(test_config=None):
     scheduler.add_job(id='auto_update_job', func=check_and_auto_update, trigger='interval', hours=6, args=[app])
 
     # --- MASTER-BOT AUTO-START (Nach Update/Container-Restart) ---
-    with app.app_context():
-        from web_dashboard.app.models import BotSettings
-        from web_dashboard.app.routes.dashboard import master_bot_action
-        
-        # Wir prüfen, ob der ID-Finder (Master) als aktiv markiert ist
-        s = BotSettings.query.filter_by(bot_name='id_finder').first()
-        if s:
-            try:
-                c = json.loads(s.config_json)
-                if c.get('is_active'):
-                    # Wir rufen die Start-Logik auf. Diese prüft intern bereits, 
-                    # ob der Prozess evtl. schon läuft (via PID-File).
-                    print("Master-Bot Auto-Start wird ausgelöst...")
-                    master_bot_action('start')
-            except Exception as e:
-                print(f"Fehler beim Master-Bot Auto-Start: {e}")
+    # Recursion Guard: Do not auto-start if we are already inside a bot process
+    if not os.environ.get("BOT_PROCESS"):
+        with app.app_context():
+            from web_dashboard.app.models import BotSettings
+            from web_dashboard.app.routes.dashboard import manage_master_bot_logic
+            
+            # Wir prüfen, ob der ID-Finder (Master) als aktiv markiert ist
+            s = BotSettings.query.filter_by(bot_name='id_finder').first()
+            if s:
+                try:
+                    c = json.loads(s.config_json)
+                    if c.get('is_active'):
+                        # Wir rufen die Start-Logik auf. Diese prüft intern bereits, 
+                        # ob der Prozess evtl. schon läuft (via PID-File).
+                        print("Master-Bot Auto-Start wird ausgelöst...")
+                        manage_master_bot_logic('start', is_auto_start=True)
+                except Exception as e:
+                    print(f"Fehler beim Master-Bot Auto-Start: {e}")
 
     return app

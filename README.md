@@ -2,7 +2,29 @@
 
 Ein leistungsstarker Telegram-Bot mit Dashboard zur Verwaltung von Einladungen, ID-Suche, Quiz und Umfragen. Optimiert für Windows und Linux (Docker).
 
-## 🚀 Features
+## 🚀 Neue Features & Verbesserungen
+
+### 📱 Intelligente Social Media Erfassung
+Der Bot erkennt nun automatisch Plattformen aus URLs. Bei reinen Nutzernamen erscheint ein interaktives Auswahlmenü.
+- **Multi-Link Support:** Nutzer können mehrere Accounts hinterlegen.
+- **Interaktive Buttons:** Entscheidung über weitere Links erfolgt via Klick-Buttons statt Texteingabe.
+
+![Social Selection](docs/images/social_selection.png)
+![Decision Buttons](docs/images/decision_buttons.png)
+
+### 👮 Handling für bestehende Mitglieder
+Nutzer, die bereits in der Gruppe sind, können ihren Steckbrief nachträglich ausfüllen. 
+- **Admin-Freigabe:** Steckbriefe von Mitgliedern werden erst nach Admin-Bestätigung (Ja/Nein Buttons) in der Gruppe gepostet.
+
+![Admin Approval](docs/images/admin_approval.png)
+
+### 🛠️ Technische Stabilität
+- **Bulletproof Process Locking:** Ein Datei-basierter Lock (`main_bot.lock`) verhindert Conflict-409 Fehler durch doppelt laufende Bot-Instanzen.
+- **Persistence:** Zustände (Conversation State) bleiben auch nach einem Bot-Neustart erhalten.
+
+---
+
+## 🚀 Features (Allgemein)
 - **Invite Bot:** Automatisierte Bewerbungen mit Steckbrief und Whitelist-Funktion.
 - **ID-Finder Bot:** Gruppen-Moderation und Nutzer-Identifizierung.
 - **Dashboard:** Modernes Web-Interface zur Konfiguration aller Bots.
@@ -61,7 +83,6 @@ Diese Methode wird für Server empfohlen, da sie Updates und Neustarts am stabil
 ## 🔄 Updates
 - **Automatisch:** Aktiviere in den Dashboard-Systemeinstellungen die Option "Auto-Update".
 - **Manuell:** Klicke im Dashboard auf "Nach Updates suchen" und dann auf "Update jetzt installieren".
-  *Hinweis: Der Bot sendet unter Linux/Docker ein Restart-Signal an den Gunicorn-Master, wodurch der gesamte Container neu geladen wird.*
 - **Docker-Konsole:** `docker-compose pull && docker-compose up -d`.
 
 ## 📂 Ordnerstruktur

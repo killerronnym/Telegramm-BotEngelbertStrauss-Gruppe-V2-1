@@ -67,7 +67,7 @@ def get_bot_token():
     """Zentrale Stelle für den Bot-Token. Priorisiert ENV vor DB."""
     # 1. Check ENV (am wichtigsten für Docker)
     env_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-    if env_token:
+    if env_token and env_token.strip() and env_token != 'MASTER_TOKEN_IN_DB_ID_FINDER':
         return env_token
     
     # 2. Check DB ('id_finder' gilt als Master-Bot Config)

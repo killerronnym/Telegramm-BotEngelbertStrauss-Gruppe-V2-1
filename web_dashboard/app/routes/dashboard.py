@@ -1088,18 +1088,27 @@ def bot_action_route(bot_name, action):
         
     return redirect(request.referrer or url_for('dashboard.index'))
 
-def master_bot_action(action):
+def manage_master_bot_logic(action, is_auto_start=False):
+    """
+    Kapselt die Logik zum Starten/Stoppen des Master-Bots.
+    Kann sowohl aus einer Web-Route als auch beim App-Start (Auto-Start) aufgerufen werden.
+    """
     pfile = os.path.join(PROJECT_ROOT, "bots", "main_bot.pid")
     script = os.path.join(PROJECT_ROOT, "bots", "main_bot.py")
     lpath = os.path.join(PROJECT_ROOT, "bots", "main_bot.log")
-    
+
+    def _flash(msg, cat):
+        if not is_auto_start:
+            try: flash(msg, cat)
+            except: pass
+
     if action == 'start':
         if os.path.exists(pfile):
             try:
                 with open(pfile, 'r') as f: pid = int(f.read().strip())
                 if is_process_running(pid):
-                    flash('Master-Bot läuft bereits.', 'warning')
-                    return redirect(request.referrer or url_for('dashboard.index'))
+                    _flash('Master-Bot läuft bereits.', 'warning')
+                    return
             except: pass
         
         exe = sys.executable
@@ -1115,28 +1124,36 @@ def master_bot_action(action):
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
         env["PYTHONIOENCODING"] = "utf-8"
+        env["BOT_PROCESS"] = "1"  # Markierung für Unterprozesse
         
         creationflags = 0
         if os.name == 'nt': creationflags = 0x00000008
             
         with open(lpath, 'a', encoding='utf-8') as lf: 
             proc = subprocess.Popen([exe, script], start_new_session=(os.name != 'nt'), creationflags=creationflags, stdout=lf, stderr=lf, env=env)
+        
         with open(pfile, 'w') as f: f.write(str(proc.pid))
-        flash('Master-Bot gestartet.', 'success')
+        _flash('Master-Bot gestartet.', 'success')
+        print(f"Master-Bot gestartet (PID: {proc.pid})")
         
     elif action == 'stop' and os.path.exists(pfile):
         try:
             with open(pfile, 'r') as f: pid = int(f.read().strip())
             if os.name == 'nt':
+                # Force kill process tree to avoid ghost processes
                 subprocess.run(['taskkill', '/F', '/T', '/PID', str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                # Also kill any leftover main_bot.py processes just in case
+                subprocess.run(['taskkill', '/F', '/IM', 'python.exe', '/FI', 'WINDOWTITLE eq Bot-Master*'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             else:
                 os.kill(pid, signal.SIGTERM)
-            os.remove(pfile)
-            flash('Master-Bot gestoppt.', 'success')
+            if os.path.exists(pfile): os.remove(pfile)
+            _flash('Master-Bot gestoppt.', 'success')
         except Exception as e:
-            print(f"Fehler beim Stoppen vom Master Bot (PID: {pid}): {e}")
-            flash('Fehler beim Stoppen des Master-Bots.', 'danger')
-            
+            print(f"Fehler beim Stoppen vom Master Bot: {e}")
+            _flash('Fehler beim Stoppen des Master-Bots.', 'danger')
+
+def master_bot_action(action):
+    manage_master_bot_logic(action)
     return redirect(request.referrer or url_for('dashboard.index'))
 
 @bp.route('/api/bot-status')
