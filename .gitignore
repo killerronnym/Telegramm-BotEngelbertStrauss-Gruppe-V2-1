@@ -31,6 +31,3 @@ data/tmp_update/
 nohup.out
 web_server.pid
 *.log
-web_dashboard/app/static/avatars/
-web_dashboard/app/static/media/
-web_dashboard/app/static/uploads/

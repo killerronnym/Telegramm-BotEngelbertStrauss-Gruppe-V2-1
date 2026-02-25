@@ -23,15 +23,19 @@ if "mysql" in db_url and "charset=utf8mb4" not in db_url:
 
 print(f"Connecting to: {db_url.split('@')[-1] if '@' in db_url else 'SQLite/Local'}")
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 try:
     engine = create_engine(db_url)
     with engine.connect() as conn:
         result = conn.execute(
-            text("SELECT id, telegram_user_id, content_type, file_id, text, timestamp FROM id_finder_message ORDER BY id DESC LIMIT 10")
+            text("SELECT id, content_type, file_id, text, timestamp FROM id_finder_message ORDER BY id DESC LIMIT 50")
         ).fetchall()
         
-        print("\nLast 10 messages:")
+        print("\nLast 50 messages:")
         for row in result:
-            print(row)
+            # Safely print row as a list of strings
+            print([str(val) for val in row])
 except Exception as e:
     print(f"Error: {e}")

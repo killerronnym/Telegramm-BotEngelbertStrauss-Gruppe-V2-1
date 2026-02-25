@@ -220,6 +220,10 @@ async def track_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             content_type = "text"
             file_id = None
+            
+            # Debug log for all message fields
+            logger.debug(f"Message fields: photo={bool(msg.photo)}, video={bool(msg.video)}, sticker={bool(msg.sticker)}, animation={bool(msg.animation)}, doc={bool(msg.document)}")
+            
             if msg.photo: 
                 content_type = "photo"
                 file_id = msg.photo[-1].file_id
@@ -252,7 +256,7 @@ async def track_activity(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 content_type=content_type, file_id=file_id,
                 is_command=is_command, timestamp=now
             )
-            logger.info(f"Logging message from {user.id}: type={content_type}, file_id={file_id}")
+            logger.info(f"Logging message from {user.id}: type={content_type}, file_id={file_id}, text_len={len(db_msg.text)}")
             db.session.add(db_msg)
             db.session.commit()
     except Exception as e:
