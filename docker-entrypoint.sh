@@ -4,6 +4,7 @@
 set -e
 
 echo "--- Starting Bot Engine v2 Entrypoint ---"
+export BOT_PROCESS=1
 
 # Navigieren zum App-Verzeichnis
 cd /app
