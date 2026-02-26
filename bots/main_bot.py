@@ -1,5 +1,7 @@
 import os
 import sys
+import socket
+from datetime import datetime
 
 # Setup Project Root for imports
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -37,7 +39,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-logger.info(f"--- BOT STARTUP ATTEMPT (PID: {os.getpid()}) ---")
+hostname = socket.gethostname()
+start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+logger.info(f"--- BOT IDENTITY: Host={hostname} | Start={start_time} | PID={os.getpid()} ---")
 
 # Recursion Guard
 os.environ["BOT_PROCESS"] = "1"
@@ -56,7 +60,8 @@ import bots.umfrage_bot.umfrage_bot as umfrage_plugin
 import bots.outfit_bot.outfit_bot as outfit_plugin
 
 async def main_post_init(app: Application) -> None:
-    logger.info("🚀 Master-Bot initialisiert. Startvorgang läuft...")
+    bot_info = await app.bot.get_me()
+    logger.info(f"🚀 Master-Bot @{bot_info.username} initialisiert. Host: {socket.gethostname()}")
 
 async def main_post_shutdown(app: Application) -> None:
     logger.info("🛑 Master-Bot wurde beendet und heruntergefahren.")
@@ -93,7 +98,7 @@ def main():
         atexit.register(remove_pid)
 
     except (IOError, ImportError):
-        logger.error(f"❌ Eine andere Instanz des Bots läuft bereits (Lock auf {lock_file_path}). Beende PID {os.getpid()}...")
+        logger.error(f"❌ Andere Instanz läuft bereits (Lock auf {lock_file_path}). Host: {socket.gethostname()} | PID: {os.getpid()}")
         sys.exit(1)
 
     token = get_bot_token()
