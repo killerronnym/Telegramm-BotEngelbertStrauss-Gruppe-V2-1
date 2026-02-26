@@ -66,6 +66,18 @@ def get_master_pid():
         except: return None
     return None
 
+def fmt_dt(d):
+    """Helper for date formatting (Handles mysql date objects vs sqlite strings)"""
+    if not d: return 'Unknown'
+    if hasattr(d, 'strftime'): return d.strftime('%d.%m')
+    try:
+        s = str(d)
+        if '-' in s:
+            parts = s.split('-')
+            if len(parts) >= 3: return f"{parts[2][:2]}.{parts[1]}"
+        return s
+    except: return 'Err'
+
 def get_bot_status_simple():
     status = {
         "invite": {"running": False}, "quiz": {"running": False}, 
@@ -802,19 +814,6 @@ def id_finder_analytics():
             func.count(IDFinderMessage.id).label('count')
         ).filter(query_filter).group_by('date').order_by('date').all()
 
-        # Helper for date formatting (Handles mysql date objects vs sqlite strings)
-        def fmt_dt(d):
-            if not d: return 'Unknown'
-            if hasattr(d, 'strftime'): return d.strftime('%d.%m')
-            # If it's a string from SQLite or similar
-            try:
-                s = str(d)
-                if '-' in s:
-                    parts = s.split('-')
-                    if len(parts) >= 3: return f"{parts[2][:2]}.{parts[1]}"
-                return s
-            except: return 'Err'
-
         # Make sure timeline has continuous dates for the requested period if filtering by days
         timeline_labels = []
         total_data = []
@@ -887,27 +886,36 @@ def id_finder_analytics():
 @bp.route('/api/id-finder/user-activity/<int:uid>')
 def id_finder_user_activity(uid):
     try:
-        days = int(request.args.get('days') or 7)
-    except ValueError:
-        days = 7
+        try:
+            days = int(request.args.get('days') or 7)
+        except ValueError:
+            days = 7
 
-    now = datetime.utcnow()
-    cutoff = now - timedelta(days=days)
-    
-    timeline_query = db.session.query(
-        func.date(IDFinderMessage.timestamp).label('date'),
-        func.count(IDFinderMessage.id).label('count')
-    ).filter(IDFinderMessage.telegram_user_id == uid, IDFinderMessage.timestamp >= cutoff) \
-     .group_by('date').order_by('date').all()
+        now = datetime.utcnow()
+        cutoff = now - timedelta(days=days)
+        
+        timeline_query = db.session.query(
+            func.date(IDFinderMessage.timestamp).label('date'),
+            func.count(IDFinderMessage.id).label('count')
+        ).filter(IDFinderMessage.telegram_user_id == uid, IDFinderMessage.timestamp >= cutoff) \
+         .group_by('date').order_by('date').all()
 
-    date_map = {row.date.strftime('%d.%m'): row.count for row in timeline_query if row.date}
-    
-    total_data = []
-    for i in range(days-1, -1, -1):
-        d_str = (now - timedelta(days=i)).strftime('%d.%m')
-        total_data.append(date_map.get(d_str, 0))
+        date_map = {fmt_dt(row.date): row.count for row in timeline_query if row.date}
+        
+        total_data = []
+        for i in range(days-1, -1, -1):
+            d_str = (now - timedelta(days=i)).strftime('%d.%m')
+            total_data.append(date_map.get(d_str, 0))
 
-    return jsonify({"timeline": total_data})
+        return jsonify({"timeline": total_data})
+    except Exception as e:
+        error_file = os.path.join(PROJECT_ROOT, "logs", "dashboard_error.log")
+        os.makedirs(os.path.dirname(error_file), exist_ok=True)
+        with open(error_file, "a", encoding="utf-8") as f:
+            f.write(f"\n--- User Activity Error [{datetime.now()}] ---\n")
+            f.write(traceback.format_exc())
+            f.write("\n")
+        raise e
 
 # --- USER MANAGEMENT ---
 @bp.route('/users')
