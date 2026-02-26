@@ -1,1 +1,0 @@
-2026-02-19 20:15:28,795 - __main__ - ERROR - <module>:37 - Erforderliche Bibliothek 'python-telegram-bot' nicht gefunden! Bitte stellen Sie sicher, dass Sie die virtuelle Umgebung (.venv) verwenden.

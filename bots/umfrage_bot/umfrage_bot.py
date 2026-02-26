@@ -19,11 +19,13 @@ from telegram.error import TelegramError
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(os.path.dirname(BASE_DIR))
 TRIGGER_FILE = os.path.join(BASE_DIR, "send_now.tmp")
-STATE_FILE = os.path.join(BASE_DIR, "umfrage_bot_state.json") # Stores last run date
+TRIGGER_FILE = os.path.join(BASE_DIR, "send_now.tmp")
+STATE_FILE = os.path.join(PROJECT_ROOT, "instance", "umfrage_bot_state.json") # Stores last run date
 
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 POLL_FILE = os.path.join(DATA_DIR, "umfragen.json")
-USED_FILE = os.path.join(BASE_DIR, "umfragen_gestellt.json")
+POLL_FILE = os.path.join(DATA_DIR, "umfragen.json")
+USED_FILE = os.path.join(PROJECT_ROOT, "instance", "umfragen_gestellt.json")
 
 # Navigating to project root
 sys.path.append(PROJECT_ROOT)

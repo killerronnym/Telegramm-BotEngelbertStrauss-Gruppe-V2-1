@@ -1,5 +1,5 @@
 # Stop all running bots via PID files
-$pidFolder = Join-Path $PSScriptRoot "web_dashboard"
+$pidFolder = Join-Path $PSScriptRoot "logs"
 $pidFiles = Get-ChildItem $pidFolder -Filter "*.pid" | Where-Object { $_.Name -ne "web_server.pid" }
 
 foreach ($pf in $pidFiles) {

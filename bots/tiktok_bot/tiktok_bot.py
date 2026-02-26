@@ -19,12 +19,23 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..', '..'))
 
 def log_print(msg):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    # Encode/decode to safely handle emojis in Windows console
     safe_msg = str(msg).encode('utf-8', 'replace').decode('utf-8')
+    log_line = f"[{timestamp}] TikTok Bot: {safe_msg}"
+    
+    # Print to stdout
     try:
-        print(f"[{timestamp}] TikTok Bot: {safe_msg}", flush=True)
+        print(log_line, flush=True)
     except UnicodeEncodeError:
         print(f"[{timestamp}] TikTok Bot: [Message contains unsupported characters]", flush=True)
+        
+    # Write to log file for the dashboard
+    log_file_path = os.path.join(PROJECT_ROOT, "logs", "tiktok_bot.log")
+    try:
+        os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
+        with open(log_file_path, "a", encoding="utf-8") as f:
+            f.write(log_line + "\n")
+    except Exception as e:
+        print(f"Failed to write to log file: {e}")
 
 try:
     from TikTokLive import TikTokLiveClient

@@ -15,7 +15,7 @@ bp = Blueprint('api', __name__, url_prefix='/api')
 # Pfade
 WEB_DASHBOARD_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROJECT_ROOT = os.path.dirname(WEB_DASHBOARD_DIR)
-USER_INTERACTION_LOG_FILE = os.path.join(PROJECT_ROOT, "user_interactions.log") 
+USER_INTERACTION_LOG_FILE = os.path.join(PROJECT_ROOT, "logs", "user_interactions.log") 
 AVATAR_CACHE_DIR = os.path.join(WEB_DASHBOARD_DIR, "app", "static", "avatars")
 MEDIA_CACHE_DIR = os.path.join(WEB_DASHBOARD_DIR, "app", "static", "media")
 VERSION_FILE = os.path.join(PROJECT_ROOT, "version.json")
