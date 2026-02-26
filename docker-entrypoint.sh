@@ -17,7 +17,12 @@ fi
 
 echo "Starting Gunicorn Flask server and Master-Bot..."
 # Wir stellen sicher, dass die Datenbank bereit ist (Create All)
-python -c "from web_dashboard.app import create_app, db; app=create_app(); with app.app_context(): db.create_all()"
+python -c "
+from web_dashboard.app import create_app, db
+app=create_app()
+with app.app_context():
+    db.create_all()
+"
 
 # Master-Bot im Hintergrund starten
 python bots/main_bot.py &
