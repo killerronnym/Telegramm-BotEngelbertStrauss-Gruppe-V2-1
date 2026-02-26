@@ -6,7 +6,7 @@ import subprocess
 import sys
 import signal
 from datetime import datetime, timedelta
-from sqlalchemy import func, extract, case, text
+from sqlalchemy import func, extract, case, text, true
 import traceback
 from werkzeug.utils import secure_filename
 from ..models import db, BotSettings, Broadcast, TopicMapping, User, IDFinderAdmin, IDFinderUser, IDFinderMessage, AVAILABLE_PERMISSIONS
@@ -765,6 +765,8 @@ def id_finder_update_admin_permissions():
 @bp.route('/id-finder/analytics')
 @login_required
 def id_finder_analytics():
+    sys.stdout.write("--- [DEBUG] Entered id_finder_analytics ---\n")
+    sys.stdout.flush()
     try:
         try:
             days = int(request.args.get('days') or 7)
@@ -778,7 +780,7 @@ def id_finder_analytics():
             month = 0
             year = 0
 
-        query_filter = text("1=1")
+        query_filter = true()
         
         # Handle time filtering
         now = datetime.utcnow()
@@ -789,6 +791,9 @@ def id_finder_analytics():
         elif days > 0:
             cutoff = now - timedelta(days=days)
             query_filter = IDFinderMessage.timestamp >= cutoff
+
+        sys.stdout.write(f"--- [DEBUG] Filter set. Days={days}, Month={month}, Year={year} ---\n")
+        sys.stdout.flush()
 
         total_users = IDFinderUser.query.count()
 
@@ -807,6 +812,9 @@ def id_finder_analytics():
             {"uid": str(row.telegram_id), "name": row.first_name or "Unknown", "msgs": int(row.msg_count), "media": int(row.media_count or 0)}
             for row in leaderboard_query
         ]
+        
+        sys.stdout.write(f"--- [DEBUG] Leaderboard ready: {len(leaderboard)} entries ---\n")
+        sys.stdout.flush()
 
         # Timeline (Messages per day)
         timeline_query = db.session.query(
@@ -864,6 +872,9 @@ def id_finder_analytics():
                         py_dow = (val + 6) % 7
                     busiest_days[py_dow] = row.count
                 except: pass
+
+        sys.stdout.write("--- [DEBUG] Everything ready. Rendering template. ---\n")
+        sys.stdout.flush()
 
         return render_template('id_finder_analytics.html', 
                                stats={'total_users': total_users}, 
