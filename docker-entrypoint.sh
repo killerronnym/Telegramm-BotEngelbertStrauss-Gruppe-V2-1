@@ -26,7 +26,7 @@ BOT_PID=$!
 # Dashboard im Vordergrund (exec ersetzt die Shell, also brauchen wir hier KEIN exec wenn wir PIDs managen wollen)
 # Aber wir können gunicorn starten und per trap auf Signale reagieren.
 # Alternativ: Gunicorn im Hintergrund und wait.
-gunicorn --bind 0.0.0.0:9002 --workers 2 --timeout 120 --access-logfile - --error-logfile - "web_dashboard.app:create_app()" &
+gunicorn --bind 0.0.0.0:9003 --workers 2 --timeout 120 --access-logfile - --error-logfile - "web_dashboard.app:create_app()" &
 WEB_PID=$!
 
 # Trap für sauberes Beenden beider Prozesse
