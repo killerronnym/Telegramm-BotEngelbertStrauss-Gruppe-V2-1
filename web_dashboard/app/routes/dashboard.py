@@ -1,12 +1,5 @@
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, session
-from flask_login import login_required, current_user
-import os
-import json
-import subprocess
-import sys
-import signal
-from datetime import datetime, timedelta
 from sqlalchemy import func, extract, case, text
+import traceback
 from werkzeug.utils import secure_filename
 from ..models import db, BotSettings, Broadcast, TopicMapping, User, IDFinderAdmin, IDFinderUser, IDFinderMessage, AVAILABLE_PERMISSIONS
 
@@ -753,116 +746,135 @@ def id_finder_update_admin_permissions():
 @login_required
 def id_finder_analytics():
     try:
-        days = int(request.args.get('days') or 7)
-    except ValueError:
-        days = 7
+        try:
+            days = int(request.args.get('days') or 7)
+        except ValueError:
+            days = 7
 
-    try:
-        month = int(request.args.get('month') or 0)
-        year = int(request.args.get('year') or 0)
-    except ValueError:
-        month = 0
-        year = 0
+        try:
+            month = int(request.args.get('month') or 0)
+            year = int(request.args.get('year') or 0)
+        except ValueError:
+            month = 0
+            year = 0
 
-    query_filter = True
-    base_query = IDFinderMessage.query
-    
-    # Handle time filtering
-    now = datetime.utcnow()
-    if year > 0 and month > 0:
-        query_filter = (extract('year', IDFinderMessage.timestamp) == year) & (extract('month', IDFinderMessage.timestamp) == month)
-    elif year > 0:
-        query_filter = extract('year', IDFinderMessage.timestamp) == year
-    elif days > 0:
-        cutoff = now - timedelta(days=days)
-        query_filter = IDFinderMessage.timestamp >= cutoff
+        query_filter = True
+        
+        # Handle time filtering
+        now = datetime.utcnow()
+        if year > 0 and month > 0:
+            query_filter = (extract('year', IDFinderMessage.timestamp) == year) & (extract('month', IDFinderMessage.timestamp) == month)
+        elif year > 0:
+            query_filter = extract('year', IDFinderMessage.timestamp) == year
+        elif days > 0:
+            cutoff = now - timedelta(days=days)
+            query_filter = IDFinderMessage.timestamp >= cutoff
 
-    total_users = IDFinderUser.query.count()
+        total_users = IDFinderUser.query.count()
 
-    # Leaderboard
-    leaderboard_query = db.session.query(
-        IDFinderUser.telegram_id,
-        IDFinderUser.first_name,
-        func.count(IDFinderMessage.id).label('msg_count'),
-        func.sum(case((IDFinderMessage.content_type != 'text', 1), else_=0)).label('media_count')
-    ).join(IDFinderMessage, IDFinderUser.telegram_id == IDFinderMessage.telegram_user_id) \
-     .filter(query_filter) \
-     .group_by(IDFinderUser.telegram_id, IDFinderUser.first_name) \
-     .order_by(text('msg_count DESC')).limit(100).all()
+        # Leaderboard
+        leaderboard_query = db.session.query(
+            IDFinderUser.telegram_id,
+            IDFinderUser.first_name,
+            func.count(IDFinderMessage.id).label('msg_count'),
+            func.sum(case([(IDFinderMessage.content_type != 'text', 1)], else_=0)).label('media_count')
+        ).join(IDFinderMessage, IDFinderUser.telegram_id == IDFinderMessage.telegram_user_id) \
+         .filter(query_filter) \
+         .group_by(IDFinderUser.telegram_id, IDFinderUser.first_name) \
+         .order_by(text('msg_count DESC')).limit(100).all()
 
-    leaderboard = [
-        {"uid": str(row.telegram_id), "name": row.first_name or "Unknown", "msgs": int(row.msg_count), "media": int(row.media_count or 0)}
-        for row in leaderboard_query
-    ]
+        leaderboard = [
+            {"uid": str(row.telegram_id), "name": row.first_name or "Unknown", "msgs": int(row.msg_count), "media": int(row.media_count or 0)}
+            for row in leaderboard_query
+        ]
 
-    # Timeline (Messages per day)
-    timeline_query = db.session.query(
-        func.date(IDFinderMessage.timestamp).label('date'),
-        func.count(IDFinderMessage.id).label('count')
-    ).filter(query_filter).group_by('date').order_by('date').all()
+        # Timeline (Messages per day)
+        timeline_query = db.session.query(
+            func.date(IDFinderMessage.timestamp).label('date'),
+            func.count(IDFinderMessage.id).label('count')
+        ).filter(query_filter).group_by('date').order_by('date').all()
 
-    # Make sure timeline has continuous dates for the requested period if filtering by days
-    timeline_labels = []
-    total_data = []
-    
-    if days > 0 and year == 0 and month == 0:
-        date_map = {row.date.strftime('%d.%m'): row.count for row in timeline_query if row.date}
-        for i in range(days-1, -1, -1):
-            d = now - timedelta(days=i)
-            d_str = d.strftime('%d.%m')
-            timeline_labels.append(d_str)
-            total_data.append(date_map.get(d_str, 0))
-    else:
-        # For month/year filtering, rely on the data returned directly
-        timeline_labels = [row.date.strftime('%d.%m') if row.date else 'Unknown' for row in timeline_query]
-        total_data = [row.count for row in timeline_query]
+        # Helper for date formatting (Handles mysql date objects vs sqlite strings)
+        def fmt_dt(d):
+            if not d: return 'Unknown'
+            if hasattr(d, 'strftime'): return d.strftime('%d.%m')
+            # If it's a string from SQLite or similar
+            try:
+                s = str(d)
+                if '-' in s:
+                    parts = s.split('-')
+                    if len(parts) >= 3: return f"{parts[2][:2]}.{parts[1]}"
+                return s
+            except: return 'Err'
 
-    # Hours distribution
-    # Using generic cast since extract('hour') is cross-compatible 
-    hours_query = db.session.query(
-        extract('hour', IDFinderMessage.timestamp).label('hour'),
-        func.count(IDFinderMessage.id).label('count')
-    ).filter(query_filter).group_by('hour').all()
-    
-    busiest_hours = [0] * 24
-    for row in hours_query:
-        if row.hour is not None:
-            busiest_hours[int(row.hour)] = row.count
+        # Make sure timeline has continuous dates for the requested period if filtering by days
+        timeline_labels = []
+        total_data = []
+        
+        if days > 0 and year == 0 and month == 0:
+            date_map = {fmt_dt(row.date): row.count for row in timeline_query if row.date}
+            for i in range(days-1, -1, -1):
+                d = now - timedelta(days=i)
+                d_str = d.strftime('%d.%m')
+                timeline_labels.append(d_str)
+                total_data.append(date_map.get(d_str, 0))
+        else:
+            # For month/year filtering, rely on the data returned directly
+            timeline_labels = [fmt_dt(row.date) for row in timeline_query]
+            total_data = [row.count for row in timeline_query]
 
-    # Weekdays distribution
-    # Extract 'dow' is not supported in MySQL/MariaDB.
-    engine_name = db.engine.dialect.name
-    if engine_name == 'mysql':
-        # MySQL/MariaDB: DAYOFWEEK returns 1 (Sun) to 7 (Sat)
-        dow_expr = func.dayofweek(IDFinderMessage.timestamp)
-    else:
-        # SQLite: 0 (Sun) to 6 (Sat)
-        dow_expr = extract('dow', IDFinderMessage.timestamp)
+        # Hours distribution
+        hours_query = db.session.query(
+            extract('hour', IDFinderMessage.timestamp).label('hour'),
+            func.count(IDFinderMessage.id).label('count')
+        ).filter(query_filter).group_by('hour').all()
+        
+        busiest_hours = [0] * 24
+        for row in hours_query:
+            if row.hour is not None:
+                busiest_hours[int(row.hour)] = row.count
 
-    dow_query = db.session.query(
-        dow_expr.label('dow'),
-        func.count(IDFinderMessage.id).label('count')
-    ).filter(query_filter).group_by('dow').all()
+        # Weekdays distribution
+        engine_name = db.engine.dialect.name
+        if engine_name == 'mysql':
+            dow_expr = func.dayofweek(IDFinderMessage.timestamp)
+        else:
+            dow_expr = extract('dow', IDFinderMessage.timestamp)
 
-    busiest_days = [0] * 7
-    for row in dow_query:
-        if row.dow is not None:
-            if engine_name == 'mysql':
-                # Shift MySQL 1-7 (Sun-Sat) to 0-6 (Mon-Sun)
-                py_dow = (int(row.dow) + 5) % 7
-            else:
-                # Shift SQLite 0-6 (Sun-Sat) to 0-6 (Mon-Sun)
-                py_dow = (int(row.dow) + 6) % 7
-            busiest_days[py_dow] = row.count
+        dow_query = db.session.query(
+            dow_expr.label('dow'),
+            func.count(IDFinderMessage.id).label('count')
+        ).filter(query_filter).group_by('dow').all()
 
-    return render_template('id_finder_analytics.html', 
-                           stats={'total_users': total_users}, 
-                           activity={
-                               'timeline': {'labels': timeline_labels, 'total': total_data}, 
-                               'leaderboard': leaderboard, 
-                               'busiest_hours': busiest_hours, 
-                               'busiest_days': busiest_days
-                           })
+        busiest_days = [0] * 7
+        for row in dow_query:
+            if row.dow is not None:
+                try:
+                    val = int(row.dow)
+                    if engine_name == 'mysql':
+                        py_dow = (val + 5) % 7
+                    else:
+                        py_dow = (val + 6) % 7
+                    busiest_days[py_dow] = row.count
+                except: pass
+
+        return render_template('id_finder_analytics.html', 
+                               stats={'total_users': total_users}, 
+                               activity={
+                                   'timeline': {'labels': timeline_labels, 'total': total_data}, 
+                                   'leaderboard': leaderboard, 
+                                   'busiest_hours': busiest_hours, 
+                                   'busiest_days': busiest_days
+                               })
+    except Exception as e:
+        # LOG AND CRASH gracefully
+        error_file = os.path.join(PROJECT_ROOT, "logs", "dashboard_error.log")
+        os.makedirs(os.path.dirname(error_file), exist_ok=True)
+        with open(error_file, "a", encoding="utf-8") as f:
+            f.write(f"\n--- Analytics Error [{datetime.now()}] ---\n")
+            f.write(traceback.format_exc())
+            f.write("\n")
+        raise e
 
 @bp.route('/api/id-finder/user-activity/<int:uid>')
 def id_finder_user_activity(uid):
