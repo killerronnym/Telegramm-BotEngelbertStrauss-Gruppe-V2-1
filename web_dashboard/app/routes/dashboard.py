@@ -19,20 +19,20 @@ PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_FILE_DIR, '../../..'))
 BASE_DIR = os.path.join(PROJECT_ROOT, 'web_dashboard')
 
 # Bot PID Files
-INVITE_BOT_PID_FILE = os.path.join(BASE_DIR, "invite_bot.pid")
-ID_FINDER_BOT_PID_FILE = os.path.join(BASE_DIR, "id_finder_bot.pid")
-TIKTOK_BOT_PID_FILE = os.path.join(BASE_DIR, "tiktok_bot.pid")
-QUIZ_BOT_PID_FILE = os.path.join(BASE_DIR, "quiz_bot.pid")
-UMFRAGE_BOT_PID_FILE = os.path.join(BASE_DIR, "umfrage_bot.pid")
-OUTFIT_BOT_PID_FILE = os.path.join(BASE_DIR, "outfit_bot.pid")
+INVITE_BOT_PID_FILE = os.path.join(PROJECT_ROOT, "logs", "invite_bot.pid")
+ID_FINDER_BOT_PID_FILE = os.path.join(PROJECT_ROOT, "logs", "id_finder_bot.pid")
+TIKTOK_BOT_PID_FILE = os.path.join(PROJECT_ROOT, "logs", "tiktok_bot.pid")
+QUIZ_BOT_PID_FILE = os.path.join(PROJECT_ROOT, "logs", "quiz_bot.pid")
+UMFRAGE_BOT_PID_FILE = os.path.join(PROJECT_ROOT, "logs", "umfrage_bot.pid")
+OUTFIT_BOT_PID_FILE = os.path.join(PROJECT_ROOT, "logs", "outfit_bot.pid")
 
 # Log Files
-INVITE_BOT_LOG_FILE = os.path.join(BASE_DIR, "invite_bot.log")
-ID_FINDER_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "bots", "id_finder_bot", "id_finder_bot.log")
-TIKTOK_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "bots", "tiktok_bot", "tiktok_bot.log")
-QUIZ_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "bots", "quiz_bot", "quiz_bot.log")
-UMFRAGE_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "bots", "umfrage_bot", "umfrage_bot.log")
-OUTFIT_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "bots", "outfit_bot", "outfit_bot.log")
+INVITE_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "logs", "invite_bot.log")
+ID_FINDER_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "logs", "id_finder_bot.log")
+TIKTOK_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "logs", "tiktok_bot.log")
+QUIZ_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "logs", "quiz_bot.log")
+UMFRAGE_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "logs", "umfrage_bot.log")
+OUTFIT_BOT_LOG_FILE = os.path.join(PROJECT_ROOT, "logs", "outfit_bot.log")
 
 def is_process_running(pid):
     try:
@@ -58,7 +58,7 @@ def safe_clear_log(filepath):
             return False
 
 def get_master_pid():
-    pfile = os.path.join(PROJECT_ROOT, "bots", "main_bot.pid")
+    pfile = os.path.join(PROJECT_ROOT, "logs", "main_bot.pid")
     if os.path.exists(pfile):
         try:
             with open(pfile, 'r') as f: return int(f.read().strip())
@@ -371,7 +371,7 @@ def quiz_settings():
             aq_json = request.form.get('asked_questions_json')
             try:
                 data = json.loads(aq_json)
-                aq_path = os.path.join(PROJECT_ROOT, "bots", "quiz_bot", "quizfragen_gestellt.json")
+                aq_path = os.path.join(PROJECT_ROOT, "instance", "quizfragen_gestellt.json")
                 os.makedirs(os.path.dirname(aq_path), exist_ok=True)
                 with open(aq_path, 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)
@@ -386,7 +386,7 @@ def quiz_settings():
 
     # Load Data for Template
     q_path = os.path.join(PROJECT_ROOT, "data", "quizfragen.json")
-    aq_path = os.path.join(PROJECT_ROOT, "bots", "quiz_bot", "quizfragen_gestellt.json")
+    aq_path = os.path.join(PROJECT_ROOT, "instance", "quizfragen_gestellt.json")
     
     questions = []
     if os.path.exists(q_path):
@@ -467,7 +467,7 @@ def umfrage_settings():
             up_json = request.form.get('asked_polls_json')
             try:
                 data = json.loads(up_json)
-                up_path = os.path.join(PROJECT_ROOT, "bots", "umfrage_bot", "umfragen_gestellt.json")
+                up_path = os.path.join(PROJECT_ROOT, "instance", "umfragen_gestellt.json")
                 os.makedirs(os.path.dirname(up_path), exist_ok=True)
                 with open(up_path, 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)
@@ -482,7 +482,7 @@ def umfrage_settings():
 
     # Load Data
     p_path = os.path.join(PROJECT_ROOT, "data", "umfragen.json")
-    up_path = os.path.join(PROJECT_ROOT, "bots", "umfrage_bot", "umfragen_gestellt.json")
+    up_path = os.path.join(PROJECT_ROOT, "instance", "umfragen_gestellt.json")
     
     polls = []
     if os.path.exists(p_path):
@@ -546,7 +546,7 @@ def outfit_bot_dashboard():
         except: pass
         
     # Load Duel Status from data file
-    data_path = os.path.join(PROJECT_ROOT, "bots", "outfit_bot", "outfit_bot_data.json")
+    data_path = os.path.join(PROJECT_ROOT, "instance", "outfit_bot_data.json")
     duel_status = {'active': False}
     if os.path.exists(data_path):
         try:
@@ -615,7 +615,7 @@ def outfit_bot_actions(action):
 @login_required
 def critical_errors():
     logs = []
-    lpath = os.path.join(BASE_DIR, "critical_errors.log")
+    lpath = os.path.join(PROJECT_ROOT, "logs", "critical_errors.log")
     if os.path.exists(lpath):
         with open(lpath, 'r') as f: logs = f.readlines()
     return render_template("critical_errors.html", critical_logs=logs)
@@ -623,7 +623,7 @@ def critical_errors():
 @bp.route('/critical-errors/clear', methods=['POST'])
 @login_required
 def clear_critical_errors():
-    lpath = os.path.join(BASE_DIR, "critical_errors.log")
+    lpath = os.path.join(PROJECT_ROOT, "logs", "critical_errors.log")
     if not safe_clear_log(lpath):
         flash('Kritische Fehler konnten nicht gelöscht werden.', 'warning')
     return redirect(url_for('dashboard.critical_errors'))
@@ -1093,9 +1093,9 @@ def manage_master_bot_logic(action, is_auto_start=False):
     Kapselt die Logik zum Starten/Stoppen des Master-Bots.
     Kann sowohl aus einer Web-Route als auch beim App-Start (Auto-Start) aufgerufen werden.
     """
-    pfile = os.path.join(PROJECT_ROOT, "bots", "main_bot.pid")
+    pfile = os.path.join(PROJECT_ROOT, "logs", "main_bot.pid")
     script = os.path.join(PROJECT_ROOT, "bots", "main_bot.py")
-    lpath = os.path.join(PROJECT_ROOT, "bots", "main_bot.log")
+    lpath = os.path.join(PROJECT_ROOT, "logs", "main_bot.log")
 
     def _flash(msg, cat):
         if not is_auto_start:

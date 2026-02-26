@@ -18,8 +18,9 @@ from shared_bot_utils import get_bot_config, is_bot_active
 
 # --- PATH SETUP ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..', '..'))
 LOG_FILE = os.path.join(BASE_DIR, 'outfit_bot.log')
-DATA_FILE = os.path.join(BASE_DIR, 'outfit_bot_data.json')
+DATA_FILE = os.path.join(PROJECT_ROOT, 'instance', 'outfit_bot_data.json')
 
 # --- LOGGING SETUP ---
 logging.basicConfig(

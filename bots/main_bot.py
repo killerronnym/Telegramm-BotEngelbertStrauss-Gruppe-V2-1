@@ -31,7 +31,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
     handlers=[
-        logging.FileHandler("bots/main_bot.log", encoding="utf-8"),
+        logging.FileHandler(os.path.join(BASE_DIR, "logs", "main_bot.log"), encoding="utf-8"),
         logging.StreamHandler(sys.stdout)
     ]
 )
@@ -67,7 +67,7 @@ def main():
     global _keep_lock_alive
     
     # --- Prozess-Lock prüfen ---
-    lock_file_path = os.path.join(BASE_DIR, "bots", "main_bot.lock")
+    lock_file_path = os.path.join(BASE_DIR, "logs", "main_bot.lock")
     try:
         lock_file = open(lock_file_path, "w")
         if os.name == 'nt' and msvcrt:
@@ -88,7 +88,7 @@ def main():
         sys.exit(1)
 
     logger.info("Starte ApplicationBuilder...")
-    persistence = PicklePersistence(filepath=os.path.join(BASE_DIR, "bots", "persistence.pickle"))
+    persistence = PicklePersistence(filepath=os.path.join(BASE_DIR, "instance", "persistence.pickle"))
     app = ApplicationBuilder().token(token).persistence(persistence)
     app = app.post_init(main_post_init).post_shutdown(main_post_shutdown).build()
 

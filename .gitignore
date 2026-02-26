@@ -31,3 +31,5 @@ data/tmp_update/
 nohup.out
 web_server.pid
 *.log
+logs/
+instance/

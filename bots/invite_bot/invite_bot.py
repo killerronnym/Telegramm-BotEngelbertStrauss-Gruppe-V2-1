@@ -37,11 +37,11 @@ flask_app = get_db_session()
 # --- Logging Setup --- 
 # Corrected paths for logging to be robust regardless of where the script is run from.
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-WEB_DASHBOARD_DIR = os.path.join(PROJECT_ROOT, 'web_dashboard')
-INVITE_BOT_LOG_FILE = os.path.join(WEB_DASHBOARD_DIR, "invite_bot.log")
+LOGS_DIR = os.path.join(PROJECT_ROOT, 'logs')
+INVITE_BOT_LOG_FILE = os.path.join(LOGS_DIR, "invite_bot.log")
 
 # Ensure directories exist before logging attempts
-os.makedirs(WEB_DASHBOARD_DIR, exist_ok=True)
+os.makedirs(LOGS_DIR, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -144,6 +144,8 @@ async def letsgo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text("Der Bot ist zur Zeit deaktiviert.")
         return ConversationHandler.END
 
+    log_user_interaction(update.effective_user.id, update.effective_user.username, "/letsgo command aufgerufen")
+
     # Wir erlauben das Neustarten jederzeit. Falls bereits eine Bewerbung existiert, 
     # wird diese am Ende des Prozesses (nach den Regeln) einfach überschrieben.
     with flask_app.app_context():
@@ -184,6 +186,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             await update.message.reply_text("Bitte sende ein Foto.")
             return ASKING_QUESTIONS
         answer = update.message.photo[-1].file_id
+        log_user_interaction(user.id, user.username, f"Antwort auf {field['id']}: photo {answer}")
     else:
         answer_text = update.message.text
         if answer_text and answer_text.lower().strip() == 'nein':
@@ -199,6 +202,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 await update.message.reply_text("Bitte sende eine gültige Zahl.")
                 return ASKING_QUESTIONS
             answer = int(answer_text)
+            log_user_interaction(user.id, user.username, f"Antwort auf {field['id']}: {answer}")
             
             # Altersprüfung
             min_age = field.get('min_age')
@@ -221,6 +225,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                     return ASKING_QUESTIONS
             
             answer = answer_raw
+            log_user_interaction(user.id, user.username, f"Antwort auf {field['id']}: {answer}")
     
     # --- Multi-Social Support ---
     is_social = field['id'] == 'instagram' or 'social' in field['id'].lower()
@@ -685,6 +690,7 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Prozess abgebrochen.")
+    log_user_interaction(update.effective_user.id, update.effective_user.username, "/cancel command aufgerufen")
     return ConversationHandler.END
 
 async def catch_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

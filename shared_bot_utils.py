@@ -2,6 +2,7 @@ import os
 import sys
 import json
 from sqlalchemy import create_engine, text, inspect
+from sqlalchemy.engine import URL
 
 # Pfade bestimmen
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -19,6 +20,32 @@ if os.path.exists(ENV_FILE):
 
 def get_db_url():
     """Gibt die konfigurierte Datenbank-URL zurück oder fällt auf SQLite zurück."""
+    # 1. Discrete Environment Variables (Best Practice für URLs mit Sonderzeichen)
+    db_user = os.environ.get('DB_USER')
+    db_host = os.environ.get('DB_HOST')
+    db_name = os.environ.get('DB_NAME')
+    
+    if db_user and db_host and db_name:
+        db_password = os.environ.get('DB_PASSWORD')
+        db_port = os.environ.get('DB_PORT')
+        db_driver = os.environ.get('DB_DRIVER', 'mysql+pymysql')
+        
+        query = {}
+        if "mysql" in db_driver:
+            query["charset"] = "utf8mb4"
+            
+        url_obj = URL.create(
+            drivername=db_driver,
+            username=db_user,
+            password=db_password,
+            host=db_host,
+            port=int(db_port) if db_port else None,
+            database=db_name,
+            query=query
+        )
+        return str(url_obj)
+
+    # 2. Fallback alte DATABASE_URL
     db_url = os.environ.get('DATABASE_URL')
     if db_url:
         # Pymysql-Parameter für UTF-8 sicherstellen
@@ -27,7 +54,7 @@ def get_db_url():
             db_url += f"{separator}charset=utf8mb4"
         return db_url
     
-    # Fallback SQLite (Konsistent mit Docker/Windows Pfaden)
+    # 3. Fallback SQLite (Konsistent mit Docker/Windows Pfaden)
     # Bevorzugte Pfade: /app/instance/app.db oder ./instance/app.db
     if not os.path.exists(INSTANCE_DIR):
         os.makedirs(INSTANCE_DIR, exist_ok=True)

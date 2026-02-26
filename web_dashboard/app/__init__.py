@@ -12,9 +12,7 @@ from .utils import datetimeformat
 def create_app(test_config=None):
     load_dotenv()
     
-    template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
-    
-    app = Flask(__name__, instance_relative_config=True, template_folder=template_dir)
+    app = Flask(__name__, instance_relative_config=True)
     
     if test_config:
         app.config.from_mapping(test_config)
@@ -84,7 +82,7 @@ def create_app(test_config=None):
 
     # --- MASTER-BOT AUTO-START (Nach Update/Container-Restart) ---
     # Recursion Guard: Do not auto-start if we are already inside a bot process
-    if not os.environ.get("BOT_PROCESS"):
+    if not os.environ.get("BOT_PROCESS") and (not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true"):
         with app.app_context():
             from web_dashboard.app.models import BotSettings
             from web_dashboard.app.routes.dashboard import manage_master_bot_logic

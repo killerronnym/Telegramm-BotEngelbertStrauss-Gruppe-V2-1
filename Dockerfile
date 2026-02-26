@@ -24,8 +24,8 @@ COPY . .
 # Ensure scripts are executable
 RUN chmod +x docker-entrypoint.sh
 
-# Ensure instance directory exists
-RUN mkdir -p /app/instance
+# Ensure instance and logs directories exist
+RUN mkdir -p /app/instance /app/logs
 
 # Expose port
 EXPOSE 9002

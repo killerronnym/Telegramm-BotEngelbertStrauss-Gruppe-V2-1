@@ -20,7 +20,16 @@ services:
       - TZ=Europe/Berlin
       - FLASK_ENV=production
       # - TELEGRAM_BOT_TOKEN=dein_token_hier (Optional, falls .env nicht genutzt wird)
-      # Falls eine externe MySQL Datenbank genutzt wird, kann diese hier verlinkt werden
+
+      # === Externe Datenbank Anbindung ===
+      # (Nutze diese separaten Variablen, damit Sonderzeichen im Passwort keine Probleme machen)
+      # - DB_DRIVER=mysql+pymysql
+      # - DB_USER=dein_db_user
+      # - DB_PASSWORD=dein_db_passwort
+      # - DB_HOST=dein_host.myds.me
+      # - DB_PORT=3306
+      # - DB_NAME=deine_datenbank
+      # ===================================
       # networks:
       #   - bot-network
 
