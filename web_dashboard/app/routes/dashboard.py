@@ -1107,8 +1107,15 @@ def manage_master_bot_logic(action, is_auto_start=False):
             try:
                 with open(pfile, 'r') as f: pid = int(f.read().strip())
                 if is_process_running(pid):
-                    _flash('Master-Bot läuft bereits.', 'warning')
+                    print(f"Master-Bot läuft bereits (PID: {pid}). Kein Neustart erforderlich.")
+                    _flash('Master-Bot läuft bereits.', 'info')
                     return
+            except Exception as e:
+                print(f"Fehler beim Prüfen der PID-Datei: {e}")
+        
+        # Falls Datei existiert aber Prozess NICHT läuft -> Datei löschen für sauberen Start
+        if os.path.exists(pfile):
+            try: os.remove(pfile)
             except: pass
         
         exe = sys.executable

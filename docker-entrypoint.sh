@@ -30,6 +30,8 @@ with app.app_context():
 echo "Launching Master-Bot in background..."
 python bots/main_bot.py &
 BOT_PID=$!
+mkdir -p logs
+echo $BOT_PID > logs/main_bot.pid
 
 # Dashboard im Vordergrund (bindet an Port 9003)
 echo "Launching Gunicorn on port 9003..."
