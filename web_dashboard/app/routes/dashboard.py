@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, extract, case, text, true
 import traceback
 from werkzeug.utils import secure_filename
-from ..models import db, BotSettings, Broadcast, TopicMapping, User, IDFinderAdmin, IDFinderUser, IDFinderMessage, AuditLog, AVAILABLE_PERMISSIONS
+from ..models import db, BotSettings, Broadcast, TopicMapping, User, IDFinderAdmin, IDFinderUser, IDFinderMessage, AuditLog, AVAILABLE_PERMISSIONS, AutoReplyRule
 
 # Wir definieren den Blueprint explizit
 bp = Blueprint('dashboard', __name__)
@@ -136,6 +136,22 @@ def save_dashboard_layout():
     else: s.config_json = json.dumps(data)
     db.session.commit()
     return jsonify({"success": True})
+
+# --- AUTO RESPONDER ROUTE ---
+@bp.route('/auto-responder')
+@login_required
+def auto_responder():
+    rules = AutoReplyRule.query.order_by(AutoReplyRule.id.desc()).all()
+    # Check if the auto_responder bot is toggled 'on' in the main settings
+    s = BotSettings.query.filter_by(bot_name='auto_responder').first()
+    is_running = False
+    if s and s.config_json:
+        try:
+            cfg = json.loads(s.config_json)
+            is_running = cfg.get('is_active', False)
+        except:
+            pass
+    return render_template('auto_responder.html', rules=rules, is_running=is_running)
 
 # --- INVITE BOT ROUTES ---
 @bp.route('/bot-settings', methods=["GET", "POST"])

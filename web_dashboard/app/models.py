@@ -53,6 +53,16 @@ class TopicMapping(db.Model):
     topic_id = db.Column(db.BigInteger, unique=True, nullable=False)
     topic_name = db.Column(db.String(100), nullable=False)
 
+# --- Auto-Responder Models ---
+class AutoReplyRule(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    trigger_type = db.Column(db.String(20), nullable=False) # 'command' or 'keyword'
+    trigger_text = db.Column(db.String(255), nullable=False)
+    response_text = db.Column(db.Text, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 # --- ID Finder Bot Models ---
 
 class IDFinderAdmin(db.Model):

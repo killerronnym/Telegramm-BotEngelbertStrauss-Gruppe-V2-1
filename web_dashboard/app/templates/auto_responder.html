@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Bot Steuerung | Auto-Antworten{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-chat-right-text text-blue me-2"></i> Auto-Antworten & Befehle</h2>
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary">Zurück zum Dashboard</a>
+    </div>
+
+    <!-- Modul Aktivierung -->
+    <div class="card mb-4 border-primary shadow-sm" style="background-color: rgba(59, 130, 246, 0.05);">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="card-title fw-bold mb-1 text-primary"><i class="bi bi-power me-2"></i>Modul-Status</h5>
+                <p class="card-text text-secondary small mb-0">Aktiviere oder deaktiviere das Auto-Responder Modul
+                    global.</p>
+            </div>
+            <div class="d-flex gap-2">
+                {% if is_running %}
+                <form action="/bot-action/auto_responder/stop" method="POST" class="m-0">
+                    <button type="submit" class="btn btn-danger fw-bold"><i class="bi bi-stop-fill me-1"></i>
+                        STOP</button>
+                </form>
+                {% else %}
+                <form action="/bot-action/auto_responder/start" method="POST" class="m-0">
+                    <button type="submit" class="btn btn-success fw-bold"><i class="bi bi-play-fill me-1"></i>
+                        START</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Add New Rule Column -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="bi bi-plus-circle text-blue me-2"></i> Neue Regel hinzufügen</h5>
+                </div>
+                <div class="card-body">
+                    <form id="addRuleForm">
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small fw-bold">Typ des Auslösers</label>
+                            <select class="form-select" id="triggerType" required>
+                                <option value="command">Befehl (z.B. /ping)</option>
+                                <option value="keyword">Schlüsselwort / Satz</option>
+                            </select>
+                            <div class="form-text text-secondary" style="font-size: 0.75rem;">
+                                <strong>Befehl:</strong> Muss mit "/" beginnen und exakt stimmen.<br>
+                                <strong>Schlüsselwort:</strong> Reagiert, wenn das Wort im Text vorkommt.
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small fw-bold">Auslöser (Trigger)</label>
+                            <input type="text" class="form-control" id="triggerText"
+                                placeholder="z.B. /ping oder 'Welcher Tag'" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-secondary small fw-bold">Antwort des Bots</label>
+                            <textarea class="form-control" id="responseText" rows="4"
+                                placeholder="z.B. Pong! oder 'Heute ist ein schöner Tag!'" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-blue-action w-100">
+                            <i class="bi bi-save me-1"></i> REGEL SPEICHERN
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rules List Column -->
+        <div class="col-lg-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-list-ul text-blue me-2"></i> Aktive Regeln</h5>
+                    <span class="badge bg-secondary">{{ rules|length }} Regeln gesamt</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if rules|length > 0 %}
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0 align-middle">
+                            <thead class="text-secondary small">
+                                <tr>
+                                    <th class="border-top-0 ps-4">Auslöser</th>
+                                    <th class="border-top-0">Typ</th>
+                                    <th class="border-top-0">Antwort</th>
+                                    <th class="border-top-0 text-center">Status</th>
+                                    <th class="border-top-0 text-end pe-4">Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rule in rules %}
+                                <tr>
+                                    <td class="ps-4 fw-bold text-white">{{ rule.trigger_text }}</td>
+                                    <td>
+                                        {% if rule.trigger_type == 'command' %}
+                                        <span
+                                            class="badge bg-danger bg-opacity-25 text-danger border border-danger">Befehl</span>
+                                        {% else %}
+                                        <span
+                                            class="badge bg-info bg-opacity-25 text-info border border-info">Wort/Satz</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-secondary small"
+                                        style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                                        title="{{ rule.response_text }}">
+                                        {{ rule.response_text }}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input class="form-check-input toggle-rule" type="checkbox"
+                                                data-id="{{ rule.id }}" {% if rule.is_active %}checked{% endif %}
+                                                style="cursor: pointer;">
+                                        </div>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button class="btn btn-sm btn-outline-danger btn-delete-rule"
+                                            data-id="{{ rule.id }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center p-5 text-secondary">
+                        <i class="bi bi-inbox fs-1 mb-3 text-muted"></i>
+                        <h5>Keine Regeln gefunden</h5>
+                        <p class="small">Füge links deine erste Auto-Antwort hinzu.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Add Rule
+    document.getElementById('addRuleForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const type = document.getElementById('triggerType').value;
+        const trigger = document.getElementById('triggerText').value;
+        const response = document.getElementById('responseText').value;
+
+        // Auto-fix command prefix if type is command
+        let finalTrigger = trigger;
+        if (type === 'command' && !finalTrigger.startsWith('/')) {
+            finalTrigger = '/' + finalTrigger;
+        }
+
+        try {
+            const res = await fetch('/api/auto-responder/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    trigger_type: type,
+                    trigger_text: finalTrigger,
+                    response_text: response
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Fehler beim Speichern: ' + data.error);
+            }
+        } catch (err) {
+            alert('Netzwerkfehler beim Speichern.');
+        }
+    });
+
+    // Delete Rule
+    document.querySelectorAll('.btn-delete-rule').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            if (!confirm('Regel wirklich löschen?')) return;
+            const id = e.currentTarget.dataset.id;
+            try {
+                const res = await fetch(`/api/auto-responder/delete/${id}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Fehler beim Löschen.');
+                }
+            } catch (err) {
+                alert('Netzwerkfehler.');
+            }
+        });
+    });
+
+    // Toggle Rule Status
+    document.querySelectorAll('.toggle-rule').forEach(checkbox => {
+        checkbox.addEventListener('change', async (e) => {
+            const id = e.currentTarget.dataset.id;
+            try {
+                const res = await fetch(`/api/auto-responder/toggle/${id}`, { method: 'POST' });
+                const data = await res.json();
+                if (!data.success) {
+                    e.currentTarget.checked = !e.currentTarget.checked; // revert
+                    alert('Fehler beim Ändern des Status.');
+                }
+            } catch (err) {
+                e.currentTarget.checked = !e.currentTarget.checked; // revert
+                alert('Netzwerkfehler.');
+            }
+        });
+    });
+</script>
+{% endblock %}

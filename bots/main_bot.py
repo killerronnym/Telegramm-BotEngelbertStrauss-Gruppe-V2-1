@@ -58,6 +58,7 @@ import bots.tiktok_bot.tiktok_bot as tiktok_plugin
 import bots.quiz_bot.quiz_bot as quiz_plugin
 import bots.umfrage_bot.umfrage_bot as umfrage_plugin
 import bots.outfit_bot.outfit_bot as outfit_plugin
+import bots.auto_responder_bot.auto_responder_bot as auto_responder_plugin
 
 async def main_post_init(app: Application) -> None:
     bot_info = await app.bot.get_me()
@@ -169,6 +170,7 @@ def main():
     register_plugin(quiz_plugin, "quiz")
     register_plugin(umfrage_plugin, "umfrage")
     register_plugin(tiktok_plugin, "tiktok")
+    register_plugin(auto_responder_plugin, "auto_responder")
 
     # 1. Alle Haupt-Handler registrieren (Gruppe 0)
     for h in main_handlers:

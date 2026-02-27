@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, send_file, redirect, url_for
-from ..models import db, BotSettings, IDFinderMessage, IDFinderUser, TopicMapping, IDFinderWarning, AutoCleanupTask
+from ..models import db, BotSettings, IDFinderMessage, IDFinderUser, TopicMapping, IDFinderWarning, AutoCleanupTask, AutoReplyRule
 # Absolute import to avoid ModuleNotFoundError
 from web_dashboard.updater import Updater
 import os
@@ -195,6 +195,54 @@ def get_topics():
         topics = TopicMapping.query.all()
         return jsonify([{'id': t.topic_id, 'name': t.topic_name} for t in topics])
     except: return jsonify([])
+
+# --- AUTO RESPONDER API ---
+@bp.route('/auto-responder/add', methods=['POST'])
+def add_auto_reply():
+    data = request.json
+    if not data or 'trigger_type' not in data or 'trigger_text' not in data or 'response_text' not in data:
+        return jsonify({"success": False, "error": "Fehlende Daten"}), 400
+    
+    try:
+        rule = AutoReplyRule(
+            trigger_type=data['trigger_type'],
+            trigger_text=data['trigger_text'],
+            response_text=data['response_text'],
+            is_active=True
+        )
+        db.session.add(rule)
+        db.session.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@bp.route('/auto-responder/delete/<int:rule_id>', methods=['POST'])
+def delete_auto_reply(rule_id):
+    try:
+        rule = AutoReplyRule.query.get(rule_id)
+        if rule:
+            db.session.delete(rule)
+            db.session.commit()
+            return jsonify({"success": True})
+        return jsonify({"success": False, "error": "Regel nicht gefunden"}), 404
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@bp.route('/auto-responder/toggle/<int:rule_id>', methods=['POST'])
+def toggle_auto_reply(rule_id):
+    try:
+        rule = AutoReplyRule.query.get(rule_id)
+        if rule:
+            rule.is_active = not rule.is_active
+            db.session.commit()
+            return jsonify({"success": True, "is_active": rule.is_active})
+        return jsonify({"success": False, "error": "Regel nicht gefunden"}), 404
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 @bp.route('/moderation/delete', methods=['POST'])
 def delete_message():
