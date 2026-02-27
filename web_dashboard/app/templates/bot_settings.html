@@ -279,9 +279,10 @@
                 </li>
             </ul>
 
-            <div class="tab-content">
+            <div class="tab-content border border-white border-opacity-5 rounded-3 p-4"
+                style="background: rgba(255,255,255,0.01);">
                 <!-- Profil Tab -->
-                <div class="tab-pane fade show active" id="profile-panel">
+                <div class="tab-pane fade show active" id="profile-panel" role="tabpanel">
                     <div class="card mb-4">
                         <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
                             <h6 class="mb-0 fw-bold">Anmelde-Formular bearbeiten</h6>
@@ -309,13 +310,15 @@
                                     </thead>
                                     <tbody>
                                         {% for field in config.get('form_fields', []) %}
+                                        {% set fid = field.get('id') %}
+                                        {% if fid %}
                                         <tr class="{% if not field.get('enabled') %}opacity-25{% endif %}"
                                             style="border-bottom: 1px solid rgba(255,255,255,0.03) !important;">
                                             <td class="text-center">
                                                 <div class="d-flex flex-column align-items-center">
                                                     {% if not loop.first %}
                                                     <form
-                                                        action="{{ url_for('dashboard.invite_bot_move_field', field_id=field.id, direction='up') }}"
+                                                        action="{{ url_for('dashboard.invite_bot_move_field', field_id=fid, direction='up') }}"
                                                         method="POST" class="d-inline">
                                                         <button type="submit" class="move-arrow btn btn-sm p-0 mb-1"
                                                             style="font-size: 1.2rem;"><i
@@ -325,7 +328,7 @@
                                                     <small class="fw-bold mb-1 fs-6">{{ loop.index }}</small>
                                                     {% if not loop.last %}
                                                     <form
-                                                        action="{{ url_for('dashboard.invite_bot_move_field', field_id=field.id, direction='down') }}"
+                                                        action="{{ url_for('dashboard.invite_bot_move_field', field_id=fid, direction='down') }}"
                                                         method="POST" class="d-inline">
                                                         <button type="submit" class="move-arrow btn btn-sm p-0"
                                                             style="font-size: 1.2rem;"><i
@@ -336,15 +339,15 @@
                                             </td>
                                             <td><span
                                                     class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1">{{
-                                                    field.id }}</span></td>
+                                                    fid }}</span></td>
                                             <td>
                                                 <div class="small text-secondary mb-1 opacity-75">{{ field.get('label',
                                                     '') }}
                                                 </div>
                                                 <div class="fw-bold text-info" style="color: #0ea5e9 !important;">{{
                                                     field.get('emoji', '🔹') }} {{
-                                                    field.get('display_name', (field.id|capitalize if field.id else
-                                                    'Unbenannt')) }}</div>
+                                                    field.get('display_name', (fid|capitalize if fid else 'Unbenannt'))
+                                                    }}</div>
                                             </td>
                                             <td class="text-center">
                                                 <div class="small fw-bold text-uppercase" style="color: #f59e0b;">{{
@@ -367,25 +370,26 @@
                                                 <div class="d-flex justify-content-center gap-3">
                                                     <button
                                                         class="btn btn-outline-light btn-sm border-0 edit-field-btn p-1"
-                                                        data-id="{{ field.id }}" data-label="{{ field.label }}"
-                                                        data-type="{{ field.type }}"
-                                                        data-required="{{ 'true' if field.required else 'false' }}"
-                                                        data-enabled="{{ 'true' if field.enabled else 'false' }}"
-                                                        data-emoji="{{ field.emoji or '🔹' }}"
-                                                        data-display_name="{{ field.display_name or '' }}"
+                                                        data-id="{{ fid }}" data-label="{{ field.get('label', '') }}"
+                                                        data-type="{{ field.get('type', 'text') }}"
+                                                        data-required="{{ 'true' if field.get('required') else 'false' }}"
+                                                        data-enabled="{{ 'true' if field.get('enabled') else 'false' }}"
+                                                        data-emoji="{{ field.get('emoji', '🔹') }}"
+                                                        data-display_name="{{ field.get('display_name', '') }}"
                                                         data-min_age="{{ field.get('min_age', '') }}"
                                                         data-min_age_error="{{ field.get('min_age_error_msg', '') }}">
                                                         <i class="bi bi-pencil-square fs-5"></i>
                                                     </button>
                                                     <form action="{{ url_for('dashboard.delete_field') }}" method="POST"
                                                         style="display:inline;"><input type="hidden" name="field_id"
-                                                            value="{{ field.id }}"><button type="submit"
+                                                            value="{{ fid }}"><button type="submit"
                                                             class="btn btn-outline-danger btn-sm border-0 p-1"
                                                             onclick="return confirm('Löschen?');"><i
                                                                 class="bi bi-trash3 fs-5"></i></button></form>
                                                 </div>
                                             </td>
                                         </tr>
+                                        {% endif %}
                                         {% endfor %}
                                     </tbody>
                                 </table>
@@ -395,7 +399,7 @@
                 </div>
 
                 <!-- Befehle Tab -->
-                <div class="tab-pane fade" id="commands-panel">
+                <div class="tab-pane fade" id="commands-panel" role="tabpanel">
                     <div class="card mb-4">
                         <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
                             <h6 class="mb-0 fw-bold">Eigene Slash-Befehle</h6>
