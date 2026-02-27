@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, extract, case, text, true
 import traceback
 from werkzeug.utils import secure_filename
-from ..models import db, BotSettings, Broadcast, TopicMapping, User, IDFinderAdmin, IDFinderUser, IDFinderMessage, AVAILABLE_PERMISSIONS
+from ..models import db, BotSettings, Broadcast, TopicMapping, User, IDFinderAdmin, IDFinderUser, IDFinderMessage, AuditLog, AVAILABLE_PERMISSIONS
 
 # Wir definieren den Blueprint explizit
 bp = Blueprint('dashboard', __name__)
