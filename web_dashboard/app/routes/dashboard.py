@@ -170,6 +170,7 @@ def save_invite_content():
     s = BotSettings.query.filter_by(bot_name='invite').first()
     cfg = json.loads(s.config_json)
     cfg.update({k: request.form.get(k, '') for k in ['start_message', 'rules_message', 'blocked_message', 'privacy_policy', 'whitelist_pending_message', 'whitelist_rejection_message']})
+    s.is_active = cfg.get('is_active', False)
     s.config_json = json.dumps(cfg); db.session.commit(); flash('Texte gespeichert.', 'success')
     return redirect(url_for('dashboard.bot_settings'))
 
@@ -1083,6 +1084,7 @@ def tiktok_settings():
             'alert_cooldown_seconds': int(request.form.get('alert_cooldown_seconds', 1800)),
             'max_concurrent_lives': int(request.form.get('max_concurrent_lives', 3))
         })
+        s.is_active = cfg.get('is_active', False)
         s.config_json = json.dumps(cfg); db.session.commit(); flash('TikTok-Einstellungen gespeichert.', 'success'); return redirect(url_for('dashboard.tiktok_settings'))
 
     logs = []
