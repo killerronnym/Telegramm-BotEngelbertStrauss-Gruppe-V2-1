@@ -57,8 +57,11 @@ sys.path.append(PROJECT_ROOT)
 from shared_bot_utils import get_bot_config, is_bot_active
 
 def load_config():
+    log_print("Lade ID-Finder Config...")
     id_finder_config = get_bot_config("id_finder")
+    log_print("Lade TikTok Config...")
     tiktok_config = get_bot_config("tiktok")
+    log_print(f"Config geladen. Aktiv: {tiktok_config.get('is_active')}")
     
     # Kompatibilität für alte und neue Config-Struktur
     targets = tiktok_config.get("target_unique_ids", [])
@@ -194,7 +197,12 @@ async def watch_one_host(host_unique_id: str, targets: List[str], alert_state: A
 
 async def start_tiktok_monitor(app_instance: Application = None):
     log_print("=== TIKTOK MONITOR MULTI-TARGET AKTIV ===")
-    config = load_config()
+    config = safe_load_config()
+    if not config:
+        log_print("❌ Abbruch: Konfiguration konnte nicht geladen werden.")
+        return
+        
+    log_print(f"Accounts in Config: {config.get('TARGETS', [])}")
     alert_state = AlertState(last_host={}, last_sent={})
     sem = asyncio.Semaphore(config.get("MAX_CONCURRENT_LIVES", 3))
     
