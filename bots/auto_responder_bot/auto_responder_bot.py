@@ -4,7 +4,7 @@ import json
 import logging
 from telegram import Update
 from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters
-from shared_bot_utils import get_bot_status, get_shared_flask_app
+from shared_bot_utils import is_bot_active, get_shared_flask_app
 
 # Navigation to root
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -19,10 +19,10 @@ logger = logging.getLogger("AutoResponderBot")
 logger.setLevel(logging.INFO)
 
 # Check if bot is globally active
-def is_bot_active() -> bool:
+def is_bot_active_local() -> bool:
     try:
-        from shared_bot_utils import get_bot_status
-        return get_bot_status('auto_responder')
+        from shared_bot_utils import is_bot_active
+        return is_bot_active('auto_responder')
     except Exception as e:
         logger.error(f"Error checking if auto_responder is active: {e}")
         return False
@@ -45,7 +45,7 @@ def fetch_active_rules():
 
 async def handle_dynamic_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Fängt alle Commands ab und prüft, ob eine Regel dafür existiert."""
-    if not update.message or not is_bot_active():
+    if not update.message or not is_bot_active_local():
         return
         
     command_text = update.message.text.split()[0].lower() # z.B. "/ping"
@@ -62,7 +62,7 @@ async def handle_dynamic_command(update: Update, context: ContextTypes.DEFAULT_T
 
 async def handle_dynamic_keyword(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Prüft Textnachrichten auf hinterlegte Schlüsselwörter."""
-    if not update.message or not update.message.text or not is_bot_active():
+    if not update.message or not update.message.text or not is_bot_active_local():
         return
         
     message_text = update.message.text.lower()
