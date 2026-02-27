@@ -104,18 +104,36 @@ def tg_send(token: str, chat_id: str, topic_id: str, text: str) -> None:
 class AlertState:
     # key: (host, target) -> last_sent_ts
     last_sent: Dict[Tuple[str, str], float]
+    # key: (host, target) -> last_room_id
+    last_rooms: Dict[Tuple[str, str], int] = None
     # key: target -> last_host_notified
-    last_host: Dict[str, str]
+    last_host: Dict[str, str] = None
 
-    def can_send(self, host: str, target: str, cooldown: int) -> bool:
+    def __post_init__(self):
+        if self.last_rooms is None: self.last_rooms = {}
+        if self.last_host is None: self.last_host = {}
+
+    def can_send(self, host: str, target: str, cooldown: int, current_room_id: int = None) -> bool:
         h, t = host.lower(), target.lower()
+        
+        # 1. Room-ID Check (Präzise Dubletten-Verhinderung)
+        if current_room_id is not None:
+            last_room = self.last_rooms.get((h, t))
+            if last_room == current_room_id:
+                return False # Bereits für diesen Stream alarmiert
+        
+        # 2. Host-Wechsel Check
         if self.last_host.get(t) != h: return True
+        
+        # 3. Zeit-Cooldown Fallback
         return (time.time() - self.last_sent.get((h, t), 0.0)) >= cooldown
 
-    def mark_sent(self, host: str, target: str):
+    def mark_sent(self, host: str, target: str, room_id: int = None):
         h, t = host.lower(), target.lower()
         self.last_host[t] = h
         self.last_sent[(h, t)] = time.time()
+        if room_id is not None:
+            self.last_rooms[(h, t)] = room_id
 
 def live_url(host: str) -> str: return f"https://www.tiktok.com/@{host}/live"
 
@@ -144,13 +162,13 @@ async def watch_one_host(host_unique_id: str, targets: List[str], alert_state: A
                 log_print(f"Verbinde mit @{host_unique_id}...")
                 client = TikTokLiveClient(unique_id=host_unique_id)
 
-                def check_and_alert(event, event_type: str):
+                def check_and_alert(event, event_type: str, room_id: int = None):
                     try:
                         raw_data = str(event).lower()
                         # Wir prüfen JEDES Ziel in den Event-Daten
                         for t in config["TARGETS"]:
                             if t in raw_data:
-                                if alert_state.can_send(host_unique_id, t, config["ALERT_COOLDOWN_SECONDS"]):
+                                if alert_state.can_send(host_unique_id, t, config["ALERT_COOLDOWN_SECONDS"], room_id):
                                     log_print(f"[{host_unique_id}] 🎯 {t} ERKANNT ({event_type})!")
                                     # Ist es sein eigenes Live?
                                     is_self = (host_unique_id == t)
@@ -159,22 +177,24 @@ async def watch_one_host(host_unique_id: str, targets: List[str], alert_state: A
                                     try:
                                         msg = template.format(target=t, host=host_unique_id, event=event_type, url=live_url(host_unique_id))
                                     except:
-                                        msg = f"Meldung: {t} @ {host_unique_id} ({event_type})"\
+                                        msg = f"Meldung: {t} @ {host_unique_id} ({event_type})"
                                     
                                     tg_send(config["TELEGRAM_BOT_TOKEN"], config["TELEGRAM_CHAT_ID"], config["TELEGRAM_TOPIC_ID"], msg)
-                                    alert_state.mark_sent(host_unique_id, t)
+                                    alert_state.mark_sent(host_unique_id, t, room_id)
+                                else:
+                                    log_print(f"[{host_unique_id}] Skip Alert für {t} (Bereits gemeldet oder Cooldown)")
                     except Exception as e:
                         log_print(f"Error in check_and_alert: {e}")
 
 
                 @client.on(ConnectEvent)
                 async def on_connect(event: ConnectEvent):
-                    log_print(f"[{host_unique_id}] ✅ Verbunden.")
-                    check_and_alert(event, "Stream-Start")
+                    log_print(f"[{host_unique_id}] ✅ Verbunden (Room: {client.room_id}).")
+                    check_and_alert(event, "Stream-Start", client.room_id)
 
                 @client.on(SocialEvent)
                 async def on_social(event: SocialEvent):
-                    check_and_alert(event, "Aktivität")
+                    check_and_alert(event, "Aktivität", client.room_id)
 
                 # TODO: These events might not exist in newer TikTokLive versions or need proper handling
                 # @client.on("LinkMicMethodEvent")

@@ -1,34 +1,22 @@
 
 import os
-import sys
 import json
 from sqlalchemy import create_engine, text
 
-# Pfade bestimmen
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(BASE_DIR)
+# Remote MySQL URL from .env
+DB_URL = "mysql+pymysql://Drago:Ronny22092020%40@rinno.myds.me:3306/TelecombotDrago?charset=utf8mb4"
 
-from shared_bot_utils import get_db_url
-
-def check_tiktok():
-    db_url = get_db_url()
-    print(f"Checking DB: {db_url.split('@')[-1] if '@' in db_url else db_url}")
-    engine = create_engine(db_url)
-    
-    try:
-        with engine.connect() as conn:
-            result = conn.execute(
-                text("SELECT config_json, is_active FROM bot_settings WHERE bot_name='tiktok'")
-            ).fetchone()
-            
-            if result:
-                config = json.loads(result[0])
-                print(f"TikTok Active Spalte: {result[1]}")
-                print(f"TikTok Config: {json.dumps(config, indent=2)}")
-            else:
-                print("No config found for 'tiktok'")
-    except Exception as e:
-        print(f"Error: {e}")
+def run_diag():
+    engine = create_engine(DB_URL)
+    with engine.connect() as conn:
+        print("--- TIKTOK BOT SETTINGS ---")
+        settings = conn.execute(text("SELECT bot_name, is_active, config_json FROM bot_settings WHERE bot_name='tiktok'")).fetchone()
+        if settings:
+            print(f"TikTok Active (Dashboard): {settings[1]}")
+            config = json.loads(settings[2]) if settings[2] else {}
+            print(json.dumps(config, indent=2))
+        else:
+            print("TikTok settings NOT FOUND")
 
 if __name__ == "__main__":
-    check_tiktok()
+    run_diag()
