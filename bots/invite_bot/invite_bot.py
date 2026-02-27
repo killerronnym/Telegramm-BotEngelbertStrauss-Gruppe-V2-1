@@ -186,6 +186,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         
     field = fields[idx]
     answer = None
+    answer_text = update.message.text.strip() if update.message.text else ""
 
     if field['type'] == 'photo':
         if not update.message.photo:
@@ -194,10 +195,8 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         answer = update.message.photo[-1].file_id
         log_user_interaction(user.id, user.username, f"Antwort auf {field['id']}: photo {answer}")
     
-    answer_text = update.message.text.strip() if update.message.text else ""
-
-    # Validierung für numerische Typen (Zahl oder Puppy Alter)
-    if field.get('type') in ['number', 'puppy_age']:
+    elif field.get('type') in ['number', 'puppy_age']:
+        # Validierung für numerische Typen
         if not answer_text.isdigit():
             await update.message.reply_text("Bitte gib eine Zahl ein.")
             return ASKING_QUESTIONS
@@ -211,8 +210,9 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             return ASKING_QUESTIONS
         
         answer = str(val_number)
+    
     else:
-        # Standard Validierung für andere Typen
+        # Standard Validierung für Text-Typen
         if not answer_text and field.get('required'):
             await update.message.reply_text("Diese Antwort ist erforderlich.")
             return ASKING_QUESTIONS
