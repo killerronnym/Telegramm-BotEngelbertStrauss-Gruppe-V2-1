@@ -31,15 +31,8 @@ USED_FILE = os.path.join(PROJECT_ROOT, "instance", "quizfragen_gestellt.json")
 sys.path.append(PROJECT_ROOT)
 from shared_bot_utils import get_bot_config, is_bot_active
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s: %(message)s",
-    handlers=[
-        logging.FileHandler(os.path.join(BASE_DIR, "quiz_bot.log"), encoding='utf-8'),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-log = logging.getLogger("quiz_bot")
+# logging.basicConfig is handled by main_bot.py
+log = logging.getLogger(__name__)
 
 def load_config_from_db():
     return get_bot_config("quiz")
@@ -179,9 +172,14 @@ async def send_quiz(context=None, force=False):
 
 # ----------------- Scheduler and Trigger -----------------
 async def process_trigger(context=None):
-    # Trigger wird immer geprüft, auch wenn das Modul auf 'AUS' steht (ermöglicht Sofort-Senden)
+    # Debug: Logge den Pfad einmalig/gelegentlich oder bei Fund
+    if not hasattr(process_trigger, "last_debug"): process_trigger.last_debug = 0
+    if time.time() - process_trigger.last_debug > 60:
+        log.info(f"Checking for manual trigger at: {os.path.abspath(TRIGGER_FILE)}")
+        process_trigger.last_debug = time.time()
+
     if os.path.exists(TRIGGER_FILE):
-        log.info(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Manual trigger detected at {TRIGGER_FILE}.")
+        log.info(f"Manual trigger detected at {os.path.abspath(TRIGGER_FILE)}.")
         try:
             os.remove(TRIGGER_FILE)
             await send_quiz(force=True)
