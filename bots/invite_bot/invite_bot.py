@@ -188,8 +188,21 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     answer = None
     answer_text = update.message.text.strip() if update.message.text else ""
 
+    # Falls optional: "nein" Text als skip akzeptieren
+    is_optional = not field.get('required')
+    if answer_text.lower() == 'nein' and is_optional:
+        logger.info(f"handle_answer: Manueller Skip durch 'nein' bei {field['id']}")
+        context.user_data['answers'][field['id']] = 'n/a'
+        return await next_question(update, context)
+
     if field['type'] == 'photo':
         if not update.message.photo:
+            # Falls optional und kein Foto, aber Text gesendet wurde (außer 'nein', was oben abgefangen wird)
+            if is_optional:
+                await update.message.reply_text("Das war kein Foto. Da die Frage freiwillig ist, überspringe ich sie für dich. (Oder sende jetzt ein Foto)")
+                context.user_data['answers'][field['id']] = 'n/a'
+                return await next_question(update, context)
+            
             await update.message.reply_text("Bitte sende ein Foto.")
             return ASKING_QUESTIONS
         answer = update.message.photo[-1].file_id
@@ -223,7 +236,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 await update.message.reply_text("Bitte sende keine HTML-Inhalte. Gib einfach deinen Benutzernamen oder Link ein.")
                 return ASKING_QUESTIONS
             if answer_text.count('http') > 2 or len(answer_text) > 300:
-                await update.message.reply_text("Die Eingabe ist zu lang oder enthält zu viele Links. Bitte gib nur deinen Social Media Namen oder Profil-Link an.")
+                await update.message.reply_text("Die Eingabe ist zu lang oder enthält zu viele Links.")
                 return ASKING_QUESTIONS
         
         answer = answer_text
