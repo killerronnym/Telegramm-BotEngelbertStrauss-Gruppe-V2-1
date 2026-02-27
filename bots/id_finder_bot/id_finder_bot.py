@@ -107,7 +107,8 @@ async def process_cleanup_tasks(context: ContextTypes.DEFAULT_TYPE):
 
 # --- Broadcast Engine ---
 async def check_and_send_broadcasts(context: ContextTypes.DEFAULT_TYPE):
-    if not is_bot_active('id_finder'): return
+    # Broadcast-Manager läuft immer, solange der Bot-Prozess aktiv ist.
+    # (Auch wenn das ID-Finder Modul im Dashboard auf 'AUS' steht)
     """
     Prüft die Datenbank nach fälligen Broadcasts und versendet sie.
     """
