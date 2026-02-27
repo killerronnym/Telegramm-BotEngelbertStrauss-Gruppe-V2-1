@@ -78,6 +78,13 @@ def load_config():
         "MESSAGE_TEMPLATE_PRESENCE": tiktok_config.get("message_template_presence", "👀 {target} wurde in einem TikTok-Live gesehen!\\n\\n🎥 Host: @{host}\\n📌 Event: {event}\\n🔗 {url}")
     }
 
+def safe_load_config():
+    try:
+        return load_config()
+    except Exception as e:
+        log_print(f"❌ Kritischer Fehler in load_config: {e}")
+        return {}
+
 def tg_send(token: str, chat_id: str, topic_id: str, text: str) -> None:
     if not token or not chat_id: return
     url = f"https://api.telegram.org/bot{token}/sendMessage"
@@ -193,15 +200,17 @@ async def start_tiktok_monitor(app_instance: Application = None):
     
     tasks = []
     # Alle Hosts scannen
-    for h in config["WATCH_HOSTS"]:
+    log_print(f"Erstelle Tasks für {len(config.get('WATCH_HOSTS', []))} Hosts...")
+    for h in config.get("WATCH_HOSTS", []):
         tasks.append(asyncio.create_task(watch_one_host(h, config["TARGETS"], alert_state, sem)))
     
     # Zusätzlich jeden Ziel-Account selbst scannen (falls einer davon selbst live geht)
-    for t in config["TARGETS"]:
-        if t not in config["WATCH_HOSTS"]:
+    log_print(f"Erstelle Tasks für {len(config.get('TARGETS', []))} Ziele...")
+    for t in config.get("TARGETS", []):
+        if t not in config.get("WATCH_HOSTS", []):
             tasks.append(asyncio.create_task(watch_one_host(t, [t], alert_state, sem)))
     
-    log_print(f"Beobachte {len(tasks)} Kanäle auf {len(config['TARGETS'])} Zielpersonen.")
+    log_print(f"✅ Monitoring-Setup abgeschlossen. {len(tasks)} Kanäle werden überwacht.")
     if tasks:
         await asyncio.gather(*tasks)
     else:
