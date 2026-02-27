@@ -162,26 +162,9 @@ async def letsgo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return ConversationHandler.END
     
     context.user_data.clear() # Alles löschen für sauberen Neustart
+    context.user_data.update({'fields': fields, 'current_field_index': 0, 'answers': {}})
     
-    # Puppy Config laden
-    config = get_bot_config('invite')
-    puppy_config = config.get('puppy_config', {})
-    
-    # Felder vorbereiten
-    all_fields = list(fields) # Kopie
-    if puppy_config.get('enabled'):
-        puppy_field = {
-            'id': 'puppy_age',
-            'label': puppy_config.get('label', 'Wie alt ist dein Puppy?'),
-            'type': 'number',
-            'required': puppy_config.get('required', True),
-            'is_puppy_field': True # Markierung für spezielle Validierung
-        }
-        all_fields.insert(0, puppy_field) # Puppy-Alter an den Anfang (oder nach Wunsch)
-
-    context.user_data.update({'fields': all_fields, 'current_field_index': 0, 'answers': {}})
-    
-    first_field = all_fields[0]
+    first_field = fields[0]
     keyboard = None
     if not first_field.get('required'):
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("⏭️ Überspringen / Nein", callback_data="skip_field")]])
@@ -210,70 +193,49 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             return ASKING_QUESTIONS
         answer = update.message.photo[-1].file_id
         log_user_interaction(user.id, user.username, f"Antwort auf {field['id']}: photo {answer}")
-    else:
-        answer_text = update.message.text
-        if answer_text and answer_text.lower().strip() == 'nein':
-            if field.get('required'):
-                await update.message.reply_text("Dieses Feld ist ein Pflichtfeld und kann nicht übersprungen werden. Bitte gib eine Antwort ein.")
-                return ASKING_QUESTIONS
-            answer = "nein"
-        elif not answer_text and field.get('required'):
-            await update.message.reply_text("Diese Antwort ist erforderlich.")
+    
+    answer_text = update.message.text.strip() if update.message.text else ""
+
+    # Validierung für numerische Typen (Zahl oder Puppy Alter)
+    if field.get('type') in ['number', 'puppy_age']:
+        if not answer_text.isdigit():
+            await update.message.reply_text("Bitte gib eine Zahl ein.")
             return ASKING_QUESTIONS
         
-        field = fields[idx]
-        answer = update.message.text.strip()
-        config = get_bot_config('invite')
+        val_number = int(answer_text)
+        min_age = field.get('min_age')
+        
+        if min_age and val_number < int(min_age):
+            error_msg = field.get('min_age_error_msg') or f"⚠️ Du musst mindestens {min_age} Jahre alt sein."
+            await update.message.reply_text(error_msg)
+            return ASKING_QUESTIONS
+        
+        answer = str(val_number)
+    else:
+        # Standard Validierung für andere Typen
+        if not answer_text and field.get('required'):
+            await update.message.reply_text("Diese Antwort ist erforderlich.")
+            return ASKING_QUESTIONS
+            
+        # Social Media / HTML Check
+        if field['id'] == 'instagram' or 'social' in field['id'].lower():
+            if '<' in answer_text and '>' in answer_text:
+                await update.message.reply_text("Bitte sende keine HTML-Inhalte. Gib einfach deinen Benutzernamen oder Link ein.")
+                return ASKING_QUESTIONS
+            if answer_text.count('http') > 2 or len(answer_text) > 300:
+                await update.message.reply_text("Die Eingabe ist zu lang oder enthält zu viele Links. Bitte gib nur deinen Social Media Namen oder Profil-Link an.")
+                return ASKING_QUESTIONS
+        
+        answer = answer_text
 
-        # Spezielle Validierung für Puppy-Alter
-        if field.get('is_puppy_field'):
-            if not answer.isdigit():
-                await update.message.reply_text("Bitte gib eine Zahl ein.")
-                return ASKING_QUESTIONS
-            
-            age = int(answer)
-            puppy_config = config.get('puppy_config', {})
-            min_age = puppy_config.get('min_age', 1)
-            if age < min_age:
-                error_msg = puppy_config.get('error_msg', f"⚠️ Dein Puppy muss mindestens {min_age} Jahre alt sein.")
-                await update.message.reply_text(error_msg)
-                return ASKING_QUESTIONS
-
-        # Standard Numerische Validierung für andere Felder
-        elif field.get('type') == 'number':
-            if not answer.isdigit():
-                await update.message.reply_text("Bitte gib eine Zahl ein.")
-                return ASKING_QUESTIONS
-            
-            min_age = field.get('min_age')
-            if min_age and int(answer) < int(min_age):
-                error_msg = field.get('min_age_error_msg') or f"⚠️ Du musst mindestens {min_age} Jahre alt sein."
-                await update.message.reply_text(error_msg)
-                return ASKING_QUESTIONS
-        else:
-            answer_raw = answer_text or ""
-            # --- Validierung für Social Media / HTML ---
-            if field['id'] == 'instagram' or 'social' in field['id'].lower():
-                # Check for HTML
-                if '<' in answer_raw and '>' in answer_raw:
-                    await update.message.reply_text("Bitte sende keine HTML-Inhalte. Gib einfach deinen Benutzernamen oder Link ein.")
-                    return ASKING_QUESTIONS
-                
-                # Check for multiple URLs or suspicious long content
-                if answer_raw.count('http') > 2 or len(answer_raw) > 300:
-                    await update.message.reply_text("Die Eingabe ist zu lang oder enthält zu viele Links. Bitte gib nur deinen Social Media Namen oder Profil-Link an.")
-                    return ASKING_QUESTIONS
-            
-            answer = answer_raw
-            log_user_interaction(user.id, user.username, f"Antwort auf {field['id']}: {answer}")
+    logger.info(f"handle_answer: Speichere Antwort für {field['id']}. Nächster Index: {idx+1}")
+    log_user_interaction(user.id, user.username, f"Antwort auf {field['id']}: {answer}")
     
-    # --- Multi-Social Support ---
+    # --- Multi-Social Support (nur wenn Social Media) ---
     is_social = field['id'] == 'instagram' or 'social' in field['id'].lower()
-    
-    if is_social:
-        detected = detect_social_platform(answer_raw) if not isinstance(answer, (int, float)) else None
+    if is_social and answer.lower() != 'nein': # 'nein' allows skipping social fields
+        detected = detect_social_platform(answer)
         if detected:
-            logger.info(f"handle_answer: Plattform erkannt: {detected['name']}")
             if field['id'] not in context.user_data['answers']:
                 context.user_data['answers'][field['id']] = []
             context.user_data['answers'][field['id']].append(detected)
@@ -508,18 +470,8 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
     # Steckbrief zusammenbauen
     lines = []
     
-    # Erst Puppy-Alter falls vorhanden
-    if 'puppy_age' in answers:
-        age_val = answers['puppy_age']
-        emoji = "🐶"
-        label = "Puppy-Alter"
-        if age_val == "n/a": age_val = "Nicht angegeben"
-        lines.append(f"{emoji} <b>{label}:</b> {age_val}")
-
     photo_file_id = None
     for field in ordered_fields:
-        if field['id'] == 'puppy_age': continue # Bereits oben behandelt
-        
         answer = answers.get(field['id'])
         if answer is None or (isinstance(answer, str) and answer.lower().strip() == 'nein'):
             continue
@@ -527,7 +479,7 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
             photo_file_id = answer
         else:
             emoji = field.get('emoji', '🔹')
-            name = field.get('display_name', field['id'])
+            name = field.get('display_name', field['id'].capitalize())
             
             # Link-Formatierung für Social Media (HTML)
             if field['id'] == 'instagram' or 'social' in field['id'].lower():
