@@ -162,9 +162,26 @@ async def letsgo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return ConversationHandler.END
     
     context.user_data.clear() # Alles löschen für sauberen Neustart
-    context.user_data.update({'fields': fields, 'current_field_index': 0, 'answers': {}})
     
-    first_field = fields[0]
+    # Puppy Config laden
+    config = get_bot_config('invite')
+    puppy_config = config.get('puppy_config', {})
+    
+    # Felder vorbereiten
+    all_fields = list(fields) # Kopie
+    if puppy_config.get('enabled'):
+        puppy_field = {
+            'id': 'puppy_age',
+            'label': puppy_config.get('label', 'Wie alt ist dein Puppy?'),
+            'type': 'number',
+            'required': puppy_config.get('required', True),
+            'is_puppy_field': True # Markierung für spezielle Validierung
+        }
+        all_fields.insert(0, puppy_field) # Puppy-Alter an den Anfang (oder nach Wunsch)
+
+    context.user_data.update({'fields': all_fields, 'current_field_index': 0, 'answers': {}})
+    
+    first_field = all_fields[0]
     keyboard = None
     if not first_field.get('required'):
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("⏭️ Überspringen / Nein", callback_data="skip_field")]])
@@ -203,19 +220,36 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         elif not answer_text and field.get('required'):
             await update.message.reply_text("Diese Antwort ist erforderlich.")
             return ASKING_QUESTIONS
-        if field['type'] == 'number':
-            if not (answer_text and answer_text.isdigit()):
-                await update.message.reply_text("Bitte sende eine gültige Zahl.")
+        
+        field = fields[idx]
+        answer = update.message.text.strip()
+        config = get_bot_config('invite')
+
+        # Spezielle Validierung für Puppy-Alter
+        if field.get('is_puppy_field'):
+            if not answer.isdigit():
+                await update.message.reply_text("Bitte gib eine Zahl ein.")
                 return ASKING_QUESTIONS
-            answer = int(answer_text)
-            log_user_interaction(user.id, user.username, f"Antwort auf {field['id']}: {answer}")
             
-            # Altersprüfung
-            min_age = field.get('min_age')
-            if min_age and answer < int(min_age):
-                error_msg = field.get('min_age_error_msg') or f"Du musst leider mindestens {min_age} Jahre alt sein, um der Gruppe beizutreten."
+            age = int(answer)
+            puppy_config = config.get('puppy_config', {})
+            min_age = puppy_config.get('min_age', 1)
+            if age < min_age:
+                error_msg = puppy_config.get('error_msg', f"⚠️ Dein Puppy muss mindestens {min_age} Jahre alt sein.")
                 await update.message.reply_text(error_msg)
-                return ASKING_QUESTIONS # Nicht beenden, sondern Retry erlauben!
+                return ASKING_QUESTIONS
+
+        # Standard Numerische Validierung für andere Felder
+        elif field.get('type') == 'number':
+            if not answer.isdigit():
+                await update.message.reply_text("Bitte gib eine Zahl ein.")
+                return ASKING_QUESTIONS
+            
+            min_age = field.get('min_age')
+            if min_age and int(answer) < int(min_age):
+                error_msg = field.get('min_age_error_msg') or f"⚠️ Du musst mindestens {min_age} Jahre alt sein."
+                await update.message.reply_text(error_msg)
+                return ASKING_QUESTIONS
         else:
             answer_raw = answer_text or ""
             # --- Validierung für Social Media / HTML ---
@@ -470,10 +504,22 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
     # Steckbrief-Daten vorbereiten
     answers = context.user_data['answers']
     ordered_fields = context.user_data.get('fields', [])
-    steckbrief_lines = [f"🎉 Steckbrief von {user.full_name}"]
     
+    # Steckbrief zusammenbauen
+    lines = []
+    
+    # Erst Puppy-Alter falls vorhanden
+    if 'puppy_age' in answers:
+        age_val = answers['puppy_age']
+        emoji = "🐶"
+        label = "Puppy-Alter"
+        if age_val == "n/a": age_val = "Nicht angegeben"
+        lines.append(f"{emoji} <b>{label}:</b> {age_val}")
+
     photo_file_id = None
     for field in ordered_fields:
+        if field['id'] == 'puppy_age': continue # Bereits oben behandelt
+        
         answer = answers.get(field['id'])
         if answer is None or (isinstance(answer, str) and answer.lower().strip() == 'nein'):
             continue

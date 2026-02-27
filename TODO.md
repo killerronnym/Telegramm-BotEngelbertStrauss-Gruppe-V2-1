@@ -23,6 +23,18 @@ Dieses Dokument listet den Status der Umstrukturierung und Optimierung des Proje
 
 ### 🟠 UI/UX & Frontend
 - [ ] **Templates anpassen:** Die HTML-Templates (z.B. `bot_settings.html`) müssen noch so angepasst werden, dass sie die Konfiguration aus der Datenbank lesen und schreiben, statt Platzhalter zu verwenden. Aktuell sind viele Routen in `dashboard.py` noch Stubs.
+- [ ] Implement Puppy-Alter Dedicated Tab (v1.5.3)
+    - [ ] Add "Puppy-Alter" tab to `bot_settings.html`
+    - [ ] Create specialized route in `dashboard.py`
+    - [ ] Integrate into bot conversation in `invite_bot.py`
+- [x] Debug Internal Server Error on /bot-settings (v1.5.1/v1.5.2)
+- [x] Implement Puppy Age Enhancement
+    - [x] Create Puppy Age field in Invite Bot config
+    - [x] Add "Skip" button for optional fields in `invite_bot.py`
+- [x] Implement Custom Slash Commands
+    - [x] Add "Custom Commands" tab to `bot_settings.html`
+    - [x] Create backend routes for custom command management in `dashboard.py`
+    - [x] Implement dynamic command handling in `invite_bot.py`
 - [ ] **Live-Moderation:** Die `live_moderation` Route liefert aktuell leere Daten. Hier muss die Logik implementiert werden, um Nachrichten aus der Datenbank oder den Log-Dateien zu lesen.
 
 ### 🟡 Weitere Bots migrieren

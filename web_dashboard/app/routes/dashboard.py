@@ -268,6 +268,25 @@ def delete_custom_command():
         
     return redirect(url_for('dashboard.bot_settings'))
 
+@bp.route('/bot-settings/save-puppy-config', methods=['POST'])
+@login_required
+def save_puppy_config():
+    s = BotSettings.query.filter_by(bot_name='invite').first()
+    cfg = json.loads(s.config_json)
+    
+    cfg['puppy_config'] = {
+        'enabled': 'enabled' in request.form,
+        'label': request.form.get('label', '').strip(),
+        'min_age': int(request.form.get('min_age', 1)),
+        'required': 'required' in request.form,
+        'error_msg': request.form.get('error_msg', '').strip()
+    }
+    
+    s.config_json = json.dumps(cfg)
+    db.session.commit()
+    flash('Puppy-Alter Einstellungen gespeichert.', 'success')
+    return redirect(url_for('dashboard.bot_settings', _anchor='puppy-panel'))
+
 @bp.route('/bot-settings/clear-logs/user', methods=['POST'])
 @login_required
 def clear_user_logs():
