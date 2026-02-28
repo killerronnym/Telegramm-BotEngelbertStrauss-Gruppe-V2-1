@@ -65,7 +65,12 @@ def create_app(test_config=None):
                     db.session.add(admin)
                     db.session.commit()
             except Exception as e:
-                print(f"DB Error during app context: {e}")
+                print(f"CRITICAL DB Error during app context: {e}")
+                print("Database appears unreachable. Entering Rescue Mode by deleting INSTALL_LOCK...")
+                try:
+                    os.remove(INSTALL_LOCK)
+                except:
+                    pass
 
     # Root-Route leitet direkt zum Dashboard weiter
     @app.route('/')
