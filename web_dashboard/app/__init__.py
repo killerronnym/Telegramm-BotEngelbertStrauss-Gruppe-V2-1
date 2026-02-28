@@ -27,7 +27,11 @@ def create_app(test_config=None):
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        try:
+            return db.session.get(User, int(user_id))
+        except Exception as e:
+            print(f"Error loading user from DB: {e}")
+            return None
     
     app.jinja_env.filters['datetimeformat'] = datetimeformat
     
