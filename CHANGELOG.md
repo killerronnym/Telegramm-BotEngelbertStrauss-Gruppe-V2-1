@@ -2,6 +2,11 @@
 
 Alle signifikanten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.8.13] - 2026-02-28
+
+### 🛠️ Behobene Fehler (Fixes)
+- **Dashboard**: Jinja2 Template-Syntax-Fehler beim Aufruf des Profanity-Filters behoben (`endblock`).
+
 ## [1.8.11] - 2026-02-28
 
 ### ✨ Neu
