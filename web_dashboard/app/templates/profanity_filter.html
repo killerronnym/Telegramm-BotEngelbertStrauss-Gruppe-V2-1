@@ -4,6 +4,11 @@
 {% block header %}Beleidigungsfilter{% endblock %}
 
 {% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary btn-sm rounded-pill fw-bold">
+        <i class="bi bi-arrow-left me-1"></i> ZURÜCK ZUM DASHBOARD
+    </a>
+</div>
 <div class="row g-4 mb-4">
     <!-- Status Card -->
     <div class="col-12 col-md-4">
