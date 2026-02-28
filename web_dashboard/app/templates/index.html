@@ -540,7 +540,11 @@
                 const res = await fetch('/api/update/install', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updateData)
+                    body: JSON.stringify({
+                        url: updateData.zipball_url,
+                        version: updateData.latest_version,
+                        published_at: updateData.published_at
+                    })
                 });
 
                 if (res.ok) {
