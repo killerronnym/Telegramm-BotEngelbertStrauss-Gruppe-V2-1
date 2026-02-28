@@ -66,16 +66,19 @@
     <div class="col-12 col-lg-5">
         <div class="card shadow-sm border-0 bg-dark text-light h-100">
             <div class="card-header bg-dark border-secondary">
-                <h5 class="mb-0 fw-bold header-title">Wort hinzufügen</h5>
+                <h5 class="mb-0 fw-bold header-title">Wörter hinzufügen</h5>
             </div>
             <div class="card-body">
                 <form action="{{ url_for('dashboard.profanity_filter_add') }}" method="POST" class="mb-4">
-                    <div class="input-group">
-                        <input type="text" name="word" class="form-control form-control-dark"
-                            placeholder="Schimpfwort..." required maxlength="100">
-                        <button class="btn btn-brand" type="submit"><i class="bi bi-plus-lg fw-bold"></i>
-                            HINZUFÜGEN</button>
+                    <div class="mb-2">
+                        <textarea name="words_bulk" class="form-control form-control-dark" rows="4"
+                            placeholder="Schreibe einfach deine Wörter hier rein...&#10;Hund&#10;Katze&#10;Maus"
+                            required></textarea>
                     </div>
+                    <p class="small text-secondary mb-3">Du kannst mehrere Wörter auf einmal hinzufügen. Trenne sie
+                        einfach mit einem <b>Zeilenumbruch (Enter)</b> oder einem <b>Komma</b>.</p>
+                    <button class="btn btn-brand w-100" type="submit"><i class="bi bi-plus-lg fw-bold"></i>
+                        HINZUFÜGEN</button>
                 </form>
 
                 <hr class="border-secondary my-4">

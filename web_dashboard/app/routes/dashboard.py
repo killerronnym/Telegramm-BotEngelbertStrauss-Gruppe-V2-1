@@ -1351,18 +1351,47 @@ def profanity_filter():
 @login_required
 def profanity_filter_add():
     from ..models import ProfanityWord
-    new_word = request.form.get('word', '').strip().lower()
-    if new_word:
-        exists = ProfanityWord.query.filter_by(word=new_word).first()
-        if not exists:
-            if len(new_word) <= 100:
-                db.session.add(ProfanityWord(word=new_word))
-                db.session.commit()
-                flash(f'Wort "{new_word}" hinzugefügt.', 'success')
+    
+    # Check if this is a bulk import from the new textarea
+    bulk_words = request.form.get('words_bulk', '')
+    if not bulk_words:
+        # Fallback to single word input if used
+        bulk_words = request.form.get('word', '')
+        
+    if bulk_words:
+        import re
+        # Split by commas or newlines
+        words_list = re.split(r'[,\n\r]+', bulk_words)
+        
+        added_count = 0
+        skipped_count = 0
+        
+        for w in words_list:
+            clean_word = w.strip().lower()
+            if not clean_word:
+                continue
+                
+            if len(clean_word) > 100:
+                skipped_count += 1
+                continue
+                
+            exists = ProfanityWord.query.filter_by(word=clean_word).first()
+            if not exists:
+                db.session.add(ProfanityWord(word=clean_word))
+                added_count += 1
             else:
-                flash('Wort ist zu lang.', 'danger')
+                skipped_count += 1
+                
+        if added_count > 0:
+            db.session.commit()
+            flash(f'{added_count} neue(s) Wort/Wörter erfolgreich hinzugefügt.', 'success')
+            if skipped_count > 0:
+                flash(f'{skipped_count} Wort/Wörter wurden übersprungen (bereits vorhanden oder zu lang).', 'warning')
+        elif skipped_count > 0:
+            flash(f'Alle eingegebenen Wörter existieren bereits oder sind zu lang.', 'warning')
         else:
-            flash(f'Wort "{new_word}" existiert bereits.', 'warning')
+            flash('Keine gültigen Wörter gefunden.', 'warning')
+            
     return redirect(url_for('dashboard.profanity_filter'))
 
 @bp.route('/profanity-filter/delete/<int:word_id>', methods=['POST'])
