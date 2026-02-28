@@ -140,41 +140,50 @@ async def handle_profanity_check(update: Update, context: ContextTypes.DEFAULT_T
                         asyncio.create_task(delete_notice_later(context.bot, chat.id, notice.message_id))
                         
                         # 3. Log the deleted message into IDFinderMessage so Live Moderation shows it in red
-                        try:
-                            # It might not exist yet if ID Finder hasn't logged it, so we upsert it
-                            db_msg = IDFinderMessage.query.filter_by(message_id=update.message.message_id, chat_id=chat.id).first()
-                            topic_id = update.message.message_thread_id
-                            
-                            # Update mapping if necessary
-                            if chat.type in ["group", "supergroup"] and topic_id:
-                                mapping = TopicMapping.query.filter_by(topic_id=topic_id).first()
-                                if not mapping:
-                                    topic_title = f"Topic {topic_id}"
-                                    if hasattr(update.message, 'reply_to_message') and update.message.reply_to_message and update.message.reply_to_message.forum_topic_created:
-                                        topic_title = update.message.reply_to_message.forum_topic_created.name
-                                    db.session.add(TopicMapping(topic_id=topic_id, topic_name=topic_title))
-                            
-                            if not db_msg:
-                                db_msg = IDFinderMessage(
-                                    telegram_user_id=target_user.telegram_id,
-                                    message_id=update.message.message_id,
-                                    chat_id=chat.id,
-                                    message_thread_id=topic_id,
-                                    chat_type=chat.type,
-                                    text=message_text,
-                                    content_type='text',
-                                    is_command=False,
-                                    timestamp=datetime.utcnow(),
-                                    is_deleted=True,
-                                    deletion_reason=f"Beleidigungsfilter: {word}"
-                                )
-                                db.session.add(db_msg)
-                            else:
-                                db_msg.is_deleted = True
-                                db_msg.deletion_reason = f"Beleidigungsfilter: {word}"
-                            db.session.commit()
-                        except Exception as inner_e:
-                            logger.error(f"Konnte gelöschte Nachricht nicht ins Live-Log schreiben: {inner_e}")
+                        # Run this slightly delayed to ensure ID-Finder has already logged the message
+                        async def mark_message_deleted(msg_id, c_id, uid, t_id, c_type, m_text, b_word):
+                            await asyncio.sleep(2)
+                            app_ctx = get_app()
+                            if app_ctx:
+                                with app_ctx.app_context():
+                                    try:
+                                        db_msg = IDFinderMessage.query.filter_by(message_id=msg_id, chat_id=c_id).first()
+                                        if db_msg:
+                                            db_msg.is_deleted = True
+                                            db_msg.deletion_reason = f"Beleidigungsfilter: {b_word}"
+                                            db.session.commit()
+                                            logger.info(f"Nachricht {msg_id} nachträglich als gelöscht (rot) markiert.")
+                                        else:
+                                            # Upsert if somehow ID Finder missed it
+                                            db_msg = IDFinderMessage(
+                                                telegram_user_id=uid,
+                                                message_id=msg_id,
+                                                chat_id=c_id,
+                                                message_thread_id=t_id,
+                                                chat_type=c_type,
+                                                text=m_text,
+                                                content_type='text',
+                                                is_command=False,
+                                                timestamp=datetime.utcnow(),
+                                                is_deleted=True,
+                                                deletion_reason=f"Beleidigungsfilter: {b_word}"
+                                            )
+                                            db.session.add(db_msg)
+                                            db.session.commit()
+                                    except Exception as inner_e:
+                                        logger.error(f"Konnte gelöschte Nachricht nicht ins Live-Log schreiben: {inner_e}")
+                                        
+                        asyncio.create_task(
+                            mark_message_deleted(
+                                update.message.message_id, 
+                                chat.id, 
+                                target_user.telegram_id, 
+                                update.message.message_thread_id, 
+                                chat.type, 
+                                message_text, 
+                                word
+                            )
+                        )
                             
                         # Execute punishment if limit reached
                         if warning_count >= max_warns and punishment != 'none':
