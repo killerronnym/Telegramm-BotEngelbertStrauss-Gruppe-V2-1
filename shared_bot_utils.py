@@ -115,16 +115,32 @@ def is_bot_active(bot_name):
 
         engine = get_engine(url)
         with engine.connect() as conn:
-            # Tabelle prüfen bevor Query (optional, kann entfernt werden, wenn Tabelle immer existiert)
+            # Tabelle prüfen bevor Query
             if not inspect(engine).has_table("bot_settings"):
                 return False
                 
             result = conn.execute(
-                text("SELECT is_active FROM bot_settings WHERE bot_name = :name"),
+                text("SELECT config_json, is_active FROM bot_settings WHERE bot_name = :name"),
                 {"name": bot_name}
             ).fetchone()
-            return bool(result[0]) if result else False
-    except Exception:
+            
+            if not result:
+                return False
+                
+            # First check if there's a config_json that defines the active state
+            if result[0]:
+                try:
+                    cfg = json.loads(result[0])
+                    if 'is_active' in cfg:
+                        return bool(cfg['is_active'])
+                except:
+                    pass
+                    
+            # Fallback to the database column
+            return bool(result[1]) if result[1] is not None else False
+            
+    except Exception as e:
+        sys.stderr.write(f"ERROR checking active status for {bot_name}: {e}\n")
         return False
 
 def get_shared_flask_app():
