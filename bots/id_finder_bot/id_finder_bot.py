@@ -245,16 +245,31 @@ def db_log_message_sync(user_dict, chat_dict, msg_dict, config):
                 db.session.commit()
                 return
 
-            db_msg = IDFinderMessage(
-                telegram_user_id=user_dict['id'], message_id=msg_dict['id'],
-                chat_id=chat_dict['id'], message_thread_id=msg_dict.get('thread_id'),
-                chat_type=chat_dict['type'], text=msg_dict['text'],
-                content_type=msg_dict['content_type'], file_id=msg_dict['file_id'],
-                is_command=msg_dict['is_command'], timestamp=now
-            )
-            db.session.add(db_msg)
+            db_msg = IDFinderMessage.query.filter_by(message_id=msg_dict['id'], chat_id=chat_dict['id']).first()
+            if not db_msg:
+                db_msg = IDFinderMessage(
+                    telegram_user_id=user_dict['id'], message_id=msg_dict['id'],
+                    chat_id=chat_dict['id'], message_thread_id=msg_dict.get('thread_id'),
+                    chat_type=chat_dict['type'], text=msg_dict['text'],
+                    content_type=msg_dict['content_type'], file_id=msg_dict['file_id'],
+                    is_command=msg_dict['is_command'], timestamp=now
+                )
+                db.session.add(db_msg)
+                logger.info(f"✅ Message {msg_dict['id']} from {user_dict['id']} saved to DB.")
+            else:
+                # Update existing (might have been created by Profanity Filter)
+                # Keep is_deleted and deletion_reason if already set
+                db_msg.telegram_user_id = user_dict['id']
+                db_msg.message_thread_id = msg_dict.get('thread_id')
+                db_msg.chat_type = chat_dict['type']
+                db_msg.text = msg_dict['text']
+                db_msg.content_type = msg_dict['content_type']
+                db_msg.file_id = msg_dict['file_id']
+                db_msg.is_command = msg_dict['is_command']
+                # DO NOT overwrite is_deleted or deletion_reason here if already true
+                logger.info(f"✅ Message {msg_dict['id']} from {user_dict['id']} updated in DB.")
+            
             db.session.commit()
-            logger.info(f"✅ Message {msg_dict['id']} from {user_dict['id']} saved to DB.")
     except Exception as e:
         logger.error(f"❌ Fehler beim synchronen Loggen: {e}")
         import traceback
