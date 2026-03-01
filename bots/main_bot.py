@@ -172,6 +172,7 @@ def main():
         except Exception as e:
             logger.error(f"❌ Fehler beim Laden von Modul '{name}': {e}")
 
+    register_plugin(birthday_plugin, "birthday")
     register_plugin(id_finder_plugin, "id_finder")
     register_plugin(invite_plugin, "invite")
     register_plugin(outfit_plugin, "outfit")
@@ -180,7 +181,6 @@ def main():
     register_plugin(tiktok_plugin, "tiktok")
     register_plugin(auto_responder_plugin, "auto_responder")
     register_plugin(profanity_plugin, "profanity_filter")
-    register_plugin(birthday_plugin, "birthday")
 
     # 1. Alle Haupt-Handler registrieren (Gruppe 0)
     for h in main_handlers:
