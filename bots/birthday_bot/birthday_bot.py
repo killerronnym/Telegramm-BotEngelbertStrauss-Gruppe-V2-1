@@ -7,6 +7,7 @@ from shared_bot_utils import get_shared_flask_app
 import json
 import re
 from datetime import datetime
+import pytz
 
 logger = logging.getLogger("BirthdayBot")
 logger.setLevel(logging.INFO)
@@ -135,22 +136,32 @@ async def cancel_registration(update: Update, context: ContextTypes.DEFAULT_TYPE
     return ConversationHandler.END
 
 async def check_birthdays(context: ContextTypes.DEFAULT_TYPE):
-    today = datetime.now()
+    # Standard-Zeitzone (könnte man später konfigurierbar machen)
+    tz = pytz.timezone('Europe/Berlin')
+    now = datetime.now(tz)
     
     settings = get_birthday_settings()
     announce_time = settings.get('announce_time', '00:01')
-    current_time_str = today.strftime('%H:%M')
+    current_time_str = now.strftime('%H:%M')
+    
+    # Nur ein Log-Eintrag pro Minute (wenn wir getriggert werden)
+    if now.second < 10: # Nur am Anfang der Minute loggen um Spam zu vermeiden
+        logger.info(f"Checking birthdays... Local Time: {current_time_str}, Announce Time: {announce_time}")
     
     if current_time_str != announce_time:
         return
         
+    logger.info(f"⏰ IT IS TIME! Sending congratulations for {now.day}.{now.month}. at {current_time_str}")
+    
     # Ziel-Chat auslesen
     global_target_chat = settings.get('target_chat_id', '').strip()
     global_target_topic = settings.get('target_topic_id', '').strip()
         
     flask_app = get_shared_flask_app()
     with flask_app.app_context():
-        birthdays = Birthday.query.filter_by(day=today.day, month=today.month).all()
+        # Wir suchen nach Geburtstagen für HEUTE in der Zeitzone
+        birthdays = Birthday.query.filter_by(day=now.day, month=now.month).all()
+        logger.info(f"Found {len(birthdays)} birthdays for today ({now.day}.{now.month}.)")
         for b in birthdays:
             # Prio1: Global, Prio2: Ort der Eintragung
             final_chat_id = global_target_chat if global_target_chat else b.chat_id
