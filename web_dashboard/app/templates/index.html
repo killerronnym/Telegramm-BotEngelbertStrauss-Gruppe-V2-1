@@ -277,7 +277,9 @@
         {'id': 'logs', 'title': 'Kritische Logs', 'icon': 'bi-exclamation-triangle', 'desc': 'Zeigt alle Error- und
         Critical-Logs der Anwendung an.', 'link': url_for('dashboard.critical_errors'), 'type': 'logs'},
         {'id': 'update', 'title': 'Software Update', 'icon': 'bi-cloud-arrow-down-fill', 'desc': 'Prüfen Sie manuell, ob
-        eine neue Version der Bot-Software verfügbar ist.', 'type': 'update'}
+        eine neue Version der Bot-Software verfügbar ist.', 'type': 'update'},
+        {'id': 'backup', 'title': 'Datenbank Backup', 'icon': 'bi-database-down', 'desc': 'Ihre app.db zur lokalen
+        Sicherung sofort herunterladen.', 'link': url_for('dashboard.download_backup'), 'type': 'open'}
         ] %}
 
         {% for item in items %}

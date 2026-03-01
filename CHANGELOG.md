@@ -2,6 +2,11 @@
 
 Alle signifikanten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.9.2] - 2026-03-01
+
+### ✨ Neu
+- **Datenbank Backup**: Administratoren können nun direkt über das Dashboard eine Sicherungskopie der `app.db` herunterladen. Dies dient zur lokalen Sicherung und zur Vorbeugung von Datenverlust bei Docker-Updates.
+
 ## [1.9.1] - 2026-03-01
 
 ### 🛠️ Behobene Fehler (Fixes)

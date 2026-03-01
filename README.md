@@ -1,4 +1,4 @@
-# 🤖 Bot Engine V2 - Engelbert Strauss Gruppe (v1.9.1)
+# 🤖 Bot Engine V2 - Engelbert Strauss Gruppe (v1.9.2)
 
 Ein leistungsstarker Telegram-Bot mit einem modernen Web-Dashboard zur Verwaltung von Einladungen, ID-Suche, Moderation, Quiz, Umfragen und KI-Chat-Integration. Optimiert für Windows und Linux (Docker/Synology).
 
