@@ -2,6 +2,11 @@
 
 Alle signifikanten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.9.5] - 2026-03-01
+
+### 🛠️ Fixes & Verbesserungen
+- **Version Bump**: Kleine Anpassung der Versionsnummer auf 1.9.5 nach erfolgreichem Hotfix für das Datenbank-Update-Skript.
+
 ## [1.9.4] - 2026-03-01
 
 ### 🛠️ Fixes & Verbesserungen
