@@ -2,6 +2,11 @@
 
 Alle signifikanten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.9.4] - 2026-03-01
+
+### 🛠️ Fixes & Verbesserungen
+- **Geburtstags-Bot UI Fixes**: Ein universelles Datenbank-Update-Skript (`update_db.py`) für MySQL/MariaDB bereitgestellt, um einen 500 Internal Server Error Fehler im Dashboard aufgrund fehlender Jahres-Spalten abzufangen.
+
 ## [1.9.3] - 2026-03-01
 
 ### 🛠️ Fixes & Verbesserungen
