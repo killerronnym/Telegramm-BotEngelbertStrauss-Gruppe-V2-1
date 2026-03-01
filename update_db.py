@@ -1,22 +1,23 @@
-import sqlite3
-import os
+from web_dashboard.app import create_app, db
+from sqlalchemy import text
+import sys
 
-db_path = 'instance/app.db'
-if not os.path.exists(db_path):
-    print(f"Error: Database {db_path} not found.")
-    exit(1)
+def upgrade_database():
+    app = create_app()
+    with app.app_context():
+        try:
+            # Versuche, die Spalte "year" zur Tabelle "birthday" hinzuzufügen
+            db.session.execute(text('ALTER TABLE birthday ADD COLUMN year INTEGER'))
+            db.session.commit()
+            print("Erfolgreich: Die Spalte 'year' wurde zur Tabelle 'birthday' hinzugefügt.")
+        except Exception as e:
+            error_str = str(e).lower()
+            if "duplicate column" in error_str or "already exist" in error_str:
+                print("Hinweis: Die Spalte 'year' existiert bereits in der Tabelle 'birthday'.")
+            else:
+                db.session.rollback()
+                print(f"Ein Fehler ist aufgetreten: {e}")
+                sys.exit(1)
 
-conn = sqlite3.connect(db_path)
-cursor = conn.cursor()
-
-try:
-    cursor.execute('ALTER TABLE birthday ADD COLUMN year INTEGER')
-    conn.commit()
-    print("Column 'year' added to 'birthday' table successfully.")
-except sqlite3.OperationalError as e:
-    if "duplicate column name: year" in str(e):
-        print("Column 'year' already exists in 'birthday' table.")
-    else:
-        print(f"Error executing ALTER TABLE: {e}")
-
-conn.close()
+if __name__ == '__main__':
+    upgrade_database()
