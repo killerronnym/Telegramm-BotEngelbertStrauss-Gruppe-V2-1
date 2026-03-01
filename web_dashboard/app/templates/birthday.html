@@ -164,49 +164,6 @@
                                 </td>
                             </tr>
 
-                            <!-- Edit Modal -->
-                            <div class="modal fade" id="editBirthdayModal{{ b.id }}" tabindex="-1" role="dialog"
-                                aria-hidden="true">
-                                <div class="modal-dialog" role="document">
-                                    <div class="modal-content">
-                                        <form action="{{ url_for('dashboard.birthday_settings') }}" method="POST">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Geburtstag bearbeiten</h5>
-                                                <button type="button" class="close" data-dismiss="modal"
-                                                    aria-label="Close">
-                                                    <span aria-hidden="true">&times;</span>
-                                                </button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <input type="hidden" name="action" value="update_birthday">
-                                                <input type="hidden" name="birthday_id" value="{{ b.id }}">
-                                                <div class="form-row">
-                                                    <div class="form-group col-md-4">
-                                                        <label>Tag</label>
-                                                        <input type="number" class="form-control" name="day"
-                                                            value="{{ b.day }}" min="1" max="31" required>
-                                                    </div>
-                                                    <div class="form-group col-md-4">
-                                                        <label>Monat</label>
-                                                        <input type="number" class="form-control" name="month"
-                                                            value="{{ b.month }}" min="1" max="12" required>
-                                                    </div>
-                                                    <div class="form-group col-md-4">
-                                                        <label>Jahr (optional)</label>
-                                                        <input type="number" class="form-control" name="year"
-                                                            value="{{ b.year or '' }}" min="1900" max="2100">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary"
-                                                    data-dismiss="modal">Abbrechen</button>
-                                                <button type="submit" class="btn btn-primary">Speichern</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
                             {% else %}
                             <tr>
                                 <td colspan="6" class="text-center">Noch keine Geburtstage eingetragen.</td>
@@ -218,6 +175,54 @@
             </div>
         </div>
     </div>
+</div>
+
+{% for b in birthdays %}
+<!-- Edit Modal -->
+<div class="modal fade" id="editBirthdayModal{{ b.id }}" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form action="{{ url_for('dashboard.birthday_settings') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">Geburtstag bearbeiten</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="update_birthday">
+                    <input type="hidden" name="birthday_id" value="{{ b.id }}">
+                    <div class="form-row">
+                        <div class="form-group col-md-4">
+                            <label>Tag</label>
+                            <input type="number" class="form-control" name="day" value="{{ b.day }}" min="1" max="31"
+                                required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Monat</label>
+                            <input type="number" class="form-control" name="month" value="{{ b.month }}" min="1"
+                                max="12" required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Jahr (optional)</label>
+                            <input type="number" class="form-control" name="year" value="{{ b.year or '' }}" min="1900"
+                                max="2100">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+</div>
+</div>
+</div>
+</div>
 </div>
 
 <!-- Add Modal -->

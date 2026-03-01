@@ -31,13 +31,14 @@ def get_birthday_settings():
 
 async def start_birthday_registration(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        "🎂 **Geburtstags-Bot**\n\n"
+        "🎂 <b>Geburtstags-Bot</b>\n\n"
         "Wann hast du Geburtstag?\n"
-        "Bitte schreibe es im Format `Tag.Monat` oder `Tag.Monat.Jahr`.\n"
-        "*(Beispiel: 15.08. oder 15.08.1990 - das Jahr ist komplett freiwillig!)*\n\n"
+        "Bitte schreibe es im Format <code>Tag.Monat</code> oder <code>Tag.Monat.Jahr</code>.\n"
+        "<i>(Beispiel: 15.08. oder 15.08.1990 - das Jahr ist komplett freiwillig!)</i>\n\n"
         "Wenn du abbrechen möchtest, tippe /cancel."
     )
-    await update.message.reply_text(text, parse_mode='Markdown')
+    if update.message:
+        await update.message.reply_text(text, parse_mode='HTML')
     return WAITING_FOR_DATE
 
 async def handle_date_input(update: Update, context: ContextTypes.DEFAULT_TYPE):

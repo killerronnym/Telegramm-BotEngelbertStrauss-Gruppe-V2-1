@@ -2,6 +2,12 @@
 
 Alle signifikanten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.9.6] - 2026-03-01
+
+### 🛠️ Fixes & Verbesserungen
+- **Geburtstags-Bot UI**: Ein Bug wurde behoben, durch den der "Hinzufügen"-Button nicht funktionierte (invalid DOM structure im Table).
+- **Telegram Bot**: Ein Parse-Fehler für Markdown wurde behoben, der dazu führte, dass der Bot nicht auf `/gb` bzw. `/geburtstag` reagierte.
+
 ## [1.9.5] - 2026-03-01
 
 ### 🛠️ Fixes & Verbesserungen
