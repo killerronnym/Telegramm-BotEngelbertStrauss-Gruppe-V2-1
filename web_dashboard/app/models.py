@@ -135,6 +135,7 @@ class Birthday(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     telegram_user_id = db.Column(db.BigInteger, unique=True, nullable=False)
     chat_id = db.Column(db.BigInteger) # The group where it was registered
+    topic_id = db.Column(db.BigInteger, nullable=True) # The topic where it was registered
     username = db.Column(db.String(100))
     first_name = db.Column(db.String(100))
     day = db.Column(db.Integer, nullable=False)

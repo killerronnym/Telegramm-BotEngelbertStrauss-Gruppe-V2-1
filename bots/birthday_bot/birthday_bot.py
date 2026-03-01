@@ -101,10 +101,12 @@ async def handle_date_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             birthday.chat_id = chat_id
             birthday.username = user.username
             birthday.first_name = user.first_name
+            birthday.topic_id = update.message.message_thread_id if update.message.is_topic_message else None
         else:
             birthday = Birthday(
                 telegram_user_id=user.id,
                 chat_id=chat_id,
+                topic_id=update.message.message_thread_id if update.message.is_topic_message else None,
                 username=user.username,
                 first_name=user.first_name,
                 day=day,
