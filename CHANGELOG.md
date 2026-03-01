@@ -2,6 +2,12 @@
 
 Alle signifikanten Änderungen an diesem Projekt werden hier dokumentiert.
 
+## [1.9.3] - 2026-03-01
+
+### 🛠️ Fixes & Verbesserungen
+- **Token Handling**: Vorbereitungen und Dashboard-Fixes für den Umgang mit leeren Tokens in der SQLite-Datenbank.
+- **Diagnostics**: Neue Diagnoseskripte für Datenbank-Checks hinzugefügt.
+
 ## [1.9.2] - 2026-03-01
 
 ### ✨ Neu
