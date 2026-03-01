@@ -1442,7 +1442,9 @@ def birthday_settings():
         cfg = {
             'registration_text': 'Dein Geburtstag ({day}.{month}.) wurde erfolgreich eingetragen!',
             'congratulation_text': 'Herzlichen Glückwunsch zum Geburtstag, {user}!',
-            'announce_time': '00:01'
+            'announce_time': '00:01',
+            'target_chat_id': '',
+            'target_topic_id': ''
         }
         s = BotSettings(bot_name='birthday', config_json=json.dumps(cfg))
         db.session.add(s)
@@ -1457,6 +1459,8 @@ def birthday_settings():
             cfg['registration_text'] = request.form.get('registration_text')
             cfg['congratulation_text'] = request.form.get('congratulation_text')
             cfg['announce_time'] = request.form.get('announce_time')
+            cfg['target_chat_id'] = request.form.get('target_chat_id', '').strip()
+            cfg['target_topic_id'] = request.form.get('target_topic_id', '').strip()
             s.config_json = json.dumps(cfg)
             db.session.commit()
             flash('Geburtstags-Einstellungen gespeichert.', 'success')
@@ -1465,13 +1469,14 @@ def birthday_settings():
             uid = request.form.get('telegram_user_id')
             day = request.form.get('day')
             month = request.form.get('month')
+            year = request.form.get('year')
             if uid and day and month:
                 existing = Birthday.query.filter_by(telegram_user_id=int(uid)).first()
                 if not existing:
                     u = IDFinderUser.query.filter_by(telegram_id=int(uid)).first()
                     name = u.first_name if u else "Unbekannt"
                     username = u.username if u else ""
-                    b = Birthday(telegram_user_id=int(uid), day=int(day), month=int(month), first_name=name, username=username)
+                    b = Birthday(telegram_user_id=int(uid), day=int(day), month=int(month), year=int(year) if year else None, first_name=name, username=username)
                     db.session.add(b)
                     db.session.commit()
                     flash('Geburtstag hinzugefügt.', 'success')
@@ -1482,11 +1487,13 @@ def birthday_settings():
             bid = request.form.get('birthday_id')
             day = request.form.get('day')
             month = request.form.get('month')
+            year = request.form.get('year')
             if bid and day and month:
                 b = Birthday.query.get(int(bid))
                 if b:
                     b.day = int(day)
                     b.month = int(month)
+                    b.year = int(year) if year else None
                     db.session.commit()
                     flash('Geburtstag aktualisiert.', 'success')
                     

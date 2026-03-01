@@ -139,6 +139,7 @@ class Birthday(db.Model):
     first_name = db.Column(db.String(100))
     day = db.Column(db.Integer, nullable=False)
     month = db.Column(db.Integer, nullable=False)
+    year = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # --- Invite Bot Models ---

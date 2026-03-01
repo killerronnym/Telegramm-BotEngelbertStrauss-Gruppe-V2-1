@@ -1,11 +1,37 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Zurück zum Dashboard
+    </a>
+</div>
+
 <div class="row mb-4">
     <div class="col-12">
         <h2 class="h3 mb-2 text-gray-800"><i class="fas fa-birthday-cake text-primary"></i> Geburtstags-Bot</h2>
         <p class="mb-4">Verwalte die Einstellungen für den Geburtstags-Bot und die eingetragenen Geburtstage der User.
         </p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-left-info shadow h-100 py-2" style="border-left: 4px solid #36b9cc;">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">So funktioniert's im Chat
+                        </div>
+                        <div class="mb-0 text-gray-800 text-sm">
+                            Nutzer können im Chat einfach <code>/gb</code> oder <code>/geburtstag</code> tippen. Der Bot
+                            wird sie interaktiv nach dem Datum fragen (Tag, Monat und optional das Jahr). Der Bot
+                            berechnet daraufhin das Alter und postet Glückwünsche im angegebenen Ziel-Chat/Topic.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -51,6 +77,26 @@
                     </div>
 
                     <div class="form-group row">
+                        <label class="col-sm-3 col-form-label">Ziel Chat-ID</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" name="target_chat_id"
+                                value="{{ settings.get('target_chat_id', '') }}" placeholder="-100...">
+                            <small class="form-text text-muted">In diese Chat-ID (Gruppe) wird der Glückwunsch
+                                geschickt.</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <label class="col-sm-3 col-form-label">Ziel Topic-ID (optional)</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" name="target_topic_id"
+                                value="{{ settings.get('target_topic_id', '') }}" placeholder="z.B. 123">
+                            <small class="form-text text-muted">Falls Sie Forums-Topics nutzen, hier die Topic-ID für
+                                Geburtstage eintragen.</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
                         <div class="col-sm-12 text-right">
                             <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Speichern</button>
                         </div>
@@ -79,6 +125,7 @@
                                 <th>User</th>
                                 <th>Telegram ID</th>
                                 <th>Geburtstag</th>
+                                <th>Jahr</th>
                                 <th>Chat ID</th>
                                 <th>Aktionen</th>
                             </tr>
@@ -100,7 +147,8 @@
                                 </td>
                                 <td>{{ b.first_name }} <small class="text-muted">(@{{ b.username }})</small></td>
                                 <td>{{ b.telegram_user_id }}</td>
-                                <td>{{ b.day }}.{{ b.month }}.</td>
+                                <td>{{ '%02d' % b.day }}.{{ '%02d' % b.month }}.</td>
+                                <td>{{ b.year or '-' }}</td>
                                 <td>{{ b.chat_id or '-' }}</td>
                                 <td>
                                     <button class="btn btn-sm btn-info" data-toggle="modal"
@@ -133,15 +181,20 @@
                                                 <input type="hidden" name="action" value="update_birthday">
                                                 <input type="hidden" name="birthday_id" value="{{ b.id }}">
                                                 <div class="form-row">
-                                                    <div class="form-group col-md-6">
+                                                    <div class="form-group col-md-4">
                                                         <label>Tag</label>
                                                         <input type="number" class="form-control" name="day"
                                                             value="{{ b.day }}" min="1" max="31" required>
                                                     </div>
-                                                    <div class="form-group col-md-6">
+                                                    <div class="form-group col-md-4">
                                                         <label>Monat</label>
                                                         <input type="number" class="form-control" name="month"
                                                             value="{{ b.month }}" min="1" max="12" required>
+                                                    </div>
+                                                    <div class="form-group col-md-4">
+                                                        <label>Jahr (optional)</label>
+                                                        <input type="number" class="form-control" name="year"
+                                                            value="{{ b.year or '' }}" min="1900" max="2100">
                                                     </div>
                                                 </div>
                                             </div>
@@ -185,13 +238,17 @@
                         <input type="number" class="form-control" name="telegram_user_id" required>
                     </div>
                     <div class="form-row">
-                        <div class="form-group col-md-6">
+                        <div class="form-group col-md-4">
                             <label>Tag</label>
                             <input type="number" class="form-control" name="day" min="1" max="31" required>
                         </div>
-                        <div class="form-group col-md-6">
+                        <div class="form-group col-md-4">
                             <label>Monat</label>
                             <input type="number" class="form-control" name="month" min="1" max="12" required>
+                        </div>
+                        <div class="form-group col-md-4">
+                            <label>Jahr (opt)</label>
+                            <input type="number" class="form-control" name="year" min="1900" max="2100">
                         </div>
                     </div>
                 </div>
