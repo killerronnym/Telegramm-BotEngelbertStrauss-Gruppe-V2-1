@@ -279,6 +279,11 @@
                         data-bs-toggle="tab" data-bs-target="#commands-panel" type="button"><i
                             class="bi bi-terminal me-2"></i>Befehle</button>
                 </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-bold text-uppercase small tracking-wider" id="extras-tab"
+                        data-bs-toggle="tab" data-bs-target="#extras-panel" type="button"><i
+                            class="bi bi-gear-wide-connected me-2"></i>Extras</button>
+                </li>
             </ul>
 
             <div class="tab-content border border-white border-opacity-5 rounded-3 p-4"
@@ -452,6 +457,56 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Extras Tab -->
+                <div class="tab-pane fade" id="extras-panel" role="tabpanel">
+                    <div class="card mb-4">
+                        <div class="card-header py-3 px-4">
+                            <h6 class="mb-0 fw-bold">Zusätzliche Profil-Optionen</h6>
+                        </div>
+                        <div class="card-body">
+                            <form action="{{ url_for('dashboard.save_invite_content') }}" method="POST">
+                                <div class="form-check form-switch mb-4 p-3 ps-5 rounded border border-white border-opacity-5"
+                                    style="background: rgba(255,255,255,0.01);">
+                                    <input class="form-check-input" type="checkbox" id="share_username_enabled"
+                                        name="share_username_enabled" {% if config.share_username_enabled %}checked{%
+                                        endif %}>
+                                    <label class="form-check-label fw-bold" for="share_username_enabled">Telegram-Namen
+                                        im Steckbrief teilen</label>
+                                    <div class="form-text text-muted small">Der User wird gefragt, ob sein @Username
+                                        verlinkt werden soll.</div>
+                                </div>
+
+                                <div class="p-3 rounded border border-white border-opacity-5"
+                                    style="background: rgba(255,255,255,0.01);">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="pm_question_enabled"
+                                            name="pm_question_enabled" {% if config.pm_question_enabled %}checked{%
+                                            endif %}
+                                            onchange="document.getElementById('pm_question_settings').style.display = this.checked ? 'block' : 'none'">
+                                        <label class="form-check-label fw-bold"
+                                            for="pm_question_enabled">Privatnachrichten-Anfrage aktivieren</label>
+                                    </div>
+
+                                    <div id="pm_question_settings"
+                                        style="display: {% if config.pm_question_enabled %}block{% else %}none{% endif %};">
+                                        <div class="mb-3">
+                                            <label class="small text-secondary fw-bold mb-1">Frage-Text (Bot an
+                                                User)</label>
+                                            <input type="text" class="form-control form-control-dark"
+                                                name="pm_question_label"
+                                                value="{{ config.pm_question_label or 'Darf man dich privat anschreiben?' }}">
+                                            <div class="form-text text-muted small">Diese Frage wird mit Ja/Nein Buttons
+                                                gestellt.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-blue-action w-100 mt-4">EXTRAS SPEICHERN</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div> <!-- End of Tab Content -->
 
             <!-- Logs Section -->
@@ -614,6 +669,7 @@
                                 <option value="number">Zahl</option>
                                 <option value="puppy_age">Puppy Alter</option>
                                 <option value="photo">Foto</option>
+                                <option value="boolean_buttons">Ja / Nein Buttons</option>
                             </select>
                         </div>
                         <div class="col-6 d-flex align-items-end">
@@ -685,6 +741,7 @@
                                 <option value="number">Zahl</option>
                                 <option value="puppy_age">Puppy Alter</option>
                                 <option value="photo">Foto</option>
+                                <option value="boolean_buttons">Ja / Nein Buttons</option>
                             </select>
                         </div>
                         <div class="col-6 d-flex flex-column gap-1">

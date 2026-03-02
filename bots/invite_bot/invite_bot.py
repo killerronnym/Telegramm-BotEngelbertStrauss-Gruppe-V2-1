@@ -163,8 +163,28 @@ async def letsgo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         if existing_app:
             logger.info(f"letsgo: User {update.effective_user.id} startet eine neue Bewerbung (alter Status: {existing_app.status})")
 
-    logger.info(f"letsgo: Starte Bewerbung für User {update.effective_user.id}")
+    logger.info(f"letsgo: Starte Bewerbung fǬr User {update.effective_user.id}")
     fields = [f for f in config.get('form_fields', []) if f.get('enabled', True)]
+    
+    # NEU: Virtuelle Felder injizieren
+    if config.get('share_username_enabled'):
+        fields.append({
+            'id': 'share_username',
+            'type': 'boolean_buttons',
+            'label': 'Soll dein Telegram-Name (@' + (update.effective_user.username or 'Nutzer') + ') im Steckbrief geteilt werden?',
+            'display_name': 'Username teilen',
+            'required': True
+        })
+    
+    if config.get('pm_question_enabled'):
+        fields.append({
+            'id': 'pm_allowed',
+            'type': 'boolean_buttons',
+            'label': config.get('pm_question_label', 'Darf man dich privat anschreiben?'),
+            'display_name': 'Privatnachrichten',
+            'required': True
+        })
+    
     logger.info(f"letsgo: {len(fields)} aktive Felder gefunden.")
     if not fields:
         await update.message.reply_text("Keine Fragen konfiguriert. Admin kontaktieren.")
@@ -203,6 +223,26 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         logger.info(f"handle_answer: Manueller Skip durch 'nein' bei {field['id']}")
         context.user_data['answers'][field['id']] = 'n/a'
         return await next_question(update, context)
+
+    if field['type'] == 'boolean_buttons':
+        if update.callback_query:
+            answer = update.callback_query.data.replace("bool_ans_", "")
+            user_answer = "Ja" if answer == "yes" else "Nein"
+            context.user_data['answers'][field['id']] = user_answer
+            await update.callback_query.answer()
+            await update.callback_query.edit_message_text(f"Auswahl gespeichert: {user_answer}")
+            return await next_question(update, context)
+        else:
+            # Wenn Text kommt statt Button
+            txt = answer_text.lower()
+            if txt in ['ja', 'yes', 'ok', '✅']: 
+                context.user_data['answers'][field['id']] = "Ja"
+            elif txt in ['nein', 'no', 'skip', '❌']: 
+                context.user_data['answers'][field['id']] = "Nein"
+            else:
+                await update.message.reply_text("Bitte nutze die Buttons oder antworte mit 'Ja' oder 'Nein'.")
+                return ASKING_QUESTIONS
+            return await next_question(update, context)
 
     if field['type'] == 'photo':
         if not update.message.photo:
@@ -318,7 +358,12 @@ async def next_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         next_label = next_field.get('label', 'Nächste Frage?')
         
         keyboard = None
-        if not next_field.get('required'):
+        if next_field['type'] == 'boolean_buttons':
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("✅ JA", callback_data="bool_ans_yes"),
+                 InlineKeyboardButton("❌ NEIN", callback_data="bool_ans_no")]
+            ])
+        elif not next_field.get('required'):
             keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("⏭️ Überspringen / Nein", callback_data="skip_field")]])
             
         logger.info(f"next_question: Sende nächste Frage (Index {idx}): {next_label}")
@@ -504,10 +549,23 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
     steckbrief_lines = []
     
     photo_file_id = None
+    pm_allowed_status = None
+    share_username_choice = None
+    
     for field in ordered_fields:
-        answer = answers.get(field['id'])
+        fid = field['id']
+        answer = answers.get(fid)
+        
+        if fid == 'pm_allowed':
+            pm_allowed_status = answer # "Ja" oder "Nein"
+            continue
+        if fid == 'share_username':
+            share_username_choice = answer # "Ja" oder "Nein"
+            continue
+
         if answer is None or (isinstance(answer, str) and answer.lower().strip() in ['nein', 'n/a']):
             continue
+            
         if field['type'] == 'photo':
             photo_file_id = answer
         else:
@@ -529,8 +587,21 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
             
             steckbrief_lines.append(f"{emoji} {name}: {answer}")
     
+    # Username oben einfügen wenn gewünscht
+    header = "<b>NEUER STECKBRIEF</b>\n"
+    if share_username_choice == "Ja" and user.username:
+        header = f"👤 <b>Steckbrief von @{user.username}</b>\n"
+    
+    final_text = header + "\n" + "\n".join(steckbrief_lines)
+    
+    # PM-Banner unten anfügen
+    if pm_allowed_status:
+        banner_emoji = "📩"
+        banner_text = "Darf privat angeschrieben werden: " + pm_allowed_status.upper()
+        final_text += f"\n\n{banner_emoji} <b>{banner_text}</b>"
+
     profile_data = {
-        'text': "\n".join(steckbrief_lines), 
+        'text': final_text, 
         'photo_id': photo_file_id,
         'target_chat_id': target_chat_id, 
         'topic_id': config.get('topic_id'),

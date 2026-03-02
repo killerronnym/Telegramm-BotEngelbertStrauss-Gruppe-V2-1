@@ -192,9 +192,24 @@ def bot_settings():
 def save_invite_content():
     s = BotSettings.query.filter_by(bot_name='invite').first()
     cfg = json.loads(s.config_json)
-    cfg.update({k: request.form.get(k, '') for k in ['start_message', 'rules_message', 'blocked_message', 'privacy_policy', 'whitelist_pending_message', 'whitelist_rejection_message']})
+    
+    # Text fields
+    text_keys = [
+        'start_message', 'rules_message', 'blocked_message', 
+        'privacy_policy', 'whitelist_pending_message', 
+        'whitelist_rejection_message', 'pm_question_label'
+    ]
+    cfg.update({k: request.form.get(k, '') for k in text_keys})
+    
+    # Checkbox fields (Extras)
+    if 'share_username_enabled' in request.form or 'pm_question_enabled' in request.form:
+        cfg['share_username_enabled'] = 'share_username_enabled' in request.form
+        cfg['pm_question_enabled'] = 'pm_question_enabled' in request.form
+
     s.is_active = cfg.get('is_active', False)
-    s.config_json = json.dumps(cfg, ensure_ascii=True); db.session.commit(); flash('Texte gespeichert.', 'success')
+    s.config_json = json.dumps(cfg, ensure_ascii=True)
+    db.session.commit()
+    flash('Texte und Extras gespeichert.', 'success')
     return redirect(url_for('dashboard.bot_settings'))
 
 @bp.route('/bot-settings/add-field', methods=['POST'])
