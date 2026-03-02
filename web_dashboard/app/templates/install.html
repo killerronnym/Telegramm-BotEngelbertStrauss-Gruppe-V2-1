@@ -246,6 +246,16 @@
                 <button class="btn btn-install" onclick="goToStep(2)">Weiter <i
                         class="bi bi-arrow-right ms-2"></i></button>
             </div>
+
+            <div class="mt-4 text-center border-top pt-4" style="border-color: rgba(255,255,255,0.05) !important;">
+                <p class="small text-muted mb-3">Oder bestehende Daten verwenden?</p>
+                <button class="btn btn-outline-info btn-sm px-4"
+                    onclick="document.getElementById('inputRestoreFile').click()">
+                    <i class="bi bi-upload me-2"></i> BACKUP WIEDERHERSTELLEN (.db)
+                </button>
+                <input type="file" id="inputRestoreFile" style="display:none" accept=".db"
+                    onchange="handleRestore(this)">
+            </div>
         </div>
 
         <!-- STEP 2: DB CREDENTIALS -->
@@ -534,6 +544,45 @@
                 alert("Verbindungsfehler");
                 btn.disabled = false;
                 spinner.style.display = 'none';
+            }
+        }
+
+        async function handleRestore(input) {
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+
+            if (!confirm(`Möchtest du das Backup "${file.name}" wirklich wiederherstellen? Dies überschreibt alle Daten und schließt die Installation ab!`)) {
+                input.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('backup_file', file);
+
+            const btn = input.previousElementSibling;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm d-inline-block"></span> Wiederherstellen...';
+
+            try {
+                const res = await fetch('/install/restore', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    btn.className = "btn btn-success btn-sm px-4";
+                    btn.innerHTML = "ERFOLGREICH! Neustart... 🔄";
+                    setTimeout(() => window.location.href = "/auth/login", 5000);
+                } else {
+                    throw new Error(data.error || 'Fehler beim Wiederherstellen');
+                }
+            } catch (e) {
+                alert(e.message);
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                input.value = '';
             }
         }
     </script>

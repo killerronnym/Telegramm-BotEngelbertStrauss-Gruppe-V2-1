@@ -118,3 +118,48 @@ def setup():
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+@bp.route('/restore', methods=['POST'])
+def restore():
+    if os.path.exists(INSTALL_LOCK):
+        return jsonify({"success": False, "error": "Bereits installiert"})
+
+    if 'backup_file' not in request.files:
+        return jsonify({"success": False, "error": "Keine Datei hochgeladen"}), 400
+        
+    file = request.files['backup_file']
+    if file.filename == '':
+        return jsonify({"success": False, "error": "Keine Datei ausgewählt"}), 400
+        
+    from shared_bot_utils import DB_PATH
+    
+    try:
+        # Ordner für DB sicherstellen
+        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+        
+        # Direkt speichern (Installer Pfad ist sicher da noch nichts läuft)
+        file.save(DB_PATH)
+        
+        # Validierung
+        with open(DB_PATH, 'rb') as f:
+            header = f.read(16)
+            if header != b'SQLite format 3\x00':
+                return jsonify({"success": False, "error": "Ungültige SQLite Datei"}), 400
+
+        # Lock-File erstellen
+        os.makedirs(os.path.dirname(INSTALL_LOCK), exist_ok=True)
+        with open(INSTALL_LOCK, 'w') as f:
+            f.write(f"Restored from backup on {os.uname() if hasattr(os, 'uname') else 'Windows'}")
+
+        # Restart
+        import threading
+        import time
+        import signal
+        def restart_server():
+            time.sleep(2)
+            os.kill(os.getpid(), signal.SIGTERM)
+            
+        threading.Thread(target=restart_server, daemon=True).start()
+
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})

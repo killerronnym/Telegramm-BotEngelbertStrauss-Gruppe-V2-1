@@ -355,7 +355,21 @@
                             {% endif %}
                         </div>
                         {% endif %}
-                        {% if item.type != 'update' %}
+
+                        {% if item.id == 'backup' %}
+                        <div class="d-grid gap-2">
+                            <a href="{{ item.link }}" class="btn-settings-big">
+                                <i class="bi bi-download me-1"></i> HERUNTERLADEN
+                            </a>
+                            <button onclick="document.getElementById('inputBackupFile').click()"
+                                class="btn-settings-big btn-outline-warning"
+                                style="background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b;">
+                                <i class="bi bi-upload me-1"></i> WIEDERHERSTELLEN
+                            </button>
+                            <input type="file" id="inputBackupFile" style="display:none" accept=".db"
+                                onchange="handleBackupUpload(this)">
+                        </div>
+                        {% elif item.type != 'update' %}
                         <a href="{{ item.link }}"
                             class="btn-settings-big {% if item.type == 'logs' %}btn-danger{% endif %}">
                             {{ 'LOGS ANSEHEN' if item.type == 'logs' else ('ÖFFNEN' if item.type == 'open' else
@@ -587,6 +601,50 @@
                 alert('Konnte Update nicht starten: ' + e);
             }
         };
+    }
+
+    // --- BACKUP UPLOAD LOGIC ---
+    async function handleBackupUpload(input) {
+        if (!input.files || input.files.length === 0) return;
+        const file = input.files[0];
+
+        if (!confirm(`Möchtest du das Backup "${file.name}" wirklich wiederherstellen? Diese Aktion überschreibt alle aktuellen Daten und startet den Server neu!`)) {
+            input.value = '';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('backup_file', file);
+
+        // UI-Feedback (Nutze das Update-Notify Element als Allzweck-Info)
+        const notify = document.getElementById('updateNotify');
+        notify.style.display = 'block';
+        notify.style.background = 'rgba(255, 165, 0, 0.2)';
+        notify.style.color = '#fbbf24';
+        notify.innerText = 'Backup wird hochgeladen...';
+
+        try {
+            const res = await fetch('/api/backup/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                notify.style.background = 'rgba(16, 185, 129, 0.2)';
+                notify.style.color = '#10b981';
+                notify.innerText = 'Erfolgreich! ' + data.message;
+                setTimeout(safeReload, 1000);
+            } else {
+                throw new Error(data.error || 'Unbekannter Fehler');
+            }
+        } catch (e) {
+            notify.style.background = 'rgba(239, 68, 68, 0.2)';
+            notify.style.color = '#ef4444';
+            notify.innerText = 'Fehler: ' + e.message;
+            alert('Wiederherstellung fehlgeschlagen: ' + e.message);
+            input.value = '';
+        }
     }
 </script>
 {% endblock %}

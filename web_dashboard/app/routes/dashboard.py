@@ -1578,3 +1578,63 @@ def download_backup():
         flash('Datenbank-Datei nicht gefunden. Nutzen Sie ggf. eine externe MariaDB?', 'danger')
         return redirect(url_for('dashboard.index'))
 
+@bp.route('/api/backup/upload', methods=['POST'])
+@login_required
+def upload_backup():
+    if getattr(current_user, 'role', 'user') != 'admin':
+        return jsonify({"success": False, "error": "Keine Berechtigung."}), 403
+        
+    if 'backup_file' not in request.files:
+        return jsonify({"success": False, "error": "Keine Datei hochgeladen."}), 400
+        
+    file = request.files['backup_file']
+    if file.filename == '':
+        return jsonify({"success": False, "error": "Keine Datei ausgewählt."}), 400
+        
+    if not file.filename.endswith('.db'):
+        return jsonify({"success": False, "error": "Ungültiges Dateiformat. Nur .db Dateien erlaubt."}), 400
+        
+    from shared_bot_utils import DB_PATH
+    
+    try:
+        # Erst in temporäre Datei speichern
+        temp_path = DB_PATH + ".tmp"
+        file.save(temp_path)
+        
+        # Einfache Validierung: Ist es eine SQLite Datei?
+        with open(temp_path, 'rb') as f:
+            header = f.read(16)
+            if header != b'SQLite format 3\x00':
+                os.remove(temp_path)
+                return jsonify({"success": False, "error": "Die Datei ist keine gültige SQLite-Datenbank."}), 400
+        
+        # Backup der aktuellen DB erstellen (Sicherheitshalber)
+        if os.path.exists(DB_PATH):
+            import shutil
+            shutil.copy2(DB_PATH, DB_PATH + ".bak")
+            
+        # Datenbank ersetzen
+        import shutil
+        shutil.move(temp_path, DB_PATH)
+        
+        # Server Neustart triggern (analog zu installer)
+        import threading
+        import time
+        import signal
+        
+        def restart_server():
+            time.sleep(2)
+            print("Backup Restore Complete! Triggering container restart...")
+            try:
+                os.kill(os.getppid(), signal.SIGTERM)
+            except:
+                pass
+            os.kill(os.getpid(), signal.SIGTERM)
+            
+        threading.Thread(target=restart_server, daemon=True).start()
+        
+        return jsonify({"success": True, "message": "Backup erfolgreich wiederhergestellt. Server startet neu..."})
+        
+    except Exception as e:
+        logger.error(f"Error restoring backup: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
