@@ -708,11 +708,13 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
             steckbrief_lines.append(f"{emoji} {name}: {answer}")
     
     # Username oben einfügen wenn gewünscht (Spezial-Typ: header_name oder ID: share_username)
-    header = "<b>NEUER STECKBRIEF</b>\n"
     if share_username_choice == "Ja" and user.username:
         header = f"👤 <b>Steckbrief von @{user.username}</b>\n"
-    
-    final_text = header + "\n" + "\n".join(steckbrief_lines)
+        final_text = header + "\n" + "\n".join(steckbrief_lines)
+    else:
+        # NEIN oder kein Username-Feld -> nur Titel, kein Leerzeichen darunter
+        header = "<b>NEUER STECKBRIEF</b>\n"
+        final_text = header + "\n".join(steckbrief_lines)
     
     # PM-Banner unten anfügen (Spezial-Typ: pm_contact oder ID: pm_allowed)
     if pm_allowed_status:
