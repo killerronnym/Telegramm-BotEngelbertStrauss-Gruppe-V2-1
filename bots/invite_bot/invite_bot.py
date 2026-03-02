@@ -75,6 +75,17 @@ PLATFORMS = {
     "facebook": {"name": "Facebook", "base_url": "https://facebook.com/"}
 }
 
+def fix_chat_id(chat_id_str: str) -> str:
+    """Auto-prefixes -100 for supergroups if needed."""
+    cid = chat_id_str.strip()
+    if not cid: return ""
+    if not cid.startswith('-'):
+        if cid.startswith('100') and len(cid) >= 10:
+            return f"-{cid}"
+        elif len(cid) >= 10:
+            return f"-100{cid}"
+    return cid
+
 def detect_social_platform(text: str) -> Optional[Dict[str, str]]:
     """Erkennt Plattform aus URL oder Domain. Gibt {name, url} zurück oder None."""
     t = text.lower().strip()
@@ -430,19 +441,24 @@ async def post_profile(bot, profile_data: Dict[str, Any], is_approval_post: bool
     if topic_id and str(topic_id).isdigit():
         kwargs["message_thread_id"] = int(topic_id)
 
-    if profile_data.get('photo_id'):
-        kwargs.update({
-            "photo": profile_data['photo_id'], 
-            "caption": profile_data['text'][:1024],
-            "parse_mode": "HTML"
-        })
-        await bot.send_photo(**kwargs)
-    else:
-        kwargs.update({
-            "text": profile_data['text'],
-            "parse_mode": "HTML"
-        })
-        await bot.send_message(**kwargs)
+    try:
+        if profile_data.get('photo_id'):
+            kwargs.update({
+                "photo": profile_data['photo_id'], 
+                "caption": profile_data['text'][:1024],
+                "parse_mode": "HTML"
+            })
+            await bot.send_photo(**kwargs)
+        else:
+            kwargs.update({
+                "text": profile_data['text'],
+                "parse_mode": "HTML"
+            })
+            await bot.send_message(**kwargs)
+        return True
+    except Exception as e:
+        logger.error(f"post_profile Error in {target_chat_id}: {e}")
+        return False
 
 async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
@@ -456,11 +472,16 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
     log_user_interaction(user.id, user.username, "Regeln mit OK bestätigt")
 
     config = get_bot_config('invite')
-    chat_id_str = config.get('main_chat_id')
+    chat_id_str = fix_chat_id(config.get('main_chat_id', ''))
     if not chat_id_str:
-        await update.message.reply_text("Bot nicht konfiguriert.")
+        await update.message.reply_text("Bot nicht konfiguriert (Main Chat ID fehlt).")
         return ConversationHandler.END
-    target_chat_id = int(chat_id_str) if chat_id_str.lstrip('-').isdigit() else chat_id_str
+    
+    # Try parsing both -100... or numeric
+    try:
+        target_chat_id = int(chat_id_str)
+    except:
+        target_chat_id = chat_id_str
     
     is_already_member = False
     try:
@@ -517,14 +538,15 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
     }
 
     if is_already_member:
-        approval_chat_id_str = config.get('whitelist_approval_chat_id')
+        approval_chat_id_str = fix_chat_id(config.get('whitelist_approval_chat_id', ''))
         if not approval_chat_id_str:
-            # Fallback falls kein Admin-Chat, posten wir es einfach? 
-            # Der User will aber explizit Admin-Entscheidung bei Mitgliedern.
             await update.message.reply_text("Admin-Kanal nicht konfiguriert.")
             return ConversationHandler.END
             
-        approval_chat_id = int(approval_chat_id_str) if approval_chat_id_str.lstrip('-').isdigit() else approval_chat_id_str
+        try:
+            approval_chat_id = int(approval_chat_id_str)
+        except:
+            approval_chat_id = approval_chat_id_str
         
         # In DB speichern als 'pending_existing' (separater Status zur Sicherheit)
         with flask_app.app_context():
@@ -550,23 +572,37 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
         
         approval_post_data = profile_data.copy()
         approval_post_data['target_chat_id'] = approval_chat_id
-        await post_profile(context.bot, approval_post_data, is_approval_post=True)
-        await context.bot.send_message(
-            approval_chat_id, 
-            f"Nutzer {user.full_name} ist bereits in der Gruppe. Soll der Steckbrief gepostet werden?", 
-            reply_markup=keyboard,
-            message_thread_id=approval_post_data.get('whitelist_approval_topic_id') if str(approval_post_data.get('whitelist_approval_topic_id')).isdigit() else None
-        )
-        await update.message.reply_text("Dein Steckbrief wird überprüft, bitte warte.")
+        
+        success = await post_profile(context.bot, approval_post_data, is_approval_post=True)
+        if not success:
+            await update.message.reply_text("❌ Fehler beim Senden an den Admin-Kanal. Bitte Admin kontaktieren (Bot Rechte/Chat ID prüfen).")
+            return ConversationHandler.END
+
+        try:
+            await context.bot.send_message(
+                approval_chat_id, 
+                f"Nutzer {user.full_name} ist bereits in der Gruppe. Soll der Steckbrief gepostet werden?", 
+                reply_markup=keyboard,
+                message_thread_id=approval_post_data.get('whitelist_approval_topic_id') if str(approval_post_data.get('whitelist_approval_topic_id')).isdigit() else None
+            )
+        except Exception as e:
+            logger.error(f"Error sending approval button message: {e}")
+            await update.message.reply_text(f"❌ Fehler bei der Freigabe-Anfrage: {e}")
+            return ConversationHandler.END
+
+        await update.message.reply_text("Dein Steckbrief wird berprft, bitte warte.")
         return ConversationHandler.END
 
     if config.get('whitelist_enabled'):
-        approval_chat_id_str = config.get('whitelist_approval_chat_id')
+        approval_chat_id_str = fix_chat_id(config.get('whitelist_approval_chat_id', ''))
         if not approval_chat_id_str:
             await update.message.reply_text("Whitelist ist aktiv, aber kein Admin-Chat konfiguriert.")
             return ConversationHandler.END
         
-        approval_chat_id = int(approval_chat_id_str) if approval_chat_id_str.lstrip('-').isdigit() else approval_chat_id_str
+        try:
+            approval_chat_id = int(approval_chat_id_str)
+        except:
+            approval_chat_id = approval_chat_id_str
         
         # In Datenbank als 'pending' sichern
         with flask_app.app_context():
@@ -595,14 +631,25 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
         
         approval_post_data = profile_data.copy()
         approval_post_data['target_chat_id'] = approval_chat_id
-        await post_profile(context.bot, approval_post_data, is_approval_post=True)
-        await context.bot.send_message(
-            approval_chat_id, 
-            "Neue Anfrage zur Freischaltung:", 
-            reply_markup=keyboard,
-            message_thread_id=approval_post_data.get('whitelist_approval_topic_id') if str(approval_post_data.get('whitelist_approval_topic_id')).isdigit() else None
-        )
-        await update.message.reply_text(config.get('whitelist_pending_message', 'Dein Antrag wird geprüft.'))
+        
+        success = await post_profile(context.bot, approval_post_data, is_approval_post=True)
+        if not success:
+            await update.message.reply_text("❌ Fehler beim Senden an den Whitelist-Kanal. Bitte Admin kontaktieren.")
+            return ConversationHandler.END
+
+        try:
+            await context.bot.send_message(
+                approval_chat_id, 
+                "Neue Anfrage zur Freischaltung:", 
+                reply_markup=keyboard,
+                message_thread_id=approval_post_data.get('whitelist_approval_topic_id') if str(approval_post_data.get('whitelist_approval_topic_id')).isdigit() else None
+            )
+        except Exception as e:
+            logger.error(f"Error sending whitelist request: {e}")
+            await update.message.reply_text(f"❌ Fehler bei der Freischaltungs-Anfrage: {e}")
+            return ConversationHandler.END
+
+        await update.message.reply_text(config.get('whitelist_pending_message', 'Dein Antrag wird geprǬft.'))
     else:
         # Whitelist ist AUS -> Sofort Link senden
         with flask_app.app_context():
