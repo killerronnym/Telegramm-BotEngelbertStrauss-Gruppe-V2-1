@@ -150,6 +150,8 @@ def is_bot_active(bot_name):
                     cfg = json.loads(result[0])
                     if 'is_active' in cfg:
                         return bool(cfg['is_active'])
+                    if 'is_enabled' in cfg:
+                        return bool(cfg['is_enabled'])
                 except:
                     pass
                     

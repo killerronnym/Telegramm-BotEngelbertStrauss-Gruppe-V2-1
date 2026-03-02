@@ -129,7 +129,10 @@ def detect_social_platform(text: str) -> Optional[Dict[str, str]]:
     return {"name": "Link", "url": final_url}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_bot_active('invite'): return
+    logger.info(f"start: User {update.effective_user.id} aufgerufen")
+    if not is_bot_active('invite'): 
+        logger.warning(f"start: Bot 'invite' ist nicht aktiv.")
+        return
     config = get_bot_config('invite')
     if not config.get('is_enabled'):
         await update.message.reply_text("Der Bot ist zur Zeit deaktiviert.")
@@ -138,7 +141,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     log_user_interaction(update.effective_user.id, update.effective_user.username, "/start command aufgerufen")
 
 async def datenschutz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not is_bot_active('invite'): return
+    logger.info(f"datenschutz: User {update.effective_user.id} aufgerufen")
+    if not is_bot_active('invite'): 
+        logger.warning(f"datenschutz: Bot 'invite' ist nicht aktiv.")
+        return
     config = get_bot_config('invite')
     policy = config.get('privacy_policy')
     if not policy:
@@ -163,27 +169,8 @@ async def letsgo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         if existing_app:
             logger.info(f"letsgo: User {update.effective_user.id} startet eine neue Bewerbung (alter Status: {existing_app.status})")
 
-    logger.info(f"letsgo: Starte Bewerbung fǬr User {update.effective_user.id}")
+    logger.info(f"letsgo: Starte Bewerbung für User {update.effective_user.id}")
     fields = [f for f in config.get('form_fields', []) if f.get('enabled', True)]
-    
-    # NEU: Virtuelle Felder injizieren
-    if config.get('share_username_enabled'):
-        fields.append({
-            'id': 'share_username',
-            'type': 'boolean_buttons',
-            'label': 'Soll dein Telegram-Name (@' + (update.effective_user.username or 'Nutzer') + ') im Steckbrief geteilt werden?',
-            'display_name': 'Username teilen',
-            'required': True
-        })
-    
-    if config.get('pm_question_enabled'):
-        fields.append({
-            'id': 'pm_allowed',
-            'type': 'boolean_buttons',
-            'label': config.get('pm_question_label', 'Darf man dich privat anschreiben?'),
-            'display_name': 'Privatnachrichten',
-            'required': True
-        })
     
     logger.info(f"letsgo: {len(fields)} aktive Felder gefunden.")
     if not fields:
@@ -194,12 +181,20 @@ async def letsgo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.update({'fields': fields, 'current_field_index': 0, 'answers': {}})
     
     first_field = fields[0]
+    username = update.effective_user.username or "Nutzer"
+    label = first_field.get('label', 'Frage?').replace('{username}', f"@{username}")
+    
     keyboard = None
-    if not first_field.get('required'):
+    if first_field['type'] == 'boolean_buttons':
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ JA", callback_data="bool_ans_yes"),
+             InlineKeyboardButton("❌ NEIN", callback_data="bool_ans_no")]
+        ])
+    elif not first_field.get('required'):
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("⏭️ Überspringen / Nein", callback_data="skip_field")]])
     
-    logger.info(f"letsgo: Sende erste Frage (Index 0): {first_field.get('label', 'Frage?')}")
-    await update.message.reply_text(first_field.get('label', 'Frage?'), reply_markup=keyboard)
+    logger.info(f"letsgo: Sende erste Frage (Index 0): {label}")
+    await update.message.reply_text(label, reply_markup=keyboard, parse_mode="HTML")
     return ASKING_QUESTIONS
 
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -356,6 +351,8 @@ async def next_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     if idx < len(fields):
         next_field = fields[idx]
         next_label = next_field.get('label', 'Nächste Frage?')
+        username = update.effective_user.username or "Nutzer"
+        next_label = next_label.replace('{username}', f"@{username}")
         
         keyboard = None
         if next_field['type'] == 'boolean_buttons':
@@ -368,9 +365,9 @@ async def next_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             
         logger.info(f"next_question: Sende nächste Frage (Index {idx}): {next_label}")
         if update.callback_query:
-            await context.bot.send_message(chat_id=effective_chat_id, text=next_label, reply_markup=keyboard)
+            await context.bot.send_message(chat_id=effective_chat_id, text=next_label, reply_markup=keyboard, parse_mode="HTML")
         else:
-            await update.message.reply_text(next_label, reply_markup=keyboard)
+            await update.message.reply_text(next_label, reply_markup=keyboard, parse_mode="HTML")
         return ASKING_QUESTIONS
     else:
         logger.info(f"next_question: Alle Fragen beantwortet. Sende Regeln.")
@@ -587,17 +584,18 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
             
             steckbrief_lines.append(f"{emoji} {name}: {answer}")
     
-    # Username oben einfügen wenn gewünscht
+    # Username oben einfügen wenn gewünscht (Spezial-ID: share_username)
     header = "<b>NEUER STECKBRIEF</b>\n"
-    if share_username_choice == "Ja" and user.username:
+    if answers.get('share_username') == "Ja" and user.username:
         header = f"👤 <b>Steckbrief von @{user.username}</b>\n"
     
     final_text = header + "\n" + "\n".join(steckbrief_lines)
     
-    # PM-Banner unten anfügen
-    if pm_allowed_status:
+    # PM-Banner unten anfügen (Spezial-ID: pm_allowed)
+    pm_choice = answers.get('pm_allowed')
+    if pm_choice:
         banner_emoji = "📩"
-        banner_text = "Darf privat angeschrieben werden: " + pm_allowed_status.upper()
+        banner_text = "Darf privat angeschrieben werden: " + pm_choice.upper()
         final_text += f"\n\n{banner_emoji} <b>{banner_text}</b>"
 
     profile_data = {
