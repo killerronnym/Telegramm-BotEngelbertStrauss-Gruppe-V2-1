@@ -669,6 +669,25 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
             
         if field['type'] == 'photo':
             photo_file_id = answer
+        elif field['type'] == 'birthday':
+            # Geburtstag: NUR Alter im Steckbrief anzeigen, KEIN Datum
+            # Das Datum selbst wird separat in der Birthday-DB gespeichert (für Geburtstagsgratulationen)
+            date_pattern = re.compile(r'^(\d{1,2})[\s\.](\d{1,2})(?:[\s\.](\d{4}))?\.*$')
+            match = date_pattern.match(str(answer))
+            if match and match.group(3):
+                # Jahrgang vorhanden → Alter berechnen
+                birth_year = int(match.group(3))
+                birth_month = int(match.group(2))
+                birth_day = int(match.group(1))
+                today = datetime.today()
+                age = today.year - birth_year - (
+                    (today.month, today.day) < (birth_month, birth_day)
+                )
+                emoji = field.get('emoji', '🎂')
+                name = field.get('display_name', 'Alter')
+                steckbrief_lines.append(f"{emoji} {name}: {age} Jahre")
+            # Kein Jahrgang → kein Alter-Eintrag im Steckbrief (nur DB-Eintrag für Geburtstag)
+
         else:
             emoji = field.get('emoji', '🔹')
             name = field.get('display_name', field['id'].capitalize())
