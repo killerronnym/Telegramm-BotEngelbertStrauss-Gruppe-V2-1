@@ -8,7 +8,8 @@ if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
 import json
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -25,7 +26,7 @@ from telegram.ext import (
 )
 
 from flask import Flask
-from web_dashboard.app.models import db, BotSettings, InviteApplication, InviteLog
+from web_dashboard.app.models import db, BotSettings, InviteApplication, InviteLog, Birthday, IDFinderUser
 
 # Import shared utils for DB URL resolution and app context
 from shared_bot_utils import get_db_url, get_bot_config, is_bot_active, get_shared_flask_app
@@ -185,7 +186,7 @@ async def letsgo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     label = first_field.get('label', 'Frage?').replace('{username}', f"@{username}")
     
     keyboard = None
-    if first_field['type'] == 'boolean_buttons':
+    if first_field['type'] in ['boolean_buttons', 'header_name', 'pm_contact']:
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("✅ JA", callback_data="bool_ans_yes"),
              InlineKeyboardButton("❌ NEIN", callback_data="bool_ans_no")]
@@ -219,7 +220,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         context.user_data['answers'][field['id']] = 'n/a'
         return await next_question(update, context)
 
-    if field['type'] == 'boolean_buttons':
+    if field['type'] in ['boolean_buttons', 'header_name', 'pm_contact']:
         if update.callback_query:
             answer = update.callback_query.data.replace("bool_ans_", "")
             user_answer = "Ja" if answer == "yes" else "Nein"
@@ -238,6 +239,19 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 await update.message.reply_text("Bitte nutze die Buttons oder antworte mit 'Ja' oder 'Nein'.")
                 return ASKING_QUESTIONS
             return await next_question(update, context)
+
+    if field['type'] == 'birthday':
+        # Validierung wie im birthday_bot
+        date_pattern = re.compile(r'^(\d{1,2})[\s\.]+(\d{1,2})(?:[\s\.]+(\d{4}))?\.?$')
+        match = date_pattern.match(answer_text)
+        if not match:
+            await update.message.reply_text("Das war leider das falsche Format. Beispiele: `15.08.` oder `15.08.1990`.")
+            return ASKING_QUESTIONS
+        day, month = int(match.group(1)), int(match.group(2))
+        if not (1 <= month <= 12) or not (1 <= day <= 31):
+            await update.message.reply_text("Das ist leider kein echtes Kalenderdatum. Bitte korrigiere es.")
+            return ASKING_QUESTIONS
+        answer = answer_text # Wir speichern den Text
 
     if field['type'] == 'photo':
         if not update.message.photo:
@@ -355,7 +369,7 @@ async def next_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         next_label = next_label.replace('{username}', f"@{username}")
         
         keyboard = None
-        if next_field['type'] == 'boolean_buttons':
+        if next_field['type'] in ['boolean_buttons', 'header_name', 'pm_contact']:
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("✅ JA", callback_data="bool_ans_yes"),
                  InlineKeyboardButton("❌ NEIN", callback_data="bool_ans_no")]
@@ -473,6 +487,50 @@ async def handle_social_decision(update: Update, context: ContextTypes.DEFAULT_T
             await update.message.reply_text(f"{rules}\n\nSchreibe 'ok' zum Bestätigen.")
             return CONFIRMING_RULES
 
+def save_birthday_from_answers(user, answers, fields, chat_id, topic_id=None):
+    """Sucht nach einem Birthday-Feld in den Antworten und speichert es in der Birthday-Tabelle."""
+    if not Birthday: return
+    
+    birthday_field = next((f for f in fields if f['type'] == 'birthday'), None)
+    if not birthday_field: return
+    
+    val = answers.get(birthday_field['id'])
+    if not val or val.lower() in ['nein', 'n/a']: return
+    
+    # Format: 15.08. oder 15.08.1990
+    date_pattern = re.compile(r'^(\d{1,2})[\s\.]+(\d{1,2})(?:[\s\.]+(\d{4}))?\.?$')
+    match = date_pattern.match(val)
+    if not match: return
+    
+    day = int(match.group(1))
+    month = int(match.group(2))
+    year = int(match.group(3)) if match.group(3) else None
+    
+    try:
+        # User in DB sicherstellen (analog zu birthday_bot)
+        id_user = IDFinderUser.query.filter_by(telegram_id=user.id).first()
+        if not id_user:
+            id_user = IDFinderUser(telegram_id=user.id, first_name=user.first_name, username=user.username)
+            db.session.add(id_user)
+
+        birthday = Birthday.query.filter_by(telegram_user_id=user.id).first()
+        if birthday:
+            birthday.day, birthday.month, birthday.year = day, month, year
+            birthday.chat_id, birthday.username, birthday.first_name = chat_id, user.username, user.first_name
+            birthday.topic_id = topic_id
+        else:
+            birthday = Birthday(
+                telegram_user_id=user.id, chat_id=chat_id,
+                topic_id=topic_id,
+                username=user.username, first_name=user.first_name,
+                day=day, month=month, year=year
+            )
+            db.session.add(birthday)
+        db.session.commit()
+        logger.info(f"Birthday for user {user.id} saved automatically from Steckbrief.")
+    except Exception as e:
+        logger.error(f"Error saving birthday from Steckbrief: {e}")
+
 async def post_profile(bot, profile_data: Dict[str, Any], is_approval_post: bool = False):
     target_chat_id = profile_data['target_chat_id']
     kwargs = {"chat_id": target_chat_id}
@@ -553,10 +611,10 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
         fid = field['id']
         answer = answers.get(fid)
         
-        if fid == 'pm_allowed':
+        if field['type'] == 'pm_contact' or fid == 'pm_allowed':
             pm_allowed_status = answer # "Ja" oder "Nein"
             continue
-        if fid == 'share_username':
+        if field['type'] == 'header_name' or fid == 'share_username':
             share_username_choice = answer # "Ja" oder "Nein"
             continue
 
@@ -584,18 +642,17 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
             
             steckbrief_lines.append(f"{emoji} {name}: {answer}")
     
-    # Username oben einfügen wenn gewünscht (Spezial-ID: share_username)
+    # Username oben einfügen wenn gewünscht (Spezial-Typ: header_name oder ID: share_username)
     header = "<b>NEUER STECKBRIEF</b>\n"
-    if answers.get('share_username') == "Ja" and user.username:
+    if share_username_choice == "Ja" and user.username:
         header = f"👤 <b>Steckbrief von @{user.username}</b>\n"
     
     final_text = header + "\n" + "\n".join(steckbrief_lines)
     
-    # PM-Banner unten anfügen (Spezial-ID: pm_allowed)
-    pm_choice = answers.get('pm_allowed')
-    if pm_choice:
+    # PM-Banner unten anfügen (Spezial-Typ: pm_contact oder ID: pm_allowed)
+    if pm_allowed_status:
         banner_emoji = "📩"
-        banner_text = "Darf privat angeschrieben werden: " + pm_choice.upper()
+        banner_text = "Darf privat angeschrieben werden: " + pm_allowed_status.upper()
         final_text += f"\n\n{banner_emoji} <b>{banner_text}</b>"
 
     profile_data = {
@@ -777,6 +834,16 @@ async def handle_whitelist_callback(update: Update, context: ContextTypes.DEFAUL
                     await query.edit_message_text(f"✅ Angenommen von {admin_user.full_name}. Der Nutzer hat den Link erhalten.")
                     application.status = 'accepted'
                     db.session.commit()
+                    # Birthday automatisch speichern falls vorhanden
+                    # Wir nutzen die User-ID um den User aus dem Bot-Umfeld zu holen (vage, aber effective_user ist hier der Admin)
+                    # Wir müssen den User-Daten-User finden.
+                    try:
+                        user_to_save = await context.bot.get_chat(user_id)
+                        # Wir simulieren ein User Objekt für den Helper
+                        class PseudoUser:
+                            def __init__(self, c): self.id, self.first_name, self.username = c.id, c.first_name, c.username
+                        save_birthday_from_answers(PseudoUser(user_to_save), profile_data.get('answers', {}), profile_data.get('fields', []), target_chat_id, profile_data.get('topic_id'))
+                    except: pass
                 except Exception as e:
                     logger.error(f"Fehler bei Link-Generierung (Accept, ID: {target_chat_id}): {e}")
                     await query.edit_message_text(f"❌ Fehler bei Link-Generierung (ID: {target_chat_id}): {e}")
@@ -820,6 +887,13 @@ async def handle_existing_member_callback(update: Update, context: ContextTypes.
                 await query.edit_message_text(f"✅ Steckbrief gepostet (Admin: {admin_user.full_name}).")
                 application.status = 'completed'
                 db.session.commit()
+                # Birthday automatisch speichern falls vorhanden
+                try:
+                    user_to_save = await context.bot.get_chat(user_id)
+                    class PseudoUser:
+                        def __init__(self, c): self.id, self.first_name, self.username = c.id, c.first_name, c.username
+                    save_birthday_from_answers(PseudoUser(user_to_save), profile_data.get('answers', {}), profile_data.get('fields', []), profile_data.get('target_chat_id'), profile_data.get('topic_id'))
+                except: pass
             except Exception as e:
                 logger.error(f"Fehler beim Posten des Steckbriefs (Existing): {e}")
                 await query.edit_message_text(f"❌ Fehler beim Posten: {e}")
