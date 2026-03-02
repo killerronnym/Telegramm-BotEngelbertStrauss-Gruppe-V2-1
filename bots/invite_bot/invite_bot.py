@@ -606,21 +606,21 @@ async def post_profile(bot, profile_data: Dict[str, Any], is_approval_post: bool
     try:
         if profile_data.get('photo_id'):
             kwargs.update({
-                "photo": profile_data['photo_id'], 
+                "photo": profile_data['photo_id'],
                 "caption": profile_data['text'][:1024],
                 "parse_mode": "HTML"
             })
-            await bot.send_photo(**kwargs)
+            msg = await bot.send_photo(**kwargs)
         else:
             kwargs.update({
                 "text": profile_data['text'],
                 "parse_mode": "HTML"
             })
-            await bot.send_message(**kwargs)
-        return True
+            msg = await bot.send_message(**kwargs)
+        return msg  # Gibt das Message-Objekt zurück (mit .message_id)
     except Exception as e:
         logger.error(f"post_profile Error in {target_chat_id}: {e}")
-        return False
+        return None
 
 async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
@@ -1012,15 +1012,53 @@ async def handle_new_member(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             profile_data = application.answers # property handles json.loads
             if profile_data and 'text' in profile_data:
                 logger.info(f"handle_new_member: Poste Steckbrief für {user_id}")
-                # Optional: Header anpassen für Willkommens-Post
                 lines = profile_data['text'].split('\n')
                 if lines:
                     lines[0] = "🎉 Willkommen in der Gruppe!"
                 profile_data['text'] = "\n".join(lines)
-                await post_profile(context.bot, profile_data)
+                sent_msg = await post_profile(context.bot, profile_data)
+                # message_id speichern für späteres Auto-Löschen
+                if sent_msg and hasattr(sent_msg, 'message_id'):
+                    application.profile_message_id = sent_msg.message_id
+                    application.profile_chat_id = profile_data.get('target_chat_id')
+                    logger.info(f"handle_new_member: Steckbrief message_id {sent_msg.message_id} gespeichert.")
                 
             application.status = 'completed'
             db.session.commit()
+
+async def handle_member_left(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Löscht automatisch den Steckbrief wenn ein User die Gruppe verlässt."""
+    if not update.chat_member or not update.chat_member.new_chat_member:
+        return
+    
+    new_status = update.chat_member.new_chat_member.status
+    # "left" = freiwillig, "kicked" = gebannt
+    if new_status not in ["left", "kicked"]:
+        return
+    
+    user_id = update.chat_member.new_chat_member.user.id
+    username = update.chat_member.new_chat_member.user.username or str(user_id)
+    
+    logger.info(f"handle_member_left: User @{username} ({user_id}) hat die Gruppe verlassen. Prüfe Steckbrief...")
+    
+    with flask_app.app_context():
+        application = InviteApplication.query.filter_by(telegram_user_id=user_id).first()
+        if not application:
+            return
+        
+        msg_id = application.profile_message_id
+        chat_id = application.profile_chat_id
+        
+        if msg_id and chat_id:
+            try:
+                await context.bot.delete_message(chat_id=chat_id, message_id=msg_id)
+                application.profile_message_id = None  # Gelöscht markieren
+                db.session.commit()
+                logger.info(f"handle_member_left: Steckbrief von @{username} (msg_id {msg_id}) erfolgreich gelöscht.")
+            except Exception as e:
+                logger.warning(f"handle_member_left: Konnte Steckbrief nicht löschen (msg_id {msg_id}): {e}")
+        else:
+            logger.info(f"handle_member_left: Kein Steckbrief-message_id gespeichert für @{username}.")
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Prozess abgebrochen.")
@@ -1095,6 +1133,7 @@ def get_handlers():
         (CallbackQueryHandler(handle_whitelist_callback, pattern=r'^whitelist_'), 0),
         (CallbackQueryHandler(handle_existing_member_callback, pattern=r'^existing_'), 0),
         (ChatMemberHandler(handle_new_member, ChatMemberHandler.CHAT_MEMBER), 0),
+        (ChatMemberHandler(handle_member_left, ChatMemberHandler.CHAT_MEMBER), 0),  # Auto-Löschen bei Austritt
         (MessageHandler(filters.COMMAND, handle_custom_commands), 0)
     ]
 

@@ -153,6 +153,8 @@ class InviteApplication(db.Model):
     answers_json = db.Column(db.Text, default='{}')
     status = db.Column(db.String(20), default='pending') # pending, accepted, rejected, completed
     message_ids_json = db.Column(db.Text, default='[]') # Optional: um gesendete Bewerbungs-Nachrichten später editieren zu können
+    profile_message_id = db.Column(db.BigInteger, nullable=True)  # message_id des geposteten Steckbriefs (für Auto-Löschen)
+    profile_chat_id = db.Column(db.BigInteger, nullable=True)     # chat_id wo der Steckbrief gepostet wurde
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
