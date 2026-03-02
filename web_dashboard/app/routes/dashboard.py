@@ -256,6 +256,35 @@ def invite_bot_move_field(field_id, direction):
         elif direction == 'down' and idx < len(fs)-1: fs[idx], fs[idx+1] = fs[idx+1], fs[idx]
     s.config_json = json.dumps(cfg); db.session.commit(); return redirect(url_for('dashboard.bot_settings'))
 
+@bp.route('/bot-settings/reorder-fields', methods=['POST'])
+@login_required
+def invite_bot_reorder_fields():
+    data = request.get_json()
+    if not data or 'field_ids' not in data:
+        return jsonify({"success": False, "error": "Invalid data"}), 400
+    
+    s = BotSettings.query.filter_by(bot_name='invite').first()
+    if not s: return jsonify({"success": False, "error": "Settings not found"}), 404
+    
+    cfg = json.loads(s.config_json); fs = cfg.get('form_fields', [])
+    existing_fields = {f.get('id'): f for f in fs}
+    
+    new_fields = []
+    for fid in data['field_ids']:
+        if fid in existing_fields:
+            new_fields.append(existing_fields[fid])
+            
+    # Keep missing fields
+    new_ids = set(data['field_ids'])
+    for fid, f in existing_fields.items():
+        if fid not in new_ids:
+            new_fields.append(f)
+            
+    cfg['form_fields'] = new_fields
+    s.config_json = json.dumps(cfg)
+    db.session.commit()
+    return jsonify({"success": True})
+
 @bp.route('/bot-settings/add-command', methods=['POST'])
 @login_required
 def add_custom_command():

@@ -965,10 +965,12 @@ def get_handlers():
         states={
             ASKING_QUESTIONS: [
                 CommandHandler("datenschutz", datenschutz),
+                CallbackQueryHandler(handle_answer, pattern=r'^bool_ans_'),
                 MessageHandler(filters.PHOTO | (filters.TEXT & filters.ChatType.PRIVATE & ~filters.COMMAND), handle_answer)
             ],
             CONFIRMING_RULES: [
                 CommandHandler("datenschutz", datenschutz),
+                CallbackQueryHandler(handle_answer, pattern=r'^bool_ans_'), # Backwards compatibility/safety
                 MessageHandler(filters.TEXT & filters.ChatType.PRIVATE & ~filters.COMMAND, handle_rules_confirmation)
             ],
             WAITING_FOR_SOCIAL_DECISION: [

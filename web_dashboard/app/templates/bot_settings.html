@@ -2,6 +2,51 @@
 
 {% block title %}Invite Bot | Administration{% endblock %}
 
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var el = document.getElementById('fields-sortable');
+        if (el) {
+            Sortable.create(el, {
+                animation: 150,
+                handle: '.move-arrow',
+                ghostClass: 'sortable-ghost',
+                onEnd: function (evt) {
+                    var order = [];
+                    el.querySelectorAll('tr').forEach(function (row) {
+                        var id = row.getAttribute('data-id');
+                        if (id) order.push(id);
+                    });
+
+                    // AJAX Send
+                    fetch("{{ url_for('dashboard.invite_bot_reorder_fields') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ field_ids: order })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                console.log('Ordnung gespeichert');
+                                // Optional: Notification zeigen
+                            } else {
+                                alert('Fehler beim Speichern der Reihenfolge: ' + data.error);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Serverfehler beim Speichern der Reihenfolge.');
+                        });
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+
 {% block content %}
 <style>
     .dashboard-container {
@@ -52,8 +97,17 @@
 
     .move-arrow {
         color: var(--text-dim);
-        cursor: pointer;
+        cursor: grab;
         padding: 2px;
+    }
+
+    .move-arrow:active {
+        cursor: grabbing;
+    }
+
+    .sortable-ghost {
+        opacity: 0.4;
+        background: rgba(59, 130, 246, 0.1) !important;
     }
 
     .move-arrow:hover {
@@ -297,7 +351,7 @@
                                     style="--bs-table-bg: transparent;">
                                     <thead>
                                         <tr>
-                                            <th style="width: 50px" class="text-center small text-secondary fw-bold">POS
+                                            <th style="width: 50px" class="text-center small text-secondary fw-bold">
                                             </th>
                                             <th style="width: 100px" class="small text-secondary fw-bold">ID</th>
                                             <th class="small text-secondary fw-bold">BOT-FRAGE / ANZEIGENAME</th>
@@ -310,34 +364,15 @@
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody id="fields-sortable">
                                         {% for field in config.get('form_fields', []) %}
                                         {% set fid = field.get('id') %}
                                         {% if fid %}
                                         <tr class="{% if not field.get('enabled') %}opacity-25{% endif %}"
+                                            data-id="{{ fid }}"
                                             style="border-bottom: 1px solid rgba(255,255,255,0.03) !important;">
                                             <td class="text-center">
-                                                <div class="d-flex flex-column align-items-center">
-                                                    {% if not loop.first %}
-                                                    <form
-                                                        action="{{ url_for('dashboard.invite_bot_move_field', field_id=fid, direction='up') }}"
-                                                        method="POST" class="d-inline">
-                                                        <button type="submit" class="move-arrow btn btn-sm p-0 mb-1"
-                                                            style="font-size: 1.2rem;"><i
-                                                                class="bi bi-caret-up-fill"></i></button>
-                                                    </form>
-                                                    {% endif %}
-                                                    <small class="fw-bold mb-1 fs-6">{{ loop.index }}</small>
-                                                    {% if not loop.last %}
-                                                    <form
-                                                        action="{{ url_for('dashboard.invite_bot_move_field', field_id=fid, direction='down') }}"
-                                                        method="POST" class="d-inline">
-                                                        <button type="submit" class="move-arrow btn btn-sm p-0"
-                                                            style="font-size: 1.2rem;"><i
-                                                                class="bi bi-caret-down-fill"></i></button>
-                                                    </form>
-                                                    {% endif %}
-                                                </div>
+                                                <div class="move-arrow fs-5"><i class="bi bi-grip-vertical"></i></div>
                                             </td>
                                             <td><span
                                                     class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1">{{
