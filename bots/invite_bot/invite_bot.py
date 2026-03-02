@@ -221,11 +221,16 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             if field['type'] == 'birthday':
                 await update.callback_query.answer()
                 if answer_val == 'no':
-                    # NEIN -> Feld überspringen
-                    context.user_data['answers'][field['id']] = 'n/a'
-                    await update.callback_query.edit_message_text("❌ Geburtstag wird nicht eingetragen.")
-                    logger.info(f"handle_answer: Birthday Feld '{field['id']}' übersprungen.")
-                    return await next_question(update, context)
+                    # NEIN -> Alters-Rückfrage stellen (kein Datum, aber Alter mit Mindestalter)
+                    context.user_data['birthday_age_fallback'] = True
+                    await update.callback_query.edit_message_text("❌ Kein Geburtstag eingetragen.")
+                    age_label = field.get('age_fallback_label') or "Wie alt bist du? (Bitte nur die Zahl eingeben)"
+                    await context.bot.send_message(
+                        chat_id=update.effective_chat.id,
+                        text=age_label
+                    )
+                    logger.info(f"handle_answer: Birthday NEIN -> Alters-Rückfrage gestellt.")
+                    return ASKING_QUESTIONS
                 else:
                     # JA -> Formathinweis senden und auf Datum warten
                     context.user_data['birthday_confirmed'] = True
@@ -274,12 +279,36 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     if field['type'] == 'birthday':
         # Noch nicht bestätigt? Erwarte JA/NEIN über Buttons
-        if not context.user_data.get('birthday_confirmed'):
+        if not context.user_data.get('birthday_confirmed') and not context.user_data.get('birthday_age_fallback'):
             await update.message.reply_text(
                 "Bitte nutze die Buttons ✅ JA / ❌ NEIN um zu antworten."
             )
             return ASKING_QUESTIONS
-        # Bestätigt: Datum mit Jahrgang validieren (Jahrgang ist Pflicht)
+
+        # Alters-Rückfrage (nach NEIN): User tippt Alter als Zahl
+        if context.user_data.get('birthday_age_fallback'):
+            context.user_data.pop('birthday_age_fallback', None)
+            if not answer_text.isdigit():
+                await update.message.reply_text("❌ Bitte gib nur eine Zahl ein (z.B. 25).")
+                context.user_data['birthday_age_fallback'] = True
+                return ASKING_QUESTIONS
+            age_val = int(answer_text)
+            min_age = field.get('min_age')
+            if min_age:
+                try:
+                    if age_val < int(min_age):
+                        error_msg = field.get('min_age_error_msg') or f"⚠️ Du musst mindestens {min_age} Jahre alt sein."
+                        await update.message.reply_text(error_msg)
+                        context.user_data['birthday_age_fallback'] = True
+                        return ASKING_QUESTIONS
+                except (ValueError, TypeError):
+                    pass
+            # Alter gültig -> speichern als Steckbrief-Wert
+            context.user_data['answers'][field['id']] = f"{age_val} Jahre"
+            logger.info(f"handle_answer: Birthday-Alters-Rückfrage gespeichert: {age_val} Jahre")
+            return await next_question(update, context)
+
+        # Bestätigt (JA): Datum mit Jahrgang validieren (Jahrgang ist Pflicht)
         context.user_data.pop('birthday_confirmed', None)
         date_pattern = re.compile(r'^(\d{1,2})[\s\.](\d{1,2})[\s\.](\d{4})\.?$')
         match = date_pattern.match(answer_text.strip())

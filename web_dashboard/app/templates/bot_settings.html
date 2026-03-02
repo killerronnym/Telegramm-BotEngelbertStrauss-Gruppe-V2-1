@@ -105,7 +105,7 @@
             const sel = document.getElementById(prefix + '_type');
             const sec = document.getElementById(prefix + '_age_section');
             if (sel && sec) {
-                const show = (sel.value === 'number' || sel.value === 'puppy_age');
+                const show = (sel.value === 'number' || sel.value === 'puppy_age' || sel.value === 'birthday');
                 sec.style.display = show ? 'block' : 'none';
             }
         }
@@ -736,9 +736,11 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Altersprüfung (Nur bei Zahl) -->
+                    <!-- Altersprüfung (Nur bei Zahl / Geburtsdatum) -->
                     <div id="add_age_section" style="display: none;"
                         class="mt-3 p-2 bg-black bg-opacity-25 rounded border border-secondary border-opacity-25">
+                        <p class="small text-secondary mb-2">Bei <b>Geburtsdatum</b>: gilt für die Alters-Rückfrage wenn
+                            User NEIN klickt.</p>
                         <div class="mb-2">
                             <label class="small text-warning fw-bold mb-1"><i
                                     class="bi bi-shield-lock me-1"></i>Mindestalter</label>
@@ -818,6 +820,8 @@
                     <!-- Altersprüfung (Edit) -->
                     <div id="edit_age_section" style="display: none;"
                         class="mt-3 p-2 bg-black bg-opacity-25 rounded border border-secondary border-opacity-25">
+                        <p class="small text-secondary mb-2">Bei <b>Geburtsdatum</b>: gilt für die Alters-Rückfrage wenn
+                            User NEIN klickt.</p>
                         <div class="mb-2">
                             <label class="small text-warning fw-bold mb-1"><i
                                     class="bi bi-shield-lock me-1"></i>Mindestalter</label>
