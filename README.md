@@ -128,4 +128,4 @@ Diese Methode wird für Server und NAS dringend empfohlen.
 ---
 
 **Entwickelt für die Engelbert Strauss Gruppe.**  
-Bei Fragen zum System: `@didinils` | `@pup_Rinno_cgn` auf Telegram.
+Bei Fragen zum System: `@pup_Rinno_cgn` auf Telegram.
