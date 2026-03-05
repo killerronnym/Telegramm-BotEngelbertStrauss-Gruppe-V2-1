@@ -8,11 +8,14 @@ import signal
 from datetime import datetime, timedelta
 from sqlalchemy import func, extract, case, text, true
 import traceback
+import time
+import logging
 from werkzeug.utils import secure_filename
 from ..models import db, BotSettings, Broadcast, TopicMapping, User, IDFinderAdmin, IDFinderUser, IDFinderMessage, AuditLog, AVAILABLE_PERMISSIONS, AutoReplyRule
 
 # Wir definieren den Blueprint explizit
 bp = Blueprint('dashboard', __name__)
+logger = logging.getLogger(__name__)
 
 # Pfade berechnen
 CURRENT_FILE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1658,6 +1661,7 @@ def create_event_api():
         image_path = f"/static/uploads/events/{filename}"
         
     try:
+        from ..models import GroupEvent
         new_event = GroupEvent(
             title=title,
             description=description,
@@ -1669,19 +1673,20 @@ def create_event_api():
         db.session.commit()
         
         # Trigger Bot to post event (Async via background)
-        from bots.main_bot import bot_app
+        from bots.main_bot import bot_app, flask_app
         if bot_app:
             async def post_event_task():
                 try:
                     # Format
                     text = f"📅 **{title}**\n\n{description}\n\n✅ 0 | 🤔 0 | ❌ 0"
                     
+                    from telegram.constants import ParseMode
                     from bots.event_bot.event_bot import get_event_markup
                     markup = get_event_markup(new_event.id, {})
                     
                     if image_path:
                         # Full absolute path for bot
-                        full_img_path = os.path.abspath(os.path.join(BOT_DIR, '..', 'web_dashboard', 'app', image_path.lstrip('/')))
+                        full_img_path = os.path.abspath(os.path.join(PROJECT_ROOT, 'web_dashboard', 'app', image_path.lstrip('/')))
                         with open(full_img_path, 'rb') as f:
                             posted_msg = await bot_app.bot.send_photo(
                                 chat_id=int(chat_id),
@@ -1718,7 +1723,10 @@ def create_event_api():
         return jsonify({"success": True, "message": "Event wurde erstellt und wird gepostet."})
         
     except Exception as e:
-        logger.error(f"Error creating event: {e}")
+        if 'logger' in globals() or 'logger' in locals():
+            logger.error(f"Error creating event: {e}")
+        else:
+            print(f"Error creating event: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 # --- BOT API ROUTES ---
