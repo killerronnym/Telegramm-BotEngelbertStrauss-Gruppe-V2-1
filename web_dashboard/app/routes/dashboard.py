@@ -810,9 +810,9 @@ def id_finder_dashboard():
 def id_finder_save_config():
     s = BotSettings.query.filter_by(bot_name='id_finder').first()
     cfg = json.loads(s.config_json)
-    admin_group_id = request.form.get('admin_group_id', '').strip()
-    main_group_id = request.form.get('main_group_id', '').strip()
-    admin_log_topic_id = request.form.get('admin_log_topic_id', '').strip()
+    admin_group_id = request.form.get('admin_group_id', '').strip().replace('--', '-')
+    main_group_id = request.form.get('main_group_id', '').strip().replace('--', '-')
+    admin_log_topic_id = request.form.get('admin_log_topic_id', '').strip().replace('--', '-')
     cfg.update({
         'bot_token': request.form.get('bot_token', '').strip(),
         'admin_group_id': int(admin_group_id) if admin_group_id else 0,

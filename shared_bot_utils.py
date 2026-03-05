@@ -101,13 +101,7 @@ def get_bot_config(bot_name):
 
 def get_bot_token():
     """Zentrale Stelle für den Bot-Token. Priorisiert ENV vor DB."""
-    # 1. Check ENV
-    env_token = os.environ.get('TELEGRAM_BOT_TOKEN')
-    if env_token and env_token.strip():
-        print(f"DEBUG: Using token from ENV (starts with {env_token[:5]}...)")
-        return env_token.strip()
-
-    # 2. Check DB (ID Finder / Master Bot)
+    # 1. Check DB (ID Finder / Master Bot) FIRST
     try:
         config = get_bot_config("id_finder")
         token = config.get("bot_token")
@@ -116,6 +110,12 @@ def get_bot_token():
             return token.strip()
     except Exception as e:
         sys.stderr.write(f"ERROR: Could not load token from DB: {e}\n")
+
+    # 2. Fallback to ENV
+    env_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+    if env_token and env_token.strip():
+        print(f"DEBUG: Using token from ENV (starts with {env_token[:5]}...)")
+        return env_token.strip()
     
     print("DEBUG: No bot token found in ENV or DB.")
     return None
