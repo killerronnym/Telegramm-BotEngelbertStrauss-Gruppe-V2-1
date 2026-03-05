@@ -749,10 +749,11 @@ async def handle_rules_confirmation(update: Update, context: ContextTypes.DEFAUL
             steckbrief_lines.append(f"{emoji} {name}: {answer}")
     
     # Header + optionaler Telegram-Username
-    if share_username_choice == "Ja" and user.username:
+    if share_username_choice == "Ja":
         header = f"<b>NEUER STECKBRIEF</b>\n"
-        # Telegram-Name als erste Zeile im Steckbrief-Body (über dem Namen)
-        steckbrief_lines.insert(0, f"📱 <b>Telegram:</b> @{user.username}")
+        # Telegram-Name als erste Zeile (Username falls vorhanden, sonst Vorname)
+        display_name = f"@{user.username}" if user.username else user.first_name
+        steckbrief_lines.insert(0, f"📱 <b>Telegram Name:</b> {display_name}")
     else:
         header = "<b>NEUER STECKBRIEF</b>\n"
     final_text = header + "\n".join(steckbrief_lines)
