@@ -201,3 +201,36 @@ class ProfanityWord(db.Model):
     language = db.Column(db.String(10), default='custom') # 'de', 'en', 'custom'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+# --- Report Bot Models ---
+class ReportedMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    reporter_id = db.Column(db.BigInteger, nullable=False)
+    reported_user_id = db.Column(db.BigInteger, nullable=True)
+    reported_message_id = db.Column(db.BigInteger, nullable=False)
+    chat_id = db.Column(db.BigInteger, nullable=False)
+    reason = db.Column(db.Text)
+    status = db.Column(db.String(20), default='pending') # pending, resolved, dismissed
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+# --- Event Planner Models ---
+class GroupEvent(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    image_path = db.Column(db.String(255))
+    should_pin = db.Column(db.Boolean, default=False)
+    chat_id = db.Column(db.BigInteger)
+    message_id = db.Column(db.BigInteger) # The message ID of the posted event for updating RSVPs
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship to RSVPs
+    rsvps = db.relationship('EventRSVP', backref='event', lazy=True, cascade="all, delete-orphan")
+
+class EventRSVP(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('group_event.id'), nullable=False)
+    telegram_user_id = db.Column(db.BigInteger, nullable=False)
+    username = db.Column(db.String(100))
+    status = db.Column(db.String(20)) # 'dabei', 'vielleicht', 'nicht_dabei'
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+

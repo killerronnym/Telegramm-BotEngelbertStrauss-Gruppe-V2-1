@@ -116,12 +116,11 @@ def create_app(test_config=None):
                     db.session.add(admin)
                     db.session.commit()
             except Exception as e:
+                db.session.rollback()
                 print(f"CRITICAL DB Error during app context: {e}")
-                print("Database appears unreachable. Entering Rescue Mode by deleting INSTALL_LOCK...")
-                try:
-                    os.remove(INSTALL_LOCK)
-                except:
-                    pass
+                print("Database appears unreachable. Please check your DB credentials or server status.")
+                # REMOVED: Automatic deletion of INSTALL_LOCK. 
+                # This is a security risk as it opens the setup page to anyone.
 
     # Root-Route leitet direkt zum Dashboard weiter
     @app.route('/')

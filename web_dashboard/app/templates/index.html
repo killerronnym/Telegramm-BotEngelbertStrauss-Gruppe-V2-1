@@ -276,8 +276,12 @@
         verwalten.', 'link': url_for('dashboard.manage_users'), 'type': 'settings'},
         {'id': 'logs', 'title': 'Kritische Logs', 'icon': 'bi-exclamation-triangle', 'desc': 'Zeigt alle Error- und
         Critical-Logs der Anwendung an.', 'link': url_for('dashboard.critical_errors'), 'type': 'logs'},
-        {'id': 'update', 'title': 'Software Update', 'icon': 'bi-cloud-arrow-down-fill', 'desc': 'Prüfen Sie manuell, ob
-        eine neue Version der Bot-Software verfügbar ist.', 'type': 'update'},
+        {'id': 'report_bot', 'title': 'Report Bot', 'icon': 'bi-flag', 'desc': 'Zentrale für das Melde-System (/report).
+        Konfiguration von Ziel-Kanal und Topic.', 'link': url_for('dashboard.report_settings'), 'type': 'bot', 'bot':
+        'report_bot'},
+        {'id': 'event_planner', 'title': 'Event Planer', 'icon': 'bi-calendar-event', 'desc': 'Termine planen, RSVPs
+        verwalten und Benachrichtigungen senden.', 'link': url_for('dashboard.event_settings'), 'type': 'bot', 'bot':
+        'event_bot'},
         {'id': 'backup', 'title': 'Datenbank Backup', 'icon': 'bi-database-down', 'desc': 'Ihre app.db zur lokalen
         Sicherung sofort herunterladen.', 'link': url_for('dashboard.download_backup'), 'type': 'open'}
         ] %}
@@ -667,106 +671,16 @@
         }
     }
 
-    // --- BACKUP UPLOAD LOGIC ---
-    async function handleBackupUpload(input) {
-        if (!input.files || input.files.length === 0) return;
-        const file = input.files[0];
-
-        if (!confirm(`Möchtest du das Backup "${file.name}" wirklich wiederherstellen? Diese Aktion überschreibt alle aktuellen Daten und startet den Server neu!`)) {
-            input.value = '';
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('backup_file', file);
-
-        // UI-Feedback (Nutze das Update-Notify Element als Allzweck-Info)
-        const notify = document.getElementById('updateNotify');
-        notify.style.display = 'block';
-        notify.style.background = 'rgba(255, 165, 0, 0.2)';
-        notify.style.color = '#fbbf24';
-        notify.innerText = 'Backup wird hochgeladen...';
-
+    // --- BOT API HELPERS ---
+    async function toggleBot(botName, isActive) {
         try {
-            const res = await fetch('/api/backup/upload', {
-                method: 'POST',
-                body: formData
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                notify.style.background = 'rgba(16, 185, 129, 0.2)';
-                notify.style.color = '#10b981';
-                notify.innerText = 'Erfolgreich! ' + data.message;
-                setTimeout(safeReload, 1000);
-            } else {
-                throw new Error(data.error || 'Unbekannter Fehler');
-            }
-        } catch (e) {
-            notify.style.background = 'rgba(239, 68, 68, 0.2)';
-            notify.style.color = '#ef4444';
-            notify.innerText = 'Fehler: ' + e.message;
-            alert('Wiederherstellung fehlgeschlagen: ' + e.message);
-            input.value = '';
-        }
-    }
-
-    async function triggerUpdate(url, version, published_at) {
-        if (!confirm(`Möchtest du Version v${version} wirklich installieren? Der Server wird neu gestartet.`)) return;
-
-        const infoBox = document.getElementById('updateInfoBox');
-        const notify = document.getElementById('updateNotify');
-        const versionBox = document.getElementById('versionHistoryBox');
-
-        document.getElementById('updateProgress').style.display = 'block';
-        infoBox.style.display = 'none';
-        versionBox.style.display = 'none';
-        notify.style.display = 'block';
-        notify.innerText = 'Installation wird vorbereitet...';
-
-        try {
-            const res = await fetch('/api/update/install', {
+            const res = await fetch('/api/bot/toggle', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    url: url,
-                    version: version,
-                    published_at: published_at
-                })
+                body: JSON.stringify({ bot_name: botName, active: isActive })
             });
-
-            if (res.ok) {
-                const statusInterval = setInterval(async () => {
-                    try {
-                        const sRes = await fetch('/api/update/status');
-                        const s = await sRes.json();
-
-                        document.querySelector('#updateProgress .progress-bar').style.width = s.progress + '%';
-
-                        if (s.status === 'downloading') notify.innerText = 'Lade Version herunter... (' + s.progress + '%)';
-                        else if (s.status === 'extracting') notify.innerText = 'Entpacke Dateien... (' + s.progress + '%)';
-                        else if (s.status === 'applying') notify.innerText = 'Installiere Version... (' + s.progress + '%)';
-                        else if (s.status === 'finished') {
-                            clearInterval(statusInterval);
-                            notify.innerText = 'Installation fertig! Server startet neu...';
-                            document.querySelector('#updateProgress .progress-bar').classList.remove('progress-bar-animated');
-                            safeReload();
-                        } else if (s.status === 'error') {
-                            clearInterval(statusInterval);
-                            notify.style.background = 'rgba(239, 68, 68, 0.2)';
-                            notify.style.color = '#ef4444';
-                            notify.innerText = 'Fehler: ' + (s.error || 'Unbekannter Fehler');
-                            alert('Fehlgeschlagen: ' + s.error);
-                        }
-                    } catch (err) {
-                        console.log("Status fetch failed, assuming restart...");
-                    }
-                }, 1000);
-            }
-        } catch (e) {
-            notify.innerText = 'Fehler beim Starten.';
-            alert('Konnte Installation nicht starten: ' + e);
-        }
+            if (!res.ok) alert("Fehler beim Umschalten des Bots.");
+        } catch (e) { console.error(e); }
     }
 </script>
 {% endblock %}

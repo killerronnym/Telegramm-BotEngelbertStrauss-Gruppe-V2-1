@@ -67,6 +67,8 @@ import bots.outfit_bot.outfit_bot as outfit_plugin
 import bots.auto_responder_bot.auto_responder_bot as auto_responder_plugin
 import bots.profanity_bot.profanity_bot as profanity_plugin
 import bots.birthday_bot.birthday_bot as birthday_plugin
+import bots.report_bot.report_bot as report_plugin
+import bots.event_bot.event_bot as event_plugin
 
 async def main_post_init(app: Application) -> None:
     bot_info = await app.bot.get_me()
@@ -282,6 +284,8 @@ def main():
     register_plugin(tiktok_plugin, "tiktok")
     register_plugin(auto_responder_plugin, "auto_responder")
     register_plugin(profanity_plugin, "profanity_filter")
+    register_plugin(report_plugin, "report_bot")
+    register_plugin(event_plugin, "event_bot")
 
     # 1. Alle Haupt-Handler registrieren (Gruppe 0)
     for h in main_handlers:

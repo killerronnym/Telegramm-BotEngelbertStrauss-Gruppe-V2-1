@@ -84,7 +84,8 @@ def get_bot_status_simple():
         "umfrage": {"running": False}, "outfit": {"running": False}, 
         "id_finder": {"running": False}, "tiktok": {"running": False},
         "auto_responder": {"running": False}, "profanity_filter": {"running": False},
-        "birthday": {"running": False}
+        "birthday": {"running": False}, "report_bot": {"running": False}, 
+        "event_bot": {"running": False}
     }
     
     # ID Finder (Master Bot) ist der einzige echte Prozess
@@ -100,6 +101,7 @@ def get_bot_status_simple():
             if s.bot_name in status: # Check if bot_name is in status dict
                 if s.config_json:
                     c = json.loads(s.config_json)
+                    status[s.bot_name]["config"] = c
                     if s.bot_name == 'id_finder':
                         if 'last_heartbeat' in c:
                             status['id_finder']['last_heartbeat'] = c['last_heartbeat']
@@ -1633,4 +1635,215 @@ def upload_backup():
         
     except Exception as e:
         logger.error(f"Error restoring backup: {e}")
+
+@bp.route('/api/event/create', methods=['POST'])
+@login_required
+def create_event_api():
+    title = request.form.get('title')
+    description = request.form.get('description')
+    chat_id = request.form.get('chat_id')
+    should_pin = request.form.get('pin') == 'true'
+    image = request.files.get('image')
+    
+    if not title or not chat_id:
+        return jsonify({"success": False, "error": "Titel und Chat-ID sind erforderlich."}), 400
+        
+    image_path = None
+    if image:
+        # Simple upload logic (target: static/uploads/events)
+        target_dir = os.path.join('web_dashboard', 'app', 'static', 'uploads', 'events')
+        os.makedirs(target_dir, exist_ok=True)
+        filename = f"{int(time.time())}_{image.filename}"
+        image.save(os.path.join(target_dir, filename))
+        image_path = f"/static/uploads/events/{filename}"
+        
+    try:
+        new_event = GroupEvent(
+            title=title,
+            description=description,
+            chat_id=int(chat_id),
+            should_pin=should_pin,
+            image_path=image_path
+        )
+        db.session.add(new_event)
+        db.session.commit()
+        
+        # Trigger Bot to post event (Async via background)
+        from bots.main_bot import bot_app
+        if bot_app:
+            async def post_event_task():
+                try:
+                    # Format
+                    text = f"📅 **{title}**\n\n{description}\n\n✅ 0 | 🤔 0 | ❌ 0"
+                    
+                    from bots.event_bot.event_bot import get_event_markup
+                    markup = get_event_markup(new_event.id, {})
+                    
+                    if image_path:
+                        # Full absolute path for bot
+                        full_img_path = os.path.abspath(os.path.join(BOT_DIR, '..', 'web_dashboard', 'app', image_path.lstrip('/')))
+                        with open(full_img_path, 'rb') as f:
+                            posted_msg = await bot_app.bot.send_photo(
+                                chat_id=int(chat_id),
+                                photo=f,
+                                caption=text,
+                                parse_mode=ParseMode.MARKDOWN,
+                                reply_markup=markup
+                            )
+                    else:
+                        posted_msg = await bot_app.bot.send_message(
+                            chat_id=int(chat_id),
+                            text=text,
+                            parse_mode=ParseMode.MARKDOWN,
+                            reply_markup=markup
+                        )
+                        
+                    if should_pin:
+                        await bot_app.bot.pin_chat_message(chat_id=int(chat_id), message_id=posted_msg.message_id)
+                        
+                    # Save message_id for later updates
+                    from web_dashboard.app.models import db as db_ctx
+                    with flask_app.app_context():
+                        ev = GroupEvent.query.get(new_event.id)
+                        ev.message_id = posted_msg.message_id
+                        db_ctx.session.commit()
+                        
+                except Exception as e:
+                    logger.error(f"Error posting event to Telegram: {e}")
+
+            # Use bot_app's loop to run the task
+            import asyncio
+            asyncio.run_coroutine_threadsafe(post_event_task(), bot_app.loop)
+
+        return jsonify({"success": True, "message": "Event wurde erstellt und wird gepostet."})
+        
+    except Exception as e:
+        logger.error(f"Error creating event: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+# --- BOT API ROUTES ---
+@bp.route('/api/bot/save-config', methods=['POST'])
+@login_required
+def save_bot_config_api():
+    data = request.json
+    bot_name = data.get('bot_name')
+    config_update = data.get('config')
+    
+    if not bot_name or config_update is None:
+        return jsonify({"success": False, "error": "Missing data"}), 400
+        
+    s = BotSettings.query.filter_by(bot_name=bot_name).first()
+    if not s:
+        s = BotSettings(bot_name=bot_name, config_json=json.dumps(config_update))
+        db.session.add(s)
+    else:
+        try:
+            current_cfg = json.loads(s.config_json)
+        except:
+            current_cfg = {}
+        current_cfg.update(config_update)
+        s.config_json = json.dumps(current_cfg)
+        
+    db.session.commit()
+    return jsonify({"success": True})
+
+@bp.route('/api/bot/stats/<bot_name>', methods=['GET'])
+@login_required
+def get_bot_stats(bot_name):
+    if bot_name == 'report_bot':
+        try:
+            from ..models import ReportedMessage
+            count = ReportedMessage.query.count()
+            return jsonify({"success": True, "count": count})
+        except:
+            return jsonify({"success": False, "error": "Table not found"}), 404
+            
+    elif bot_name == 'event_bot':
+        try:
+            from ..models import GroupEvent
+            count = GroupEvent.query.count()
+            return jsonify({"success": True, "count": count})
+        except:
+            return jsonify({"success": False, "error": "Table not found"}), 404
+            
+    return jsonify({"success": False, "error": "Unknown bot"}), 400
+
+@bp.route('/api/bot/toggle', methods=['POST'])
+@login_required
+def toggle_bot_api():
+    data = request.json
+    bot_name = data.get('bot_name')
+    active = data.get('active', False)
+    
+    s = BotSettings.query.filter_by(bot_name=bot_name).first()
+    if not s:
+        cfg = {"is_active": active}
+        s = BotSettings(bot_name=bot_name, config_json=json.dumps(cfg))
+        db.session.add(s)
+    else:
+        try:
+            cfg = json.loads(s.config_json)
+        except:
+            cfg = {}
+        cfg['is_active'] = active
+        s.config_json = json.dumps(cfg)
+        
+    db.session.commit()
+    return jsonify({"success": True})
+
+# --- REPORT BOT SETTINGS ---
+
+@bp.route('/report-settings', methods=['GET', 'POST'])
+@login_required
+def report_settings():
+    from ..models import ReportedMessage
+    config_setting = BotSettings.query.filter_by(bot_name='report_bot').first()
+    config = json.loads(config_setting.config_json) if config_setting and config_setting.config_json else {}
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'save_config':
+            new_config = {
+                "target_chat_id": request.form.get('target_chat_id'),
+                "target_topic_id": request.form.get('target_topic_id'),
+                "is_active": config.get('is_active', False)
+            }
+            if not config_setting:
+                config_setting = BotSettings(bot_name='report_bot')
+                db.session.add(config_setting)
+            config_setting.config_json = json.dumps(new_config)
+            db.session.commit()
+            flash('Konfiguration gespeichert!', 'success')
+            return redirect(url_for('dashboard.report_settings'))
+            
+        elif action == 'clear_reports':
+            ReportedMessage.query.delete()
+            db.session.commit()
+            flash('Alle Berichte wurden gelöscht.', 'info')
+            return redirect(url_for('dashboard.report_settings'))
+
+    reports = ReportedMessage.query.order_by(ReportedMessage.timestamp.desc()).all()
+    return render_template('report_settings.html', config=config, reports=reports)
+
+# --- EVENT PLANNER SETTINGS ---
+
+@bp.route('/event-settings', methods=['GET', 'POST'])
+@login_required
+def event_settings():
+    from ..models import GroupEvent
+    config_setting = BotSettings.query.filter_by(bot_name='event_bot').first()
+    config = json.loads(config_setting.config_json) if config_setting and config_setting.config_json else {}
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'delete_event':
+            event_id = request.form.get('event_id')
+            event = GroupEvent.query.get(event_id)
+            if event:
+                db.session.delete(event)
+                db.session.commit()
+                flash('Event wurde gelöscht.', 'info')
+            return redirect(url_for('dashboard.event_settings'))
+
+    events = GroupEvent.query.order_by(GroupEvent.created_at.desc()).all()
+    return render_template('event_settings.html', config=config, events=events)

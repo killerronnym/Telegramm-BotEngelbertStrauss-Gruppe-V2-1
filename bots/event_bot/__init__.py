@@ -1,0 +1,1 @@
+from .event_bot import get_handlers

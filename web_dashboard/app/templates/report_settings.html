@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Report Bot | Einstellungen{% endblock %}
+
+{% block content %}
+<style>
+    .dashboard-container {
+        padding: 2.5rem;
+    }
+
+    .btn-back {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-muted);
+        color: var(--text-secondary);
+        font-weight: 500;
+        border-radius: 8px;
+        padding: 0.6rem 1.25rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.85rem;
+    }
+
+    .btn-back:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+        border-color: var(--blue-accent);
+    }
+
+    .card {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .table-dark {
+        background: transparent;
+    }
+</style>
+
+<div class="dashboard-container">
+    <div class="d-flex justify-content-between align-items-start mb-5">
+        <div>
+            <a href="{{ url_for('dashboard.index') }}" class="btn-back mb-4"><i class="bi bi-chevron-left"></i>
+                ZURÜCK</a>
+            <h1 class="fw-bold mb-1 h3 text-white">Report <span class="text-blue">System</span></h1>
+            <p class="text-secondary small">Konfiguration der Admin-Benachrichtigungen</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6>Ziel-Konfiguration</h6>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('dashboard.report_settings') }}" method="POST">
+                        <input type="hidden" name="action" value="save_config">
+                        <div class="mb-3">
+                            <label class="small text-secondary fw-bold mb-1">ZIEL-CHAT ID</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary"
+                                name="target_chat_id" value="{{ config.target_chat_id or '' }}" placeholder="-100...">
+                            <small class="text-muted">ID des Kanals oder der Gruppe, in die Reports gepostet
+                                werden.</small>
+                        </div>
+                        <div class="mb-4">
+                            <label class="small text-secondary fw-bold mb-1">TOPIC-ID (OPTIONAL)</label>
+                            <input type="text" class="form-control bg-dark text-white border-secondary"
+                                name="target_topic_id" value="{{ config.target_topic_id or '' }}" placeholder="123">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">EINSTELLUNGEN SPEICHERN</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h6>Aktionen</h6>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('dashboard.report_settings') }}" method="POST"
+                        onsubmit="return confirm('Wirklich alle Berichte löschen?');">
+                        <input type="hidden" name="action" value="clear_reports">
+                        <button type="submit" class="btn btn-outline-danger btn-sm w-100">BERICHTS-LISTE LEEREN</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6>Letzte Meldungen</h6>
+                    <span class="badge bg-secondary">{{ reports|length }}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover mb-0">
+                            <thead>
+                                <tr class="small text-secondary">
+                                    <th>Datum</th>
+                                    <th>Gemeldet von</th>
+                                    <th>Grund</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for report in reports %}
+                                <tr class="small">
+                                    <td class="text-muted">{{ report.timestamp.strftime('%d.%m %H:%M') }}</td>
+                                    <td><code>{{ report.reporter_id }}</code></td>
+                                    <td>{{ report.reason }}</td>
+                                    <td>
+                                        <span
+                                            class="badge {% if report.status == 'open' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                            {{ report.status|upper }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted small">Keine Berichte vorhanden.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1 @@
+from .report_bot import get_handlers
