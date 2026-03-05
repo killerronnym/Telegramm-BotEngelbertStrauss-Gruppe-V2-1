@@ -197,7 +197,8 @@ async def letsgo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     label = first_field.get('label', 'Frage?').replace('{username}', f"@{username}")
     
     keyboard = None
-    if first_field['type'] in ['boolean_buttons', 'header_name', 'pm_contact', 'birthday']:
+    ftype = first_field.get('type', 'text').lower()
+    if ftype in ['boolean_buttons', 'header_name', 'pm_contact', 'birthday']:
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("✅ JA", callback_data="bool_ans_yes"),
              InlineKeyboardButton("❌ NEIN", callback_data="bool_ans_no")]
@@ -227,9 +228,10 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         cb_data = update.callback_query.data
         if cb_data.startswith("bool_ans_"):
             answer_val = cb_data.replace("bool_ans_", "")
+            ftype = field.get('type', 'text').lower()
 
             # Spezialbehandlung für Geburtstags-Felder: zweistufig
-            if field['type'] == 'birthday':
+            if ftype == 'birthday':
                 await update.callback_query.answer()
                 if answer_val == 'no':
                     # NEIN -> Alters-Rückfrage stellen (kein Datum, aber Alter mit Mindestalter)
@@ -276,7 +278,8 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         context.user_data['answers'][field['id']] = 'n/a'
         return await next_question(update, context)
 
-    if field['type'] in ['boolean_buttons', 'header_name', 'pm_contact']:
+    ftype = field.get('type', 'text').lower()
+    if ftype in ['boolean_buttons', 'header_name', 'pm_contact']:
         # Text-Fallback für boolean-Typen (falls User tippt statt Button klickt)
         txt = answer_text.lower()
         if txt in ['ja', 'yes', 'ok', '✅']:
@@ -455,7 +458,8 @@ async def next_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         next_label = next_label.replace('{username}', f"@{username}")
         
         keyboard = None
-        if next_field['type'] in ['boolean_buttons', 'header_name', 'pm_contact', 'birthday']:
+        ftype = next_field.get('type', 'text').lower()
+        if ftype in ['boolean_buttons', 'header_name', 'pm_contact', 'birthday']:
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("✅ JA", callback_data="bool_ans_yes"),
                  InlineKeyboardButton("❌ NEIN", callback_data="bool_ans_no")]

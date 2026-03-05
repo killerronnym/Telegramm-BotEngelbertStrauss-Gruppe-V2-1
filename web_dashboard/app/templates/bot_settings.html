@@ -291,6 +291,27 @@
         color: white;
         box-shadow: none;
     }
+
+    /* Fix for white-on-white text in selects and inputs */
+    .modal-content select.form-control-dark,
+    .modal-content input.form-control-dark,
+    .modal-content textarea.form-control-dark {
+        color: #fff !important;
+        background-color: #1a1f2e !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .modal-content select.form-control-dark option {
+        background-color: #1a1f2e;
+        color: #fff;
+    }
+
+    .modal-content select.form-control-dark:focus,
+    .modal-content input.form-control-dark:focus,
+    .modal-content textarea.form-control-dark:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
+    }
 </style>
 
 <div class="dashboard-container">
