@@ -568,60 +568,70 @@
         };
     }
 
+    async function performUpdate() {
+        if (!updateData) return;
+        document.getElementById('updateProgress').style.display = 'block';
+        infoBox.style.display = 'none';
+        notify.style.display = 'block';
+        notify.innerText = 'Installation wird vorbereitet...';
+
+        try {
+            const res = await fetch('/api/update/install', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: updateData.zipball_url,
+                    version: updateData.latest_version,
+                    published_at: updateData.published_at
+                })
+            });
+
+            if (res.ok) {
+                const statusInterval = setInterval(async () => {
+                    try {
+                        const sRes = await fetch('/api/update/status');
+                        const s = await sRes.json();
+
+                        document.querySelector('#updateProgress .progress-bar').style.width = s.progress + '%';
+
+                        if (s.status === 'downloading') notify.innerText = 'Lade Update herunter... (' + s.progress + '%)';
+                        else if (s.status === 'extracting') notify.innerText = 'Entpacke Dateien... (' + s.progress + '%)';
+                        else if (s.status === 'applying') notify.innerText = 'Installiere Update... (' + s.progress + '%)';
+                        else if (s.status === 'finished') {
+                            clearInterval(statusInterval);
+                            notify.innerText = 'Update fertig! Server startet neu...';
+                            document.querySelector('#updateProgress .progress-bar').classList.remove('progress-bar-animated');
+                            safeReload();
+                        } else if (s.status === 'error') {
+                            clearInterval(statusInterval);
+                            notify.style.background = 'rgba(239, 68, 68, 0.2)';
+                            notify.style.color = '#ef4444';
+                            notify.innerText = 'Fehler: ' + (s.error || 'Unbekannter Fehler');
+                            alert('Update fehlgeschlagen: ' + s.error);
+                        }
+                    } catch (err) {
+                        console.log("Status fetch failed, assuming restart...");
+                    }
+                }, 1000);
+            }
+        } catch (e) {
+            notify.innerText = 'Fehler beim Starten des Updates.';
+            alert('Konnte Update nicht starten: ' + e);
+        }
+    }
+
     const installBtn = document.getElementById('btnInstallNow');
     if (installBtn) {
         installBtn.onclick = async () => {
             if (!confirm("Update jetzt installieren? Der Server wird neu gestartet.")) return;
-            document.getElementById('updateProgress').style.display = 'block';
-            infoBox.style.display = 'none';
-            notify.innerText = 'Installation wird vorbereitet...';
-
-            try {
-                const res = await fetch('/api/update/install', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        url: updateData.zipball_url,
-                        version: updateData.latest_version,
-                        published_at: updateData.published_at
-                    })
-                });
-
-                if (res.ok) {
-                    const statusInterval = setInterval(async () => {
-                        try {
-                            const sRes = await fetch('/api/update/status');
-                            const s = await sRes.json();
-
-                            document.querySelector('#updateProgress .progress-bar').style.width = s.progress + '%';
-
-                            // Show detailed status text
-                            if (s.status === 'downloading') notify.innerText = 'Lade Update herunter... (' + s.progress + '%)';
-                            else if (s.status === 'extracting') notify.innerText = 'Entpacke Dateien... (' + s.progress + '%)';
-                            else if (s.status === 'applying') notify.innerText = 'Installiere Update... (' + s.progress + '%)';
-                            else if (s.status === 'finished') {
-                                clearInterval(statusInterval);
-                                notify.innerText = 'Update fertig! Server startet neu...';
-                                document.querySelector('#updateProgress .progress-bar').classList.remove('progress-bar-animated');
-                                safeReload();
-                            } else if (s.status === 'error') {
-                                clearInterval(statusInterval);
-                                notify.style.background = 'rgba(239, 68, 68, 0.2)';
-                                notify.style.color = '#ef4444';
-                                notify.innerText = 'Fehler: ' + (s.error || 'Unbekannter Fehler');
-                                alert('Update fehlgeschlagen: ' + s.error);
-                            }
-                        } catch (err) {
-                            // If status fetch fails, it might mean server is already restarting
-                            console.log("Status fetch failed, assuming restart...");
-                        }
-                    }, 1000);
-                }
-            } catch (e) {
-                notify.innerText = 'Fehler beim Starten des Updates.';
-                alert('Konnte Update nicht starten: ' + e);
-            }
+            await performUpdate();
         };
+    }
+
+    async function triggerUpdate(url, version, published_at) {
+        if (!confirm(`Möchtest du wirklich auf Version v${version} wechseln? Der Server wird neu gestartet.`)) return;
+        updateData = { zipball_url: url, latest_version: version, published_at: published_at };
+        await performUpdate();
     }
 
     // --- VERSION HISTORY & DOWNGRADE LOGIC ---
