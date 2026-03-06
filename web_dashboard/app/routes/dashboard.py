@@ -1691,23 +1691,28 @@ def create_event_api():
         db.session.add(new_event)
         db.session.commit()
         
-        # Trigger Bot to post event (Async via background)
-        from bots.main_bot import bot_app, flask_app
-        if bot_app:
+        # Trigger Bot to post event (Async via background thread)
+        from shared_bot_utils import get_bot_token
+        token = get_bot_token()
+        
+        if token:
             async def post_event_task():
                 try:
-                    # Format
-                    text = f"📅 **{title}**\n\n{description}\n\n✅ 0 | 🤔 0 | ❌ 0"
-                    
+                    from telegram import Bot
                     from telegram.constants import ParseMode
                     from bots.event_bot.event_bot import get_event_markup
+                    
+                    bot = Bot(token)
+                    
+                    # Format
+                    text = f"📅 **{title}**\n\n{description}\n\n✅ 0 | 🤔 0 | ❌ 0"
                     markup = get_event_markup(new_event.id, {})
                     
                     if image_path:
                         # Full absolute path for bot
                         full_img_path = os.path.abspath(os.path.join(PROJECT_ROOT, 'web_dashboard', 'app', image_path.lstrip('/')))
                         with open(full_img_path, 'rb') as f:
-                            posted_msg = await bot_app.bot.send_photo(
+                            posted_msg = await bot.send_photo(
                                 chat_id=int(chat_id),
                                 photo=f,
                                 caption=text,
@@ -1715,7 +1720,7 @@ def create_event_api():
                                 reply_markup=markup
                             )
                     else:
-                        posted_msg = await bot_app.bot.send_message(
+                        posted_msg = await bot.send_message(
                             chat_id=int(chat_id),
                             text=text,
                             parse_mode=ParseMode.MARKDOWN,
@@ -1723,23 +1728,33 @@ def create_event_api():
                         )
                         
                     if should_pin:
-                        await bot_app.bot.pin_chat_message(chat_id=int(chat_id), message_id=posted_msg.message_id)
+                        await bot.pin_chat_message(chat_id=int(chat_id), message_id=posted_msg.message_id)
                         
                     # Save message_id for later updates
-                    from web_dashboard.app.models import db as db_ctx
-                    with flask_app.app_context():
-                        ev = GroupEvent.query.get(new_event.id)
-                        ev.message_id = posted_msg.message_id
-                        db_ctx.session.commit()
-                        
+                    # We need a new session or use the shared flask_app context
+                    from shared_bot_utils import get_shared_flask_app
+                    f_app = get_shared_flask_app()
+                    with f_app.app_context():
+                        from web_dashboard.app.models import db as db_ctx, GroupEvent as GE
+                        ev = db_ctx.session.get(GE, new_event.id)
+                        if ev:
+                            ev.message_id = posted_msg.message_id
+                            db_ctx.session.commit()
+                            
                 except Exception as e:
                     logger.error(f"Error posting event to Telegram: {e}")
 
-            # Use bot_app's loop to run the task
-            import asyncio
-            asyncio.run_coroutine_threadsafe(post_event_task(), bot_app.loop)
+            def run_async_background(coro):
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(coro)
+                loop.close()
 
-        return jsonify({"success": True, "message": "Event wurde erstellt und wird gepostet."})
+            import threading
+            threading.Thread(target=run_async_background, args=(post_event_task(),), daemon=True).start()
+
+        return jsonify({"success": True, "message": "Event wurde erstellt und wird im Hintergrund gepostet."})
         
     except Exception as e:
         if 'logger' in globals() or 'logger' in locals():

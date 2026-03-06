@@ -58,6 +58,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Flask Setup für DB Querys ausserhalb von Requests (Singleton aus utils nutzen)
 flask_app = get_shared_flask_app()
+bot_app = None # Global placeholder for imports
 
 import bots.id_finder_bot.id_finder_bot as id_finder_plugin
 import bots.invite_bot.invite_bot as invite_plugin
@@ -136,6 +137,9 @@ def main():
     persistence = PicklePersistence(filepath=os.path.join(BASE_DIR, "instance", "persistence.pickle"))
     app = ApplicationBuilder().token(token).persistence(persistence)
     app = app.post_init(main_post_init).post_shutdown(main_post_shutdown).build()
+    
+    global bot_app
+    bot_app = app
 
     # --- HIER CORE/MASTER HANDLER HINZUFÜGEN ---
     async def master_ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
