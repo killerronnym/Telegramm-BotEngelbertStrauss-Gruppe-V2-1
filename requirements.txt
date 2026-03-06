@@ -1,23 +1,24 @@
-# Dev environment
-pip
-autopep8
-python-dotenv
-
-# App
+# Core Dependencies
 flask
 flask-sqlalchemy
 flask-login
+python-dotenv
+requests
+waitress
+pytz
+
+# Bot Framework & Helpers
 python-telegram-bot
 APScheduler
 flask-apscheduler
-pytz
-pyTelegramBotAPI
 schedule
-mcstatus
-gunicorn
+
+# Plugin Specific
 TikTokLive
-requests
 websockets
 pymysql
 cryptography
-waitress
+
+# Utilities
+cryptography
+gunicorn
