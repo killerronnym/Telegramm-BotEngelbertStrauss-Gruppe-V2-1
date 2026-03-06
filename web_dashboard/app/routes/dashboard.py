@@ -1717,9 +1717,24 @@ def create_event_api():
             image_path=image_path
         )
         db.session.add(new_event)
+        
+        # Save last used IDs
+        from ..models import BotSettings
+        s = BotSettings.query.filter_by(bot_name='event_bot').first()
+        if not s:
+            s = BotSettings(bot_name='event_bot', config_json=json.dumps({"is_active": True}))
+            db.session.add(s)
+        try:
+            cfg = json.loads(s.config_json) if s.config_json else {}
+        except:
+            cfg = {}
+        cfg['last_chat_id'] = str(int_chat_id)
+        cfg['last_topic_id'] = str(topic_id) if topic_id else ""
+        s.config_json = json.dumps(cfg)
+        
         db.session.commit()
         
-        logger.info(f"Event '{title}' created in database for chat {int_chat_id}. Pending post by Bot.")
+        logger.info(f"Event '{title}' created in database for chat {int_chat_id} (topic {topic_id}). Pending post by Bot.")
         return jsonify({"success": True, "message": "Event wurde gespeichert und wird in Kürze vom Bot gepostet."})
                             
     except Exception as e:

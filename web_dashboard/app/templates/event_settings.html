@@ -88,14 +88,16 @@
                             <div class="col-4">
                                 <label class="small text-secondary fw-bold mb-1">CHAT-ID</label>
                                 <input type="text" class="form-control bg-dark text-white border-secondary"
-                                    name="chat_id" required placeholder="-100..." id="eventChatId">
+                                    name="chat_id" required placeholder="-100..." id="eventChatId"
+                                    value="{{ config.last_chat_id or '' }}">
                             </div>
                             <div class="col-4">
                                 <label class="small text-secondary fw-bold mb-1">TOPIC-ID (Optional)</label>
                                 <select class="form-select bg-dark text-white border-secondary" name="topic_id">
                                     <option value="">-- Haupt-Chat / Generell --</option>
-                                    {% for topic_id, topic_name in known_topics.items() %}
-                                    <option value="{{ topic_id }}">{{ topic_name }} ({{ topic_id }})</option>
+                                    {% for t_id, topic_name in known_topics.items() %}
+                                    <option value="{{ t_id }}" {% if config.last_topic_id==t_id %}selected{% endif %}>{{
+                                        topic_name }} ({{ t_id }})</option>
                                     {% endfor %}
                                 </select>
                             </div>

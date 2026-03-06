@@ -93,14 +93,21 @@ async def check_pending_events(context: ContextTypes.DEFAULT_TYPE):
     """Poll DB for events that haven't been posted yet."""
     try:
         with flask_app.app_context():
-            # CRITICAL: Clear session cache to see updates from other processes (Dashboard)
-            db.session.commit()
+            # CRITICAL: Completely remove session to force a brand new DB transaction
+            db.session.remove()
             
             # Fetch all events to avoid ORM parameter caching issues
             all_events = GroupEvent.query.all()
-            pending = [e for e in all_events if not e.message_id and e.chat_id]
+            logger.info(f"[EVENT DEBUG] Found {len(all_events)} total events in DB via ORM.")
+            
+            pending = []
+            for e in all_events:
+                logger.info(f"[EVENT DEBUG] Inspecting ID={e.id}, title={e.title}, chat={e.chat_id}, msg={e.message_id}")
+                if not e.message_id and e.chat_id:
+                    pending.append(e)
             
             if not pending:
+                logger.info("[EVENT DEBUG] No pending events found.")
                 return
 
             for event in pending:
