@@ -199,6 +199,46 @@
                                 ❌ Nein: {{ event.rsvps|selectattr('status', 'equalto', 'nicht_dabei')|list|length }}
                             </span>
                         </div>
+
+                        <div class="mt-3 p-3 rounded"
+                            style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
+                            <h6 class="small fw-bold text-white mb-2">Teilnehmer-Details:</h6>
+
+                            {% set dabei_list = event.rsvps|selectattr('status', 'equalto', 'dabei')|list %}
+                            {% if dabei_list %}
+                            <div class="small text-success mb-2">
+                                <strong>✅ </strong>
+                                {% for r in dabei_list %}
+                                {{ r.username or r.telegram_user_id }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            {% set maybe_list = event.rsvps|selectattr('status', 'equalto', 'vielleicht')|list %}
+                            {% if maybe_list %}
+                            <div class="small text-info mb-2">
+                                <strong>🤔 </strong>
+                                {% for r in maybe_list %}
+                                {{ r.username or r.telegram_user_id }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            {% set nein_list = event.rsvps|selectattr('status', 'equalto', 'nicht_dabei')|list %}
+                            {% if nein_list %}
+                            <div class="small text-danger">
+                                <strong>❌ </strong>
+                                {% for r in nein_list %}
+                                {{ r.username or r.telegram_user_id }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            {% if not dabei_list and not maybe_list and not nein_list %}
+                            <div class="small text-muted fst-italic">Noch keine Reaktionen.</div>
+                            {% endif %}
+                        </div>
+
                         <div class="mt-3 small text-muted">
                             Gepostet in: <code>{{ event.chat_id }}</code>
                             {% if event.topic_id %}

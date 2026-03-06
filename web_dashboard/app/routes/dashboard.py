@@ -1868,6 +1868,17 @@ def event_settings():
     config_setting = BotSettings.query.filter_by(bot_name='event_bot').first()
     config = json.loads(config_setting.config_json) if config_setting and config_setting.config_json else {}
     
+    # Fallback to Master-Bot Chat-ID if not set yet (first use)
+    if not config.get('last_chat_id'):
+        master_bot = BotSettings.query.filter_by(bot_name='id_finder').first()
+        if master_bot and master_bot.config_json:
+            try:
+                m_cfg = json.loads(master_bot.config_json)
+                if m_cfg.get('main_group_id'):
+                    config['last_chat_id'] = str(m_cfg['main_group_id'])
+            except:
+                pass
+    
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'delete_event':
