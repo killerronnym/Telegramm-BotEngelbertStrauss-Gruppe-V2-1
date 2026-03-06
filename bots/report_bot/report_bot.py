@@ -12,6 +12,7 @@ sys.path.append(PROJECT_ROOT)
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters
 from telegram.constants import ParseMode
+import html
 
 from web_dashboard.app.models import db, BotSettings, ReportedMessage
 from shared_bot_utils import is_bot_active, get_bot_config, get_shared_flask_app
@@ -37,7 +38,14 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
 
     if not msg.reply_to_message:
-        await msg.reply_text("⚠️ Bitte antworte auf eine Nachricht, die du melden möchtest, mit `/report [Grund]`. ", parse_mode=ParseMode.MARKDOWN)
+        help_msg = (
+            "⚠️ <b>Anleitung: So meldest du eine Nachricht</b>\n\n"
+            "1. Gehe zu der Nachricht, die du melden möchtest.\n"
+            "2. Nutze die <b>Antwort-Funktion</b> (Reply) auf diese Nachricht.\n"
+            "3. Schreibe <code>/report [Grund]</code> (der Grund ist optional).\n\n"
+            "Nur wenn du auf eine Nachricht antwortest, wissen die Admins, was gemeldet wurde! 💡"
+        )
+        await msg.reply_text(help_msg, parse_mode=ParseMode.HTML)
         return
 
     reported_msg = msg.reply_to_message
@@ -64,13 +72,26 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 target_topic = config.get("target_topic_id")
                 
                 # Format notification
+                rep_name = html.escape(user.first_name)
+                target_user = reported_msg.from_user
+                target_name = html.escape(target_user.first_name) if target_user else "Unbekannt"
+                esc_reason = html.escape(reason)
+                chat_title = html.escape(chat.title or "Privat")
+                
+                # Chat link construction (stripped -100 for public/supergroup links)
+                chat_id_str = str(chat.id)
+                if chat_id_str.startswith("-100"):
+                    link_id = chat_id_str[4:]
+                else:
+                    link_id = chat_id_str
+
                 report_text = (
-                    f"🚨 **NEUE MELDUNG** 🚨\n\n"
-                    f"👤 **Melder:** {user.mention_markdown_v2()}\n"
-                    f"👤 **Gemeldeter Nutzer:** {reported_msg.from_user.mention_markdown_v2() if reported_msg.from_user else 'Unbekannt'}\n"
-                    f"💬 **Grund:** {reason}\n"
-                    f"📍 **Wo:** {chat.title or 'Privat'}\n\n"
-                    f"🔗 [Zur Nachricht](https://t.me/c/{str(chat.id)[4:] if str(chat.id).startswith('-100') else chat.id}/{reported_msg.message_id})"
+                    f"🚨 <b>NEUE MELDUNG</b> 🚨\n\n"
+                    f"👤 <b>Melder:</b> {rep_name} (ID: <code>{user.id}</code>)\n"
+                    f"👤 <b>Gemeldeter Nutzer:</b> {target_name} (ID: <code>{target_user.id if target_user else 'N/A'}</code>)\n"
+                    f"💬 <b>Grund:</b> {esc_reason}\n"
+                    f"📍 <b>Wo:</b> {chat_title}\n\n"
+                    f"🔗 <a href='https://t.me/c/{link_id}/{reported_msg.message_id}'>Zur Nachricht springen</a>"
                 )
                 
                 try:
@@ -78,7 +99,7 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         chat_id=target_chat,
                         text=report_text,
                         message_thread_id=target_topic if target_topic else None,
-                        parse_mode=ParseMode.MARKDOWN_V2
+                        parse_mode=ParseMode.HTML
                     )
                 except Exception as e:
                     logger.error(f"Fehler beim Senden der Report-Benachrichtigung an {target_chat}: {e}")
