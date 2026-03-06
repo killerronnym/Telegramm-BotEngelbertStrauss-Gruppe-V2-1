@@ -66,28 +66,29 @@
                     <h6>Neues Event erstellen</h6>
                 </div>
                 <div class="card-body">
-                    <form action="{{ url_for('dashboard.create_event_api') }}" method="POST"
+                    <div id="alertContainer"></div>
+                    <form id="createEventForm" action="{{ url_for('dashboard.create_event_api') }}" method="POST"
                         enctype="multipart/form-data">
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">TITEL</label>
                             <input type="text" class="form-control bg-dark text-white border-secondary" name="title"
-                                required>
+                                required id="eventTitle">
                         </div>
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">BESCHREIBUNG</label>
                             <textarea class="form-control bg-dark text-white border-secondary" name="description"
-                                rows="4"></textarea>
+                                rows="4" id="eventDesc"></textarea>
                         </div>
                         <div class="mb-3">
                             <label class="small text-secondary fw-bold mb-1">BILD (OPTIONAL)</label>
                             <input type="file" class="form-control bg-dark text-white border-secondary" name="image"
-                                accept="image/*">
+                                accept="image/*" id="eventImage">
                         </div>
                         <div class="row g-2 mb-4">
                             <div class="col-6">
                                 <label class="small text-secondary fw-bold mb-1">CHAT-ID</label>
                                 <input type="text" class="form-control bg-dark text-white border-secondary"
-                                    name="chat_id" required placeholder="-100...">
+                                    name="chat_id" required placeholder="-100..." id="eventChatId">
                             </div>
                             <div class="col-6 d-flex align-items-end ps-3">
                                 <div class="form-check form-switch mb-1">
@@ -97,9 +98,57 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-warning w-100 fw-bold">EVENT VERÖFFENTLICHEN</button>
+                        <button type="submit" class="btn btn-warning w-100 fw-bold" id="submitBtn">EVENT
+                            VERÖFFENTLICHEN</button>
                     </form>
                 </div>
+
+                <script>
+                    document.getElementById('createEventForm').addEventListener('submit', async function (e) {
+                        e.preventDefault();
+                        const btn = document.getElementById('submitBtn');
+                        const container = document.getElementById('alertContainer');
+                        const formData = new FormData(this);
+
+                        btn.disabled = true;
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> WIRD VERÖFFENTLICHT...';
+                        container.innerHTML = '';
+
+                        try {
+                            const response = await fetch(this.action, {
+                                method: 'POST',
+                                body: formData
+                            });
+                            const result = await response.json();
+
+                            if (result.success) {
+                                container.innerHTML = `
+                                    <div class="alert alert-success border-0 bg-success bg-opacity-10 text-success small mb-4 py-2">
+                                        <i class="bi bi-check-circle-fill me-2"></i> ${result.message}
+                                    </div>
+                                `;
+                                this.reset();
+                                // Optional: Refresh page after 2s to show in list
+                                setTimeout(() => window.location.reload(), 2000);
+                            } else {
+                                container.innerHTML = `
+                                    <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger small mb-4 py-2">
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i> ${result.error || 'Fehler beim Erstellen.'}
+                                    </div>
+                                `;
+                            }
+                        } catch (error) {
+                            container.innerHTML = `
+                                <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger small mb-4 py-2">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i> Netzwerkfehler. Bitte erneut versuchen.
+                                </div>
+                            `;
+                        } finally {
+                            btn.disabled = false;
+                            btn.innerHTML = 'EVENT VERÖFFENTLICHEN';
+                        }
+                    });
+                </script>
             </div>
         </div>
 

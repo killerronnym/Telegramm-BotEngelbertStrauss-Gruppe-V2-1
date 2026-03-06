@@ -1674,15 +1674,22 @@ def create_event_api():
         if chat_id.replace('-', '').isdigit():
             if not chat_id.startswith("-100"):
                 # Special cases: IDs starting with - (but not -100)
+                old_id = chat_id
                 if chat_id.startswith("-"):
                     cleaned = chat_id.lstrip("-")
                     chat_id = f"-100{cleaned}"
                 else:
                     chat_id = f"-100{chat_id}"
-                logger.info(f"Auto-fixed Chat ID to: {chat_id}")
+                logger.info(f"EVENT-FIX: Auto-fixed Chat ID from {old_id} to {chat_id}")
     
     if not title or not chat_id:
         return jsonify({"success": False, "error": "Titel und Chat-ID sind erforderlich."}), 400
+    
+    # Final check: Must be int-convertible for the DB/Telegram
+    try:
+        int_chat_id = int(chat_id)
+    except:
+        return jsonify({"success": False, "error": f"Ungültige Chat-ID Format: {chat_id}"}), 400
         
     image_path = None
     if image:
@@ -1698,7 +1705,7 @@ def create_event_api():
         new_event = GroupEvent(
             title=title,
             description=description,
-            chat_id=int(chat_id) if chat_id.replace('-', '').isdigit() else None,
+            chat_id=int_chat_id,
             should_pin=should_pin,
             image_path=image_path
         )
